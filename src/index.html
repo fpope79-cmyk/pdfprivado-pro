@@ -1,39 +1,100 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
+    <meta
+      name="description"
+      content="Prototipo interno de PDFPrivado Pro. Procesamiento local y sin conexión."
+    />
+    <title>PDFPrivado Pro</title>
     <script type="module" src="/main.js" defer></script>
   </head>
-
   <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="PDFPrivado Pro">
+          <span class="brand-mark" aria-hidden="true">PDF</span>
+          <span>
+            <strong>PDFPrivado</strong>
+            <small>Pro · prototipo interno</small>
+          </span>
+        </div>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
+        <div class="status-badge" role="status">
+          <span class="status-dot" aria-hidden="true"></span>
+          Local y sin conexión
+        </div>
+      </header>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
-    </main>
+      <main>
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="eyebrow">Aplicación de escritorio</p>
+            <h1 id="hero-title">Tus PDF permanecen en tu equipo</h1>
+            <p class="hero-text">
+              Esta primera versión solo prepara la estructura visual de
+              PDFPrivado Pro. Todavía no procesa documentos.
+            </p>
+
+            <div class="hero-actions">
+              <button class="primary-button" type="button" disabled>
+                Abrir archivos PDF
+              </button>
+              <span class="helper-text">Se activará en el siguiente prototipo.</span>
+            </div>
+          </div>
+
+          <aside class="privacy-card" aria-label="Principios de privacidad">
+            <h2>Privacidad por diseño</h2>
+            <ul>
+              <li>Sin subida de documentos.</li>
+              <li>Sin analítica ni telemetría.</li>
+              <li>Sin dependencias cargadas desde CDN.</li>
+              <li>Acceso únicamente a archivos elegidos por el usuario.</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="tools-section" aria-labelledby="tools-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">MVP técnico</p>
+              <h2 id="tools-title">Primeras herramientas previstas</h2>
+            </div>
+            <span class="internal-label">No disponible públicamente</span>
+          </div>
+
+          <div class="tool-grid">
+            <article class="tool-card">
+              <span class="tool-number">01</span>
+              <h3>Unir PDF</h3>
+              <p>Combinar varios documentos y elegir el archivo de salida.</p>
+              <span class="coming-soon">Próximamente</span>
+            </article>
+
+            <article class="tool-card">
+              <span class="tool-number">02</span>
+              <h3>Dividir PDF</h3>
+              <p>Extraer páginas o intervalos sin modificar el archivo original.</p>
+              <span class="coming-soon">Próximamente</span>
+            </article>
+
+            <article class="tool-card">
+              <span class="tool-number">03</span>
+              <h3>Rotar páginas</h3>
+              <p>Corregir la orientación y guardar una copia nueva.</p>
+              <span class="coming-soon">Próximamente</span>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>PDFPrivado Pro · versión técnica inicial</span>
+        <span>© <span id="current-year">2026</span> PDFPrivado</span>
+      </footer>
+    </div>
   </body>
 </html>
