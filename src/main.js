@@ -14,6 +14,14 @@ const emptyState = document.querySelector("#empty-state");
 const summary = document.querySelector("#selection-summary");
 const selectorStatus = document.querySelector("#selector-status");
 const selectionFeedback = document.querySelector("#selection-feedback");
+const outputNameInput = document.querySelector("#output-name-input");
+const mergeButton = document.querySelector("#merge-pdf-button");
+const mergeRequirement = document.querySelector("#merge-requirement");
+const mergeProgressPanel = document.querySelector("#merge-progress-panel");
+const mergeProgress = document.querySelector("#merge-progress");
+const mergeProgressTitle = document.querySelector("#merge-progress-title");
+const mergeProgressValue = document.querySelector("#merge-progress-value");
+const mergeProgressDetail = document.querySelector("#merge-progress-detail");
 
 const selectedFiles = [];
 const rowAnimations = new WeakMap();
@@ -29,6 +37,7 @@ const dragState = {
   currentIndex: -1,
   active: false,
 };
+let mergeInProgress = false;
 
 if (year) {
   year.textContent = String(new Date().getFullYear());
@@ -101,16 +110,25 @@ function setFeedback(message, kind = "info") {
 }
 
 function openFileSelector() {
+  if (mergeInProgress) {
+    return;
+  }
+
   fileInput.value = "";
   setStatus("Selector de archivos abierto.");
   fileInput.click();
 }
 
 function removeFile(key) {
+  if (mergeInProgress) {
+    return;
+  }
+
   const index = selectedFiles.findIndex((item) => item.key === key);
 
   if (index >= 0) {
     selectedFiles.splice(index, 1);
+    resetMergeProgress();
     renderFiles();
     setStatus("Archivo retirado de la lista temporal.");
   }
@@ -155,6 +173,7 @@ function moveFileToIndex(key, targetIndex) {
   }
 
   const finalIndex = selectedFiles.findIndex((item) => item.key === key);
+  resetMergeProgress();
   renderFiles();
 
   const message = `${movedItem.file.name} movido a la posición ${finalIndex + 1}.`;
@@ -342,6 +361,10 @@ function activatePointerDrag(item, row, event) {
 }
 
 function beginPointerDrag(event, item, row, handle) {
+  if (mergeInProgress) {
+    return;
+  }
+
   if (event.pointerType === "mouse" && event.button !== 0) {
     return;
   }
@@ -423,6 +446,7 @@ function endPointerDrag(event) {
     return;
   }
 
+  resetMergeProgress();
   renderFiles();
 
   if (draggedItem && initialIndex !== finalIndex) {
@@ -506,6 +530,7 @@ function renderFiles() {
     row.dataset.fileKey = item.key;
 
     const dragHandle = createDragHandle(item, row);
+    dragHandle.disabled = mergeInProgress;
 
     const position = document.createElement("span");
     position.className = "file-position";
@@ -528,6 +553,7 @@ function renderFiles() {
     removeButton.type = "button";
     removeButton.textContent = "Quitar";
     removeButton.setAttribute("aria-label", `Quitar ${item.file.name}`);
+    removeButton.disabled = mergeInProgress;
     removeButton.addEventListener("click", () => removeFile(item.key));
 
     row.append(dragHandle, position, details, removeButton);
@@ -537,7 +563,8 @@ function renderFiles() {
   const count = selectedFiles.length;
   emptyState.hidden = count > 0;
   addMoreButton.hidden = count === 0;
-  clearButton.disabled = count === 0;
+  addMoreButton.disabled = mergeInProgress;
+  clearButton.disabled = count === 0 || mergeInProgress;
   summary.textContent =
     `${count} ${count === 1 ? "archivo" : "archivos"} · ${formatBytes(totalBytes())}`;
 
@@ -548,6 +575,8 @@ function renderFiles() {
         : `${count} ${count === 1 ? "archivo preparado" : "archivos preparados"}`;
     mergeCardStatus.dataset.hasFiles = count > 0 ? "true" : "false";
   }
+
+  updateMergeControls();
 }
 
 function addSelectedFiles(fileCollection) {
@@ -576,6 +605,10 @@ function addSelectedFiles(fileCollection) {
     selectedFiles.push({ key, file });
     existingKeys.add(key);
     added += 1;
+  }
+
+  if (added > 0) {
+    resetMergeProgress();
   }
 
   renderFiles();
@@ -610,6 +643,351 @@ function addSelectedFiles(fileCollection) {
   fileInput.value = "";
 }
 
+
+function hasLocalPdfEngine() {
+  return Boolean(
+    window.PDFLib &&
+      window.PDFLib.PDFDocument &&
+      typeof window.PDFLib.PDFDocument.create === "function"
+  );
+}
+
+function normalizeOutputName(value) {
+  let name = String(value ?? "")
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+    .replace(/[. ]+$/g, "");
+
+  if (!name) {
+    name = "PDFPrivado_Unido";
+  }
+
+  if (!name.toLocaleLowerCase().endsWith(".pdf")) {
+    name += ".pdf";
+  }
+
+  if (name.length > 120) {
+    name = `${name.slice(0, 116)}.pdf`;
+  }
+
+  return name;
+}
+
+function updateMergeControls() {
+  if (!mergeButton || !mergeRequirement || !outputNameInput) {
+    return;
+  }
+
+  const count = selectedFiles.length;
+  const engineReady = hasLocalPdfEngine();
+  const enoughFiles = count >= 2;
+
+  mergeButton.disabled = mergeInProgress || !engineReady || !enoughFiles;
+  outputNameInput.disabled = mergeInProgress;
+  mergeButton.classList.toggle("is-processing", mergeInProgress);
+  mergeButton.textContent = mergeInProgress ? "Uniendo..." : "Unir y guardar";
+
+  if (!engineReady) {
+    mergeRequirement.textContent = "No se pudo cargar el motor PDF local.";
+    mergeRequirement.dataset.kind = "error";
+  } else if (mergeInProgress) {
+    mergeRequirement.textContent = "Procesando los documentos únicamente en este equipo.";
+    mergeRequirement.dataset.kind = "working";
+  } else if (!enoughFiles) {
+    mergeRequirement.textContent = "Añade al menos 2 PDF para comenzar.";
+    mergeRequirement.dataset.kind = "normal";
+  } else {
+    mergeRequirement.textContent =
+      `Se unirán ${count} PDF siguiendo exactamente el orden mostrado.`;
+    mergeRequirement.dataset.kind = "ready";
+  }
+}
+
+function setMergeProgress(percent, title, detail) {
+  const boundedValue = Math.max(0, Math.min(100, Math.round(percent)));
+
+  mergeProgressPanel.hidden = false;
+  mergeProgress.value = boundedValue;
+  mergeProgress.textContent = `${boundedValue} %`;
+  mergeProgressValue.textContent = `${boundedValue} %`;
+  mergeProgressTitle.textContent = title;
+  mergeProgressDetail.textContent = detail;
+}
+
+function resetMergeProgress() {
+  if (!mergeProgressPanel) {
+    return;
+  }
+
+  mergeProgressPanel.hidden = true;
+  mergeProgress.value = 0;
+  mergeProgress.textContent = "0 %";
+  mergeProgressValue.textContent = "0 %";
+  mergeProgressTitle.textContent = "Preparando la unión";
+  mergeProgressDetail.textContent = "Esperando para comenzar.";
+  mergeProgressPanel.dataset.kind = "normal";
+}
+
+function nextPaint() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function fileNameFromPath(path, fallbackName) {
+  const parts = String(path ?? "").split(/[\\/]/);
+  return parts.at(-1) || fallbackName;
+}
+
+async function chooseOutputTarget(suggestedName) {
+  if (typeof window.showSaveFilePicker === "function") {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [
+          {
+            description: "Documento PDF",
+            accept: { "application/pdf": [".pdf"] },
+          },
+        ],
+        excludeAcceptAllOption: true,
+      });
+
+      return {
+        kind: "file-system-access",
+        handle,
+        name: handle.name || suggestedName,
+      };
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  const tauriDialog = window.__TAURI__?.dialog;
+  const tauriFs = window.__TAURI__?.fs;
+
+  if (
+    typeof tauriDialog?.save === "function" &&
+    typeof tauriFs?.writeFile === "function"
+  ) {
+    const path = await tauriDialog.save({
+      defaultPath: suggestedName,
+      filters: [{ name: "Documento PDF", extensions: ["pdf"] }],
+    });
+
+    if (!path) {
+      return null;
+    }
+
+    return {
+      kind: "tauri",
+      path,
+      writeFile: tauriFs.writeFile,
+      name: fileNameFromPath(path, suggestedName),
+    };
+  }
+
+  return {
+    kind: "download",
+    name: suggestedName,
+  };
+}
+
+async function writeOutputTarget(target, bytes) {
+  if (target.kind === "file-system-access") {
+    const writable = await target.handle.createWritable();
+
+    try {
+      await writable.write(bytes);
+      await writable.close();
+    } catch (error) {
+      if (typeof writable.abort === "function") {
+        await writable.abort().catch(() => {});
+      }
+      throw error;
+    }
+
+    return { usedDownloadFallback: false };
+  }
+
+  if (target.kind === "tauri") {
+    await target.writeFile(target.path, bytes);
+    return { usedDownloadFallback: false };
+  }
+
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = target.name;
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+
+  return { usedDownloadFallback: true };
+}
+
+function describePdfLoadError(error, fileName) {
+  const detail = String(error?.message ?? error ?? "");
+
+  if (/encrypt|password/i.test(detail)) {
+    return new Error(
+      `${fileName} está protegido con contraseña o cifrado y no puede unirse en esta versión.`
+    );
+  }
+
+  return new Error(
+    `No se pudo leer ${fileName}. El documento puede estar dañado o usar una estructura no compatible.`
+  );
+}
+
+async function mergeAndSavePdfs() {
+  if (mergeInProgress || selectedFiles.length < 2) {
+    return;
+  }
+
+  if (!hasLocalPdfEngine()) {
+    setFeedback("No se pudo cargar el motor PDF local.", "error");
+    updateMergeControls();
+    return;
+  }
+
+  const outputName = normalizeOutputName(outputNameInput.value);
+  outputNameInput.value = outputName;
+
+  let outputTarget;
+
+  try {
+    outputTarget = await chooseOutputTarget(outputName);
+  } catch (error) {
+    setFeedback(
+      "No se pudo abrir el selector de guardado. No se ha creado ningún archivo.",
+      "error"
+    );
+    setStatus("No se pudo elegir la ubicación de salida.", "error");
+    return;
+  }
+
+  if (!outputTarget) {
+    setFeedback("Guardado cancelado. No se ha creado ningún archivo.", "info");
+    setStatus("Guardado cancelado.");
+    return;
+  }
+
+  mergeInProgress = true;
+  renderFiles();
+  setMergeProgress(
+    3,
+    "Preparando la unión",
+    "Los documentos siguen dentro de este equipo."
+  );
+  setFeedback("Uniendo los PDF localmente...", "info");
+
+  try {
+    const { PDFDocument } = window.PDFLib;
+    const outputPdf = await PDFDocument.create();
+    let totalPages = 0;
+
+    for (const [index, item] of selectedFiles.entries()) {
+      const baseProgress = 8 + (index / selectedFiles.length) * 68;
+      setMergeProgress(
+        baseProgress,
+        `Leyendo PDF ${index + 1} de ${selectedFiles.length}`,
+        item.file.name
+      );
+      setStatus(`Procesando ${item.file.name}.`);
+      await nextPaint();
+
+      const sourceBytes = await item.file.arrayBuffer();
+      let sourcePdf;
+
+      try {
+        sourcePdf = await PDFDocument.load(sourceBytes, {
+          ignoreEncryption: false,
+        });
+      } catch (error) {
+        throw describePdfLoadError(error, item.file.name);
+      }
+
+      const pageIndices = sourcePdf.getPageIndices();
+      const copiedPages = await outputPdf.copyPages(sourcePdf, pageIndices);
+
+      for (const page of copiedPages) {
+        outputPdf.addPage(page);
+      }
+
+      totalPages += copiedPages.length;
+      setMergeProgress(
+        8 + ((index + 1) / selectedFiles.length) * 68,
+        `PDF ${index + 1} de ${selectedFiles.length} incorporado`,
+        `${item.file.name} · ${copiedPages.length} ${copiedPages.length === 1 ? "página" : "páginas"}`
+      );
+      await nextPaint();
+    }
+
+    if (totalPages === 0) {
+      throw new Error("Los documentos seleccionados no contienen páginas para unir.");
+    }
+
+    outputPdf.setCreator("PDFPrivado Pro");
+    outputPdf.setProducer("PDFPrivado Pro");
+
+    setMergeProgress(
+      82,
+      "Creando el PDF nuevo",
+      `${totalPages} ${totalPages === 1 ? "página preparada" : "páginas preparadas"}.`
+    );
+    await nextPaint();
+
+    const mergedBytes = await outputPdf.save({
+      addDefaultPage: false,
+      useObjectStreams: true,
+    });
+
+    setMergeProgress(
+      94,
+      "Guardando el resultado",
+      outputTarget.name
+    );
+    await writeOutputTarget(outputTarget, mergedBytes).then((saveResult) => {
+      outputTarget.usedDownloadFallback = saveResult.usedDownloadFallback;
+    });
+
+    const successMessage =
+      `${outputTarget.name} guardado correctamente · ` +
+      `${totalPages} ${totalPages === 1 ? "página" : "páginas"} · ` +
+      `${formatBytes(mergedBytes.length)}.`;
+
+    setMergeProgress(100, "PDF unido y guardado", successMessage);
+    mergeProgressPanel.dataset.kind = "success";
+    setFeedback(successMessage, "success");
+    setStatus(successMessage);
+
+    if (outputTarget.usedDownloadFallback) {
+      setFeedback(
+        `${successMessage} El sistema utilizó la descarga local; revisa la carpeta Descargas.`,
+        "success"
+      );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "No se pudo completar la unión de los documentos.";
+
+    setMergeProgress(0, "No se pudo completar la unión", message);
+    mergeProgressPanel.dataset.kind = "error";
+    setFeedback(message, "error");
+    setStatus(message, "error");
+  } finally {
+    mergeInProgress = false;
+    renderFiles();
+  }
+}
+
 openMergeButtons.forEach((button) => {
   button.addEventListener("click", () => showMergeView(button));
 });
@@ -630,11 +1008,22 @@ fileInput?.addEventListener("cancel", () => {
 });
 
 clearButton?.addEventListener("click", () => {
+  if (mergeInProgress) {
+    return;
+  }
+
   selectedFiles.length = 0;
   fileInput.value = "";
+  resetMergeProgress();
   renderFiles();
   setStatus("Lista temporal vaciada.");
   setFeedback("La lista temporal se ha vaciado.", "info");
 });
+
+outputNameInput?.addEventListener("blur", () => {
+  outputNameInput.value = normalizeOutputName(outputNameInput.value);
+});
+
+mergeButton?.addEventListener("click", mergeAndSavePdfs);
 
 renderFiles();

@@ -9,6 +9,7 @@
       content="Prototipo interno de PDFPrivado Pro. Herramientas PDF locales y privadas."
     />
     <title>PDFPrivado Pro</title>
+    <script src="vendor/pdf-lib.min.js"></script>
     <script type="module" src="/main.js" defer></script>
   </head>
   <body>
@@ -219,27 +220,62 @@
             <p class="local-note" id="reorder-instructions">
               Arrastra cada PDF desde el asa de puntos. La fila seguirá el puntero y
               las demás abrirán espacio en tiempo real. Con el asa enfocada también
-              puedes usar las flechas ↑ y ↓. La aplicación no muestra rutas completas
-              y cerrar la aplicación borra esta lista temporal.
+              puedes usar las flechas ↑ y ↓. Los documentos se leen únicamente al
+              pulsar Unir y guardar; nunca se suben y los originales no se modifican.
             </p>
           </section>
 
-          <div class="workspace-action-bar" aria-label="Acción de la herramienta">
-            <div>
-              <strong>La unión real será el siguiente avance</strong>
-              <span>
-                Primero estamos cerrando la selección y el orden de los documentos.
+          <div class="workspace-action-bar merge-save-bar" aria-label="Unir y guardar resultado">
+            <label class="output-name-field" for="output-name-input">
+              <span class="output-field-label">Nombre del archivo nuevo</span>
+              <input
+                class="output-name-input"
+                id="output-name-input"
+                type="text"
+                value="PDFPrivado_Unido.pdf"
+                maxlength="120"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <span class="output-field-help">
+                Se creará una copia nueva; los documentos originales permanecerán intactos.
               </span>
+            </label>
+
+            <div class="merge-action-group">
+              <span class="merge-requirement" id="merge-requirement">
+                Añade al menos 2 PDF para comenzar.
+              </span>
+              <button
+                class="primary-button merge-pdf-button"
+                id="merge-pdf-button"
+                type="button"
+                disabled
+              >
+                Unir y guardar
+              </button>
             </div>
-            <button class="primary-button" type="button" disabled>
-              Unir PDF
-            </button>
+          </div>
+
+          <div
+            class="merge-progress-panel"
+            id="merge-progress-panel"
+            role="status"
+            aria-live="polite"
+            hidden
+          >
+            <div class="merge-progress-header">
+              <strong id="merge-progress-title">Preparando la unión</strong>
+              <span id="merge-progress-value">0 %</span>
+            </div>
+            <progress id="merge-progress" max="100" value="0">0 %</progress>
+            <p id="merge-progress-detail">Esperando para comenzar.</p>
           </div>
         </div>
       </main>
 
       <footer>
-        <span>PDFPrivado Pro · interfaz por herramientas v2</span>
+        <span>PDFPrivado Pro · unión local v1</span>
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>

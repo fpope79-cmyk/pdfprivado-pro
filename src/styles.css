@@ -1299,3 +1299,215 @@ footer {
     padding-top: 20px;
   }
 }
+
+
+/* Unión local v1 */
+.merge-save-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 28px;
+  margin-top: 8px;
+  padding: 22px;
+}
+
+.output-name-field,
+.output-field-label,
+.output-field-help {
+  display: block;
+}
+
+.output-name-field {
+  min-width: 0;
+}
+
+.output-field-label {
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.output-name-input {
+  width: min(100%, 520px);
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+.output-name-input:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+.output-name-input:focus {
+  border-color: #38bdf8;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.12);
+}
+
+.output-name-input:disabled {
+  cursor: wait;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.output-field-help {
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.merge-action-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.merge-requirement {
+  max-width: 280px;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.merge-requirement[data-kind="ready"] {
+  color: #166534;
+}
+
+.merge-requirement[data-kind="working"] {
+  color: #0369a1;
+}
+
+.merge-requirement[data-kind="error"] {
+  color: #b91c1c;
+}
+
+.merge-pdf-button {
+  min-width: 154px !important;
+  white-space: nowrap;
+}
+
+.merge-pdf-button.is-processing {
+  cursor: wait;
+}
+
+.merge-progress-panel {
+  margin-top: 12px;
+  padding: 16px 18px;
+  border: 1px solid #bae6fd;
+  border-radius: 15px;
+  background: #f0f9ff;
+}
+
+.merge-progress-panel[hidden] {
+  display: none;
+}
+
+.merge-progress-panel[data-kind="success"] {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.merge-progress-panel[data-kind="error"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.merge-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.merge-progress-header strong {
+  color: #334155;
+  font-size: 0.84rem;
+}
+
+.merge-progress-header span {
+  color: #0369a1;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.merge-progress-panel progress {
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.merge-progress-panel progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.merge-progress-panel progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: #0284c7;
+}
+
+.merge-progress-panel[data-kind="success"] progress::-webkit-progress-value {
+  background: #16a34a;
+}
+
+.merge-progress-panel progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: #0284c7;
+}
+
+.merge-progress-panel p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.drag-handle:disabled,
+.remove-button:disabled,
+.add-files-button:disabled {
+  cursor: wait;
+  opacity: 0.45;
+}
+
+@media (max-width: 760px) {
+  .merge-save-bar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .output-name-input {
+    width: 100%;
+  }
+
+  .merge-action-group {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .merge-requirement {
+    max-width: none;
+    text-align: left;
+  }
+
+  .merge-pdf-button {
+    width: 100%;
+  }
+}
