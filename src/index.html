@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Prototipo interno de PDFPrivado Pro. Selección local de documentos PDF."
+      content="Prototipo interno de PDFPrivado Pro. Herramientas PDF locales y privadas."
     />
     <title>PDFPrivado Pro</title>
     <script type="module" src="/main.js" defer></script>
@@ -29,139 +29,217 @@
       </header>
 
       <main>
-        <section class="hero" aria-labelledby="hero-title">
-          <div class="hero-copy">
-            <p class="eyebrow">Aplicación de escritorio</p>
-            <h1 id="hero-title">Tus PDF permanecen en tu equipo</h1>
-            <p class="hero-text">
-              Selecciona uno o varios documentos. En esta fase solo mostramos
-              sus nombres y tamaños; todavía no se lee ni modifica su contenido.
-            </p>
+        <div class="app-view" id="home-view">
+          <section class="hero hero-home" aria-labelledby="hero-title">
+            <div class="hero-copy">
+              <p class="eyebrow">Aplicación de escritorio</p>
+              <h1 id="hero-title">Tus PDF permanecen en tu equipo</h1>
+              <p class="hero-text">
+                Elige la herramienta que necesitas. Cada espacio de trabajo está
+                diseñado para procesar los documentos localmente, sin subirlos a
+                Internet.
+              </p>
 
-            <div class="hero-actions">
-              <input
-                id="pdf-file-input"
-                class="visually-hidden"
-                type="file"
-                accept=".pdf,application/pdf"
-                multiple
-                tabindex="-1"
-                aria-hidden="true"
-              />
-              <button class="primary-button" id="select-pdf-button" type="button">
-                Abrir archivos PDF
-              </button>
-              <span class="helper-text" id="selector-status" role="status">
-                Puedes elegir varios archivos a la vez.
-              </span>
-            </div>
-          </div>
-
-          <aside class="privacy-card" aria-label="Principios de privacidad">
-            <h2>Privacidad por diseño</h2>
-            <ul>
-              <li>Sin subida de documentos.</li>
-              <li>Sin analítica ni telemetría.</li>
-              <li>Sin dependencias cargadas desde CDN.</li>
-              <li>Solo se usan los archivos elegidos por el usuario.</li>
-            </ul>
-          </aside>
-        </section>
-
-        <section class="selection-section" aria-labelledby="selection-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Selección local</p>
-              <h2 id="selection-title">Archivos preparados</h2>
             </div>
 
-            <div class="selection-actions">
-              <span class="selection-summary" id="selection-summary">
-                0 archivos · 0 B
-              </span>
+            <aside class="privacy-card" aria-label="Principios de privacidad">
+              <h2>Privacidad por diseño</h2>
+              <ul>
+                <li>Sin subida de documentos.</li>
+                <li>Sin analítica ni telemetría.</li>
+                <li>Sin dependencias cargadas desde CDN.</li>
+                <li>Solo se usan los archivos elegidos por el usuario.</li>
+              </ul>
+            </aside>
+          </section>
+
+          <section class="tools-section home-tools" aria-labelledby="tools-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Herramientas locales</p>
+                <h2 id="tools-title">¿Qué quieres hacer?</h2>
+              </div>
+              <span class="internal-label">No disponible públicamente</span>
+            </div>
+
+            <div class="tool-grid">
               <button
-                class="add-files-button"
-                id="add-more-files-button"
+                class="tool-card tool-card-button tool-card-active"
                 type="button"
-                hidden
+                data-open-tool="merge"
+                aria-describedby="merge-tool-description merge-card-status"
               >
-                + Añadir archivos
-              </button>
-              <button class="secondary-button" id="clear-files-button" type="button" disabled>
-                Vaciar lista
-              </button>
-            </div>
-          </div>
-
-          <div class="selection-panel">
-            <div class="empty-state" id="empty-state">
-              <button
-                class="empty-add-button"
-                id="empty-add-button"
-                type="button"
-                aria-label="Añadir archivos PDF"
-              >
-                <span class="empty-icon" aria-hidden="true">+</span>
-                <span class="empty-copy">
-                  <strong>Añadir archivos PDF</strong>
-                  <span>Selecciona uno o varios documentos locales.</span>
+                <span class="tool-card-topline">
+                  <span class="tool-number">01</span>
+                  <span class="available-label">Disponible</span>
+                </span>
+                <h3>Unir PDF</h3>
+                <p id="merge-tool-description">
+                  Selecciona varios documentos, decide su orden y prepara una
+                  copia combinada sin modificar los originales.
+                </p>
+                <span class="tool-card-footer">
+                  <span class="tool-card-status" id="merge-card-status">
+                    Abrir herramienta
+                  </span>
+                  <span class="tool-card-arrow" aria-hidden="true">→</span>
                 </span>
               </button>
-            </div>
 
-            <ol class="file-list" id="file-list" aria-live="polite"></ol>
+              <article class="tool-card tool-card-unavailable" aria-disabled="true">
+                <span class="tool-card-topline">
+                  <span class="tool-number">02</span>
+                  <span class="coming-soon">Próximamente</span>
+                </span>
+                <h3>Dividir PDF</h3>
+                <p>
+                  Extraer páginas o intervalos y guardarlos como documentos
+                  nuevos.
+                </p>
+                <span class="unavailable-note">Todavía no implementado</span>
+              </article>
+
+              <article class="tool-card tool-card-unavailable" aria-disabled="true">
+                <span class="tool-card-topline">
+                  <span class="tool-number">03</span>
+                  <span class="coming-soon">Próximamente</span>
+                </span>
+                <h3>Rotar páginas</h3>
+                <p>
+                  Corregir la orientación de páginas concretas y guardar una
+                  copia nueva.
+                </p>
+                <span class="unavailable-note">Todavía no implementado</span>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div
+          class="app-view workspace-view"
+          id="merge-view"
+          aria-labelledby="merge-title"
+          hidden
+        >
+          <div class="workspace-toolbar">
+            <button class="back-button" id="back-home-button" type="button">
+              <span aria-hidden="true">←</span>
+              Volver al inicio
+            </button>
+            <span class="workspace-local-badge">
+              <span class="status-dot" aria-hidden="true"></span>
+              Espacio de trabajo local
+            </span>
           </div>
 
-          <div
-            class="selection-feedback"
-            id="selection-feedback"
+          <section class="workspace-heading">
+            <p class="eyebrow">Herramienta local</p>
+            <h1 id="merge-title" tabindex="-1">Unir PDF</h1>
+            <p class="workspace-description">
+              Combina varios documentos en el orden que elijas, sin subirlos a
+              Internet y sin modificar los originales.
+            </p>
+          </section>
+
+          <input
+            id="pdf-file-input"
+            class="visually-hidden"
+            type="file"
+            accept=".pdf,application/pdf"
+            multiple
+            tabindex="-1"
+            aria-hidden="true"
+          />
+          <span
+            class="visually-hidden"
+            id="selector-status"
             role="status"
             aria-live="polite"
-            hidden
-          ></div>
+          >
+            Puedes elegir varios archivos a la vez.
+          </span>
 
-          <p class="local-note">
-            La aplicación no muestra rutas completas. Cerrar la aplicación borra
-            esta lista temporal.
-          </p>
-        </section>
+          <section class="selection-section workspace-selection" aria-labelledby="selection-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Orden de unión</p>
+                <h2 id="selection-title">Archivos preparados</h2>
+              </div>
 
-        <section class="tools-section" aria-labelledby="tools-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">MVP técnico</p>
-              <h2 id="tools-title">Próximas herramientas</h2>
+              <div class="selection-actions">
+                <span class="selection-summary" id="selection-summary">
+                  0 archivos · 0 B
+                </span>
+                <button
+                  class="add-files-button"
+                  id="add-more-files-button"
+                  type="button"
+                  hidden
+                >
+                  + Añadir archivos
+                </button>
+                <button
+                  class="secondary-button"
+                  id="clear-files-button"
+                  type="button"
+                  disabled
+                >
+                  Vaciar lista
+                </button>
+              </div>
             </div>
-            <span class="internal-label">No disponible públicamente</span>
+
+            <div class="selection-panel">
+              <div class="empty-state" id="empty-state">
+                <button
+                  class="empty-add-button"
+                  id="empty-add-button"
+                  type="button"
+                  aria-label="Añadir archivos PDF"
+                >
+                  <span class="empty-icon" aria-hidden="true">+</span>
+                  <span class="empty-copy">
+                    <strong>Añadir archivos PDF</strong>
+                    <span>Selecciona uno o varios documentos locales.</span>
+                  </span>
+                </button>
+              </div>
+
+              <ol class="file-list" id="file-list" aria-live="polite"></ol>
+            </div>
+
+            <div
+              class="selection-feedback"
+              id="selection-feedback"
+              role="status"
+              aria-live="polite"
+              hidden
+            ></div>
+
+            <p class="local-note" id="reorder-instructions">
+              Arrastra cada PDF desde el asa de puntos. La fila seguirá el puntero y
+              las demás abrirán espacio en tiempo real. Con el asa enfocada también
+              puedes usar las flechas ↑ y ↓. La aplicación no muestra rutas completas
+              y cerrar la aplicación borra esta lista temporal.
+            </p>
+          </section>
+
+          <div class="workspace-action-bar" aria-label="Acción de la herramienta">
+            <div>
+              <strong>La unión real será el siguiente avance</strong>
+              <span>
+                Primero estamos cerrando la selección y el orden de los documentos.
+              </span>
+            </div>
+            <button class="primary-button" type="button" disabled>
+              Unir PDF
+            </button>
           </div>
-
-          <div class="tool-grid">
-            <article class="tool-card">
-              <span class="tool-number">01</span>
-              <h3>Unir PDF</h3>
-              <p>Combinar los documentos seleccionados y elegir el archivo de salida.</p>
-              <span class="coming-soon">Siguiente fase</span>
-            </article>
-
-            <article class="tool-card">
-              <span class="tool-number">02</span>
-              <h3>Dividir PDF</h3>
-              <p>Extraer páginas o intervalos sin modificar el archivo original.</p>
-              <span class="coming-soon">Próximamente</span>
-            </article>
-
-            <article class="tool-card">
-              <span class="tool-number">03</span>
-              <h3>Rotar páginas</h3>
-              <p>Corregir la orientación y guardar una copia nueva.</p>
-              <span class="coming-soon">Próximamente</span>
-            </article>
-          </div>
-        </section>
+        </div>
       </main>
 
       <footer>
-        <span>PDFPrivado Pro · selector local v4</span>
+        <span>PDFPrivado Pro · interfaz por herramientas v2</span>
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>
