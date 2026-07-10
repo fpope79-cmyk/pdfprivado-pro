@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Prototipo interno de PDFPrivado Pro. Procesamiento local y sin conexión."
+      content="Prototipo interno de PDFPrivado Pro. Selección local de documentos PDF."
     />
     <title>PDFPrivado Pro</title>
     <script type="module" src="/main.js" defer></script>
@@ -34,15 +34,26 @@
             <p class="eyebrow">Aplicación de escritorio</p>
             <h1 id="hero-title">Tus PDF permanecen en tu equipo</h1>
             <p class="hero-text">
-              Esta primera versión solo prepara la estructura visual de
-              PDFPrivado Pro. Todavía no procesa documentos.
+              Selecciona uno o varios documentos. En esta fase solo mostramos
+              sus nombres y tamaños; todavía no se lee ni modifica su contenido.
             </p>
 
             <div class="hero-actions">
-              <button class="primary-button" type="button" disabled>
+              <input
+                id="pdf-file-input"
+                class="visually-hidden"
+                type="file"
+                accept=".pdf,application/pdf"
+                multiple
+                tabindex="-1"
+                aria-hidden="true"
+              />
+              <button class="primary-button" id="select-pdf-button" type="button">
                 Abrir archivos PDF
               </button>
-              <span class="helper-text">Se activará en el siguiente prototipo.</span>
+              <span class="helper-text" id="selector-status" role="status">
+                Puedes elegir varios archivos a la vez.
+              </span>
             </div>
           </div>
 
@@ -52,16 +63,74 @@
               <li>Sin subida de documentos.</li>
               <li>Sin analítica ni telemetría.</li>
               <li>Sin dependencias cargadas desde CDN.</li>
-              <li>Acceso únicamente a archivos elegidos por el usuario.</li>
+              <li>Solo se usan los archivos elegidos por el usuario.</li>
             </ul>
           </aside>
+        </section>
+
+        <section class="selection-section" aria-labelledby="selection-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Selección local</p>
+              <h2 id="selection-title">Archivos preparados</h2>
+            </div>
+
+            <div class="selection-actions">
+              <span class="selection-summary" id="selection-summary">
+                0 archivos · 0 B
+              </span>
+              <button
+                class="add-files-button"
+                id="add-more-files-button"
+                type="button"
+                hidden
+              >
+                + Añadir archivos
+              </button>
+              <button class="secondary-button" id="clear-files-button" type="button" disabled>
+                Vaciar lista
+              </button>
+            </div>
+          </div>
+
+          <div class="selection-panel">
+            <div class="empty-state" id="empty-state">
+              <button
+                class="empty-add-button"
+                id="empty-add-button"
+                type="button"
+                aria-label="Añadir archivos PDF"
+              >
+                <span class="empty-icon" aria-hidden="true">+</span>
+                <span class="empty-copy">
+                  <strong>Añadir archivos PDF</strong>
+                  <span>Selecciona uno o varios documentos locales.</span>
+                </span>
+              </button>
+            </div>
+
+            <ol class="file-list" id="file-list" aria-live="polite"></ol>
+          </div>
+
+          <div
+            class="selection-feedback"
+            id="selection-feedback"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></div>
+
+          <p class="local-note">
+            La aplicación no muestra rutas completas. Cerrar la aplicación borra
+            esta lista temporal.
+          </p>
         </section>
 
         <section class="tools-section" aria-labelledby="tools-title">
           <div class="section-heading">
             <div>
               <p class="eyebrow">MVP técnico</p>
-              <h2 id="tools-title">Primeras herramientas previstas</h2>
+              <h2 id="tools-title">Próximas herramientas</h2>
             </div>
             <span class="internal-label">No disponible públicamente</span>
           </div>
@@ -70,8 +139,8 @@
             <article class="tool-card">
               <span class="tool-number">01</span>
               <h3>Unir PDF</h3>
-              <p>Combinar varios documentos y elegir el archivo de salida.</p>
-              <span class="coming-soon">Próximamente</span>
+              <p>Combinar los documentos seleccionados y elegir el archivo de salida.</p>
+              <span class="coming-soon">Siguiente fase</span>
             </article>
 
             <article class="tool-card">
@@ -92,7 +161,7 @@
       </main>
 
       <footer>
-        <span>PDFPrivado Pro · versión técnica inicial</span>
+        <span>PDFPrivado Pro · selector local v4</span>
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>
