@@ -262,6 +262,32 @@
                   <strong id="viewer-zoom-value">100 %</strong>
                   <button id="viewer-zoom-in-button" type="button" title="Ampliar" disabled>+</button>
                 </div>
+                <div class="viewer-toolbar-group viewer-global-history" aria-label="Historial del documento">
+                  <button
+                    class="viewer-history-command"
+                    id="viewer-undo-button"
+                    type="button"
+                    title="Deshacer último cambio (Ctrl+Z)"
+                    aria-label="Deshacer último cambio"
+                    disabled
+                  ><span aria-hidden="true">↶</span><b>Deshacer</b></button>
+                  <button
+                    class="viewer-history-command"
+                    id="viewer-redo-button"
+                    type="button"
+                    title="Rehacer último cambio (Ctrl+Y)"
+                    aria-label="Rehacer último cambio"
+                    disabled
+                  ><span aria-hidden="true">↷</span><b>Rehacer</b></button>
+                  <button
+                    class="viewer-history-command viewer-history-reset-command"
+                    id="viewer-reset-document-button"
+                    type="button"
+                    title="Restablecer el documento a su estado inicial"
+                    aria-label="Restablecer el documento a su estado inicial"
+                    disabled
+                  ><span aria-hidden="true">⟲</span><b>Restablecer</b></button>
+                </div>
               </div>
 
               <div class="viewer-stage-stack">
@@ -364,14 +390,6 @@
                   </label>
                   <button class="secondary-button viewer-panel-secondary" id="viewer-panel-insert-pdf-button" type="button" disabled>Insertar páginas de otro PDF</button>
                   <button class="secondary-button viewer-panel-secondary" id="viewer-panel-add-blank-button" type="button" disabled>Añadir página A4 en blanco</button>
-                </section>
-                <section class="viewer-tool-section">
-                  <p class="eyebrow">Historial del documento</p>
-                  <div class="viewer-history-actions">
-                    <button class="secondary-button" id="viewer-undo-button" type="button" disabled>Deshacer</button>
-                    <button class="secondary-button" id="viewer-redo-button" type="button" disabled>Rehacer</button>
-                    <button class="secondary-button viewer-danger-subtle" id="viewer-reset-document-button" type="button" disabled>Restablecer</button>
-                  </div>
                 </section>
               </div>
 

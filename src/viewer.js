@@ -247,6 +247,10 @@ const viewerLayoutState = {
   veryCompact: false,
   compactThumbnailsOverride: null,
   compactToolsOverride: null,
+  contextualToolsOverride: null,
+  organizeThumbnailsOverride: null,
+  organizeToolsOverride: null,
+  organizeReturnTool: "overview",
 };
 
 function persistViewerLayoutPreferences() {
@@ -262,11 +266,24 @@ function persistViewerLayoutPreferences() {
 
 function effectivePanelCollapsed(panel) {
   if (panel === "thumbnails") {
+    if (state.viewMode === "organize") {
+      return viewerLayoutState.organizeThumbnailsOverride ?? true;
+    }
     if (viewerLayoutState.veryCompact) {
       return viewerLayoutState.compactThumbnailsOverride ?? true;
     }
     return viewerLayoutState.manualThumbnailsCollapsed;
   }
+
+  if (state.viewMode === "organize") {
+    return viewerLayoutState.organizeToolsOverride ?? true;
+  }
+
+  if (state.file) {
+    const defaultCollapsed = state.activeTool === "overview";
+    return viewerLayoutState.contextualToolsOverride ?? defaultCollapsed;
+  }
+
   if (viewerLayoutState.compact) {
     return viewerLayoutState.compactToolsOverride ?? true;
   }
@@ -279,6 +296,8 @@ function applyViewerPanelLayout() {
   document.body.classList.toggle("viewer-thumbnails-collapsed", thumbnailsCollapsed);
   document.body.classList.toggle("viewer-tools-collapsed", toolsCollapsed);
   document.body.classList.toggle("viewer-compact-layout", viewerLayoutState.compact);
+  document.body.classList.toggle("viewer-reading-clean", Boolean(state.file) && state.viewMode === "continuous" && state.activeTool === "overview");
+  document.body.dataset.viewerActiveTool = state.activeTool || "overview";
 
   if (toggleThumbnailsButton) {
     toggleThumbnailsButton.textContent = thumbnailsCollapsed ? "›" : "‹";
@@ -311,11 +330,18 @@ function updateResponsiveViewerLayout() {
 function toggleViewerPanel(panel) {
   const collapsed = effectivePanelCollapsed(panel);
   if (panel === "thumbnails") {
-    if (viewerLayoutState.veryCompact) viewerLayoutState.compactThumbnailsOverride = !collapsed;
-    else {
+    if (state.viewMode === "organize") {
+      viewerLayoutState.organizeThumbnailsOverride = !collapsed;
+    } else if (viewerLayoutState.veryCompact) {
+      viewerLayoutState.compactThumbnailsOverride = !collapsed;
+    } else {
       viewerLayoutState.manualThumbnailsCollapsed = !collapsed;
       persistViewerLayoutPreferences();
     }
+  } else if (state.viewMode === "organize") {
+    viewerLayoutState.organizeToolsOverride = !collapsed;
+  } else if (state.file) {
+    viewerLayoutState.contextualToolsOverride = !collapsed;
   } else if (viewerLayoutState.compact) {
     viewerLayoutState.compactToolsOverride = !collapsed;
   } else {
@@ -324,6 +350,14 @@ function toggleViewerPanel(panel) {
   }
   applyViewerPanelLayout();
   scheduleViewerLayoutRefresh(true);
+}
+
+function organizeSummaryLabel(selectedCount = state.selectedIds.size) {
+  const pages = state.pageCount;
+  const selected = Number(selectedCount) || 0;
+  const pageLabel = pages === 1 ? "1 página" : `${pages} páginas`;
+  const selectedLabel = selected === 1 ? "1 seleccionada" : `${selected} seleccionadas`;
+  return `Organizar páginas · ${pageLabel} · ${selectedLabel}`;
 }
 
 function stylePixels(styles, property) {
@@ -2165,7 +2199,7 @@ function moveOrganizeMarquee(event) {
   state.selectedIds = next;
   refreshSelectionVisuals();
   selectedCount.textContent = String(state.selectedIds.size);
-  organizeSummary.textContent = `${state.pageCount} ${state.pageCount === 1 ? "página" : "páginas"} · ${state.selectedIds.size} seleccionadas`;
+  organizeSummary.textContent = organizeSummaryLabel();
 }
 
 function finishOrganizeMarquee(event, cancelled = false) {
@@ -2243,7 +2277,7 @@ function buildOrganizeGrid() {
   organizeGrid.replaceChildren();
   state.organizeVirtual = null;
   organizeGrid.classList.remove('is-virtualized');
-  organizeSummary.textContent = `${state.pageCount} ${state.pageCount === 1 ? "página" : "páginas"} · ${state.selectedIds.size} seleccionadas`;
+  organizeSummary.textContent = organizeSummaryLabel();
 
   if (isExtremeDocument()) {
     state.organizeVirtual = { start: -1, end: -1, columns: 0, cardHeight: 310, rowStride: 324, rows: 0 };
@@ -2338,10 +2372,13 @@ function setViewMode(mode, rebuild = true) {
     cancelTaskMap(state.organizeTasks);
   }
   state.viewMode = resolvedMode;
+  viewerLayoutState.organizeThumbnailsOverride = null;
+  viewerLayoutState.organizeToolsOverride = null;
   canvasStage.hidden = true;
   continuousStage.hidden = resolvedMode !== "continuous";
   organizeStage.hidden = resolvedMode !== "organize";
   document.body.classList.toggle("viewer-organize-active", resolvedMode === "organize");
+  applyViewerPanelLayout();
   if (rebuild && state.file) {
     if (resolvedMode === "continuous") {
       const page = state.currentPage;
@@ -2362,6 +2399,18 @@ function setViewMode(mode, rebuild = true) {
 
 function activateTool(name) {
   const before = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
+  const enteringOrganize = Boolean(state.file && name === "organize" && state.viewMode !== "organize");
+  const leavingOrganizeForOverview = name === "overview" && state.viewMode === "organize";
+
+  if (enteringOrganize) {
+    viewerLayoutState.organizeReturnTool =
+      state.activeTool && state.activeTool !== "organize" ? state.activeTool : "overview";
+  } else if (state.viewMode === "organize" && !["overview", "organize"].includes(name)) {
+    // Si se trabaja con una herramienta contextual sobre la cuadrícula,
+    // volver a lectura recuperará esa herramienta y su panel.
+    viewerLayoutState.organizeReturnTool = name;
+  }
+
   state.activeTool = name;
   toolTabs.forEach((button) => button.classList.toggle("is-active", button.dataset.viewerTool === name));
   toolPanels.forEach((panel) => {
@@ -2370,17 +2419,30 @@ function activateTool(name) {
     panel.hidden = !active;
   });
 
-  // La herramienta activa y la vista central son estados independientes.
-  // Entrar en Organizar abre su cuadrícula, pero cambiar a Dividir, Añadir,
-  // Rotar o Guardar no debe sacar al usuario de ella ni perder la selección.
-  if (state.file && name === "organize" && state.viewMode !== "organize") {
+  // Organizar es un espacio de trabajo de ancho completo. Sus raíles siguen
+  // disponibles, pero los paneles se pliegan temporalmente para no duplicar
+  // la cuadrícula. Inicio sí devuelve al modo de lectura.
+  if (enteringOrganize) {
     setViewMode("organize");
+  } else if (leavingOrganizeForOverview) {
+    setViewMode("continuous");
   }
+
+  viewerLayoutState.contextualToolsOverride = null;
+  if (state.viewMode === "organize") {
+    viewerLayoutState.organizeToolsOverride = ["overview", "organize"].includes(name) ? null : false;
+  }
+  applyViewerPanelLayout();
+  scheduleViewerLayoutRefresh();
 
   if (name === "split") updateSplitPlan();
   document.querySelector(`.viewer-tool-panel[data-viewer-tool-panel="${name}"]`)?.scrollTo?.({ top: 0 });
   const after = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
-  const expectedView = name === "organize" && state.file ? "organize" : before.viewMode;
+  const expectedView = enteringOrganize
+    ? "organize"
+    : leavingOrganizeForOverview
+      ? "continuous"
+      : before.viewMode;
   const passed = before.currentPage === after.currentPage && before.selectedPages === after.selectedPages && after.viewMode === expectedView;
   diagEmit("state-check", { operation: "tool-change", passed, before, after });
   diagnosticContext();
@@ -2421,7 +2483,7 @@ function updateControls() {
   const dirty = isDocumentChanged();
   const rotations = changedRotationCount();
   selectedCount.textContent = `${selected} ${selected === 1 ? "seleccionada" : "seleccionadas"}`;
-  organizeSummary.textContent = `${state.pageCount} ${state.pageCount === 1 ? "página" : "páginas"} · ${selected} seleccionadas`;
+  organizeSummary.textContent = organizeSummaryLabel(selected);
   pageTotal.textContent = `/ ${state.pageCount || 0}`;
   pageInput.max = String(state.pageCount || 1);
   previousButton.disabled = !ready || state.currentPage <= 1;
@@ -2474,6 +2536,7 @@ function updateControls() {
   if (rotateScope.value === "selected" && !selected) rotationSummary.textContent = "Selecciona páginas en las miniaturas para girarlas juntas.";
   fitWidthButton.classList.toggle("is-active", state.zoomMode === "fit-width");
   fitPageButton.classList.toggle("is-active", state.zoomMode === "fit-page");
+  applyViewerPanelLayout();
   diagnosticContext();
 }
 
@@ -2986,7 +3049,13 @@ progressCloseButton?.addEventListener("click", resetProgress);
 toolTabs.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.viewerTool)));
 toolLinks.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.activateTool)));
 openOrganizeButton?.addEventListener("click", () => {
-  setViewMode(state.viewMode === "organize" ? "continuous" : "organize");
+  if (state.viewMode === "organize") {
+    const returnTool = viewerLayoutState.organizeReturnTool || "overview";
+    setViewMode("continuous");
+    activateTool(returnTool === "organize" ? "overview" : returnTool);
+    return;
+  }
+  activateTool("organize");
 });
 panelInsertPdfButton?.addEventListener("click", () => openInsertPicker(insertPosition.value));
 panelAddBlankButton?.addEventListener("click", () => addBlankPage(insertPosition.value));
