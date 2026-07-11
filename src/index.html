@@ -161,16 +161,18 @@
           </span>
 
           <section class="selection-section workspace-selection" aria-labelledby="selection-title">
-            <div class="section-heading">
+            <div class="section-heading selection-heading">
               <div>
                 <p class="eyebrow">Orden de unión</p>
                 <h2 id="selection-title">Archivos preparados</h2>
               </div>
+              <span class="selection-summary" id="selection-summary">
+                0 archivos · 0 B
+              </span>
+            </div>
 
-              <div class="selection-actions">
-                <span class="selection-summary" id="selection-summary">
-                  0 archivos · 0 B
-                </span>
+            <div class="merge-toolbar file-toolbar" aria-label="Acciones sobre los archivos PDF">
+              <div class="toolbar-group toolbar-file-actions">
                 <button
                   class="add-files-button"
                   id="add-more-files-button"
@@ -178,6 +180,16 @@
                   hidden
                 >
                   + Añadir archivos
+                </button>
+                <button
+                  class="secondary-button organize-pages-button"
+                  id="organize-pages-button"
+                  type="button"
+                  aria-pressed="false"
+                  title="Abrir las miniaturas para organizar y editar las páginas"
+                  disabled
+                >
+                  Organizar y editar páginas
                 </button>
                 <button
                   class="secondary-button"
@@ -223,9 +235,110 @@
               puedes usar las flechas ↑ y ↓. Los documentos se leen únicamente al
               pulsar Unir y guardar; nunca se suben y los originales no se modifican.
             </p>
+
+            <section
+              class="page-organizer"
+              id="page-organizer"
+              aria-labelledby="page-organizer-title"
+              hidden
+            >
+              <div class="page-organizer-header">
+                <div>
+                  <p class="eyebrow">Vista previa local</p>
+                  <h2 id="page-organizer-title">Páginas del resultado</h2>
+                  <p>
+                    Arrastra las miniaturas para decidir el orden exacto del PDF final.
+                    Pulsa una página para seleccionarla y utiliza la barra de edición situada justo debajo para girarla,
+                    duplicarla, eliminarla o insertar páginas en blanco.
+                  </p>
+                </div>
+                <button
+                  class="secondary-button"
+                  id="close-page-organizer-button"
+                  type="button"
+                >
+                  Cerrar vista
+                </button>
+              </div>
+
+              <div
+                class="page-edit-toolbar"
+                id="page-action-toolbar"
+                aria-label="Herramientas para editar las páginas seleccionadas"
+              >
+                <span class="selected-pages-count" id="selected-pages-count">0 seleccionadas</span>
+                <button class="toolbar-button" id="select-all-pages-button" type="button" disabled>
+                  Seleccionar todo
+                </button>
+                <button class="toolbar-button" id="rotate-left-button" type="button" title="Girar páginas seleccionadas 90 grados a la izquierda" disabled>
+                  ↶ Girar
+                </button>
+                <button class="toolbar-button" id="rotate-right-button" type="button" title="Girar páginas seleccionadas 90 grados a la derecha" disabled>
+                  ↷ Girar
+                </button>
+                <button class="toolbar-button" id="duplicate-pages-button" type="button" disabled>
+                  Duplicar
+                </button>
+                <button class="toolbar-button" id="add-blank-page-button" type="button" disabled>
+                  + Página en blanco
+                </button>
+                <button class="toolbar-button toolbar-button-danger" id="delete-pages-button" type="button" disabled>
+                  Eliminar
+                </button>
+                <button class="toolbar-button" id="undo-page-change-button" type="button" disabled>
+                  Deshacer
+                </button>
+              </div>
+
+              <div
+                class="page-organizer-status"
+                id="page-organizer-status"
+                role="status"
+                aria-live="polite"
+              >
+                Pulsa Organizar y editar páginas para generar las miniaturas.
+              </div>
+
+              <div class="page-preview-groups page-result-grid" id="page-preview-groups" aria-label="Orden final de páginas"></div>
+            </section>
           </section>
 
-          <div class="workspace-action-bar merge-save-bar" aria-label="Unir y guardar resultado">
+          <section class="result-options-panel" id="result-options-panel" aria-labelledby="result-options-title" hidden>
+            <div class="result-options-heading">
+              <div>
+                <p class="eyebrow">Configuración local</p>
+                <h3 id="result-options-title">Opciones del resultado</h3>
+                <p>Estas preferencias se aplican únicamente al archivo nuevo y se procesan dentro del equipo.</p>
+              </div>
+              <button class="secondary-button" id="close-result-options-button" type="button">Cerrar</button>
+            </div>
+
+            <div class="result-options-grid">
+              <label class="option-card">
+                <input id="clean-metadata-option" type="checkbox" checked />
+                <span>
+                  <strong>Metadatos básicos limpios</strong>
+                  <small>Crea autor, asunto y palabras clave vacíos. No altera el contenido visible de las páginas.</small>
+                </span>
+              </label>
+              <label class="option-card">
+                <input id="title-from-name-option" type="checkbox" checked />
+                <span>
+                  <strong>Usar el nombre como título interno</strong>
+                  <small>El título interno se tomará del nombre elegido para el archivo de salida.</small>
+                </span>
+              </label>
+              <label class="option-card">
+                <input id="page-numbers-option" type="checkbox" />
+                <span>
+                  <strong>Numerar las páginas</strong>
+                  <small>Añade una numeración discreta centrada en el margen inferior del PDF nuevo.</small>
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <div class="workspace-action-bar merge-save-bar" aria-label="Configurar, unir y guardar resultado">
             <label class="output-name-field" for="output-name-input">
               <span class="output-field-label">Nombre del archivo nuevo</span>
               <input
@@ -243,6 +356,16 @@
             </label>
 
             <div class="merge-action-group">
+              <button
+                class="secondary-button result-options-button"
+                id="result-options-button"
+                type="button"
+                aria-expanded="false"
+                aria-controls="result-options-panel"
+                disabled
+              >
+                Opciones del resultado
+              </button>
               <span class="merge-requirement" id="merge-requirement">
                 Añade al menos 2 PDF para comenzar.
               </span>
@@ -275,7 +398,7 @@
       </main>
 
       <footer>
-        <span>PDFPrivado Pro · unión local v1</span>
+        <span>PDFPrivado Pro · edición visual de páginas v3.1</span>
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>

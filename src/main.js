@@ -1,3 +1,10 @@
+import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "./vendor/pdfjs/pdf.worker.mjs",
+  import.meta.url
+).href;
+
 const year = document.querySelector("#current-year");
 const homeView = document.querySelector("#home-view");
 const mergeView = document.querySelector("#merge-view");
@@ -22,6 +29,26 @@ const mergeProgress = document.querySelector("#merge-progress");
 const mergeProgressTitle = document.querySelector("#merge-progress-title");
 const mergeProgressValue = document.querySelector("#merge-progress-value");
 const mergeProgressDetail = document.querySelector("#merge-progress-detail");
+const organizePagesButton = document.querySelector("#organize-pages-button");
+const pageOrganizer = document.querySelector("#page-organizer");
+const closePageOrganizerButton = document.querySelector("#close-page-organizer-button");
+const pageOrganizerStatus = document.querySelector("#page-organizer-status");
+const pagePreviewGroups = document.querySelector("#page-preview-groups");
+const pageActionToolbar = document.querySelector("#page-action-toolbar");
+const selectedPagesCount = document.querySelector("#selected-pages-count");
+const selectAllPagesButton = document.querySelector("#select-all-pages-button");
+const rotateLeftButton = document.querySelector("#rotate-left-button");
+const rotateRightButton = document.querySelector("#rotate-right-button");
+const duplicatePagesButton = document.querySelector("#duplicate-pages-button");
+const addBlankPageButton = document.querySelector("#add-blank-page-button");
+const deletePagesButton = document.querySelector("#delete-pages-button");
+const undoPageChangeButton = document.querySelector("#undo-page-change-button");
+const resultOptionsButton = document.querySelector("#result-options-button");
+const resultOptionsPanel = document.querySelector("#result-options-panel");
+const closeResultOptionsButton = document.querySelector("#close-result-options-button");
+const cleanMetadataOption = document.querySelector("#clean-metadata-option");
+const titleFromNameOption = document.querySelector("#title-from-name-option");
+const pageNumbersOption = document.querySelector("#page-numbers-option");
 
 const selectedFiles = [];
 const rowAnimations = new WeakMap();
@@ -38,6 +65,20 @@ const dragState = {
   active: false,
 };
 let mergeInProgress = false;
+let pageOrganizerInProgress = false;
+let pageOrganizerSignature = "";
+let pagePlan = [];
+let pageDragState = null;
+let pageDragAutoScrollFrame = null;
+const selectedPageIds = new Set();
+const pageHistory = [];
+let pageItemSequence = 0;
+let lastSelectedPageId = null;
+const resultOptions = {
+  cleanMetadata: true,
+  titleFromName: true,
+  pageNumbers: false,
+};
 
 if (year) {
   year.textContent = String(new Date().getFullYear());
@@ -128,6 +169,7 @@ function removeFile(key) {
 
   if (index >= 0) {
     selectedFiles.splice(index, 1);
+    invalidatePageOrganizer();
     resetMergeProgress();
     renderFiles();
     setStatus("Archivo retirado de la lista temporal.");
@@ -173,6 +215,7 @@ function moveFileToIndex(key, targetIndex) {
   }
 
   const finalIndex = selectedFiles.findIndex((item) => item.key === key);
+  invalidatePageOrganizer();
   resetMergeProgress();
   renderFiles();
 
@@ -446,6 +489,7 @@ function endPointerDrag(event) {
     return;
   }
 
+  invalidatePageOrganizer();
   resetMergeProgress();
   renderFiles();
 
@@ -577,6 +621,7 @@ function renderFiles() {
   }
 
   updateMergeControls();
+  updatePageOrganizerControls();
 }
 
 function addSelectedFiles(fileCollection) {
@@ -608,6 +653,7 @@ function addSelectedFiles(fileCollection) {
   }
 
   if (added > 0) {
+    invalidatePageOrganizer();
     resetMergeProgress();
   }
 
@@ -641,6 +687,988 @@ function addSelectedFiles(fileCollection) {
   }
 
   fileInput.value = "";
+}
+
+
+
+function currentSelectionSignature() {
+  return selectedFiles.map((item) => item.key).join("\u001f");
+}
+
+
+function clonePagePlan(plan = pagePlan) {
+  return plan.map((item) => ({ ...item }));
+}
+
+function pushPageHistory(snapshot = clonePagePlan()) {
+  pageHistory.push(snapshot);
+  if (pageHistory.length > 20) {
+    pageHistory.shift();
+  }
+}
+
+function clearPageSelection() {
+  selectedPageIds.clear();
+  lastSelectedPageId = null;
+}
+
+function selectedPageItems() {
+  return pagePlan.filter((item) => selectedPageIds.has(item.id));
+}
+
+function pageOrganizerIsReady() {
+  return Boolean(
+    pageOrganizer &&
+      !pageOrganizer.hidden &&
+      pageOrganizerSignature === currentSelectionSignature() &&
+      pagePlan.length > 0
+  );
+}
+
+function makePageItemId(prefix = "page") {
+  pageItemSequence += 1;
+  return `${prefix}\u001e${Date.now()}\u001e${pageItemSequence}`;
+}
+
+function updatePageActionControls() {
+  const ready = pageOrganizerIsReady();
+  const selectedCount = selectedPageIds.size;
+  const busy = mergeInProgress || pageOrganizerInProgress;
+  const allSelected = ready && selectedCount === pagePlan.length;
+
+  if (pageActionToolbar) {
+    pageActionToolbar.dataset.ready = ready ? "true" : "false";
+  }
+
+  if (selectedPagesCount) {
+    selectedPagesCount.textContent = `${selectedCount} ${selectedCount === 1 ? "seleccionada" : "seleccionadas"}`;
+    selectedPagesCount.dataset.hasSelection = selectedCount > 0 ? "true" : "false";
+  }
+
+  if (selectAllPagesButton) {
+    selectAllPagesButton.disabled = busy || !ready;
+    selectAllPagesButton.textContent = allSelected ? "Deseleccionar todo" : "Seleccionar todo";
+  }
+
+  for (const button of [rotateLeftButton, rotateRightButton, duplicatePagesButton]) {
+    if (button) {
+      button.disabled = busy || !ready || selectedCount === 0;
+    }
+  }
+
+  if (deletePagesButton) {
+    deletePagesButton.disabled =
+      busy || !ready || selectedCount === 0 || selectedCount >= pagePlan.length;
+  }
+
+  if (addBlankPageButton) {
+    addBlankPageButton.disabled = busy || !ready;
+  }
+
+  if (undoPageChangeButton) {
+    undoPageChangeButton.disabled = busy || !ready || pageHistory.length === 0;
+  }
+
+  if (resultOptionsButton) {
+    resultOptionsButton.disabled = busy || selectedFiles.length === 0;
+    const isOpen = Boolean(resultOptionsPanel && !resultOptionsPanel.hidden);
+    resultOptionsButton.classList.toggle("is-active", isOpen);
+    resultOptionsButton.setAttribute("aria-expanded", String(isOpen));
+  }
+
+  if (cleanMetadataOption) {
+    cleanMetadataOption.checked = resultOptions.cleanMetadata;
+    cleanMetadataOption.disabled = busy;
+  }
+  if (titleFromNameOption) {
+    titleFromNameOption.checked = resultOptions.titleFromName;
+    titleFromNameOption.disabled = busy || !resultOptions.cleanMetadata;
+  }
+  if (pageNumbersOption) {
+    pageNumbersOption.checked = resultOptions.pageNumbers;
+    pageNumbersOption.disabled = busy;
+  }
+}
+
+function togglePageSelection(pageId, additive = true) {
+  if (!pagePlan.some((item) => item.id === pageId)) {
+    return;
+  }
+
+  if (!additive) {
+    clearPageSelection();
+  }
+
+  if (selectedPageIds.has(pageId)) {
+    selectedPageIds.delete(pageId);
+  } else {
+    selectedPageIds.add(pageId);
+    lastSelectedPageId = pageId;
+  }
+
+  renderPagePlan();
+}
+
+function toggleAllPages() {
+  if (!pageOrganizerIsReady()) {
+    return;
+  }
+
+  if (selectedPageIds.size === pagePlan.length) {
+    clearPageSelection();
+  } else {
+    selectedPageIds.clear();
+    pagePlan.forEach((item) => selectedPageIds.add(item.id));
+    lastSelectedPageId = pagePlan.at(-1)?.id ?? null;
+  }
+
+  renderPagePlan();
+}
+
+function rotateSelectedPages(delta) {
+  const selected = selectedPageItems();
+  if (selected.length === 0 || !pageOrganizerIsReady()) {
+    return;
+  }
+
+  pushPageHistory();
+  for (const item of selected) {
+    item.rotation = ((Number(item.rotation) || 0) + delta + 360) % 360;
+  }
+  renderPagePlan();
+  updatePageOrganizerSummary(
+    `${selected.length} ${selected.length === 1 ? "página girada" : "páginas giradas"} ${delta < 0 ? "a la izquierda" : "a la derecha"}.`
+  );
+  resetMergeProgress();
+}
+
+function duplicateSelectedPages() {
+  const selectedIds = new Set(selectedPageIds);
+  if (selectedIds.size === 0 || !pageOrganizerIsReady()) {
+    return;
+  }
+
+  pushPageHistory();
+  const nextPlan = [];
+  const duplicatedIds = [];
+
+  for (const item of pagePlan) {
+    nextPlan.push(item);
+    if (selectedIds.has(item.id)) {
+      const duplicate = {
+        ...item,
+        id: makePageItemId("duplicate"),
+        duplicatedFrom: item.id,
+      };
+      nextPlan.push(duplicate);
+      duplicatedIds.push(duplicate.id);
+    }
+  }
+
+  pagePlan = nextPlan;
+  selectedPageIds.clear();
+  duplicatedIds.forEach((id) => selectedPageIds.add(id));
+  lastSelectedPageId = duplicatedIds.at(-1) ?? null;
+  renderPagePlan();
+  updatePageOrganizerSummary(
+    `${duplicatedIds.length} ${duplicatedIds.length === 1 ? "página duplicada" : "páginas duplicadas"}.`
+  );
+  resetMergeProgress();
+}
+
+function deleteSelectedPages() {
+  const selectedCount = selectedPageIds.size;
+  if (selectedCount === 0 || !pageOrganizerIsReady()) {
+    return;
+  }
+
+  if (selectedCount >= pagePlan.length) {
+    setFeedback("El resultado debe conservar al menos una página.", "warning");
+    return;
+  }
+
+  pushPageHistory();
+  pagePlan = pagePlan.filter((item) => !selectedPageIds.has(item.id));
+  clearPageSelection();
+  renderPagePlan();
+  updatePageOrganizerSummary(
+    `${selectedCount} ${selectedCount === 1 ? "página eliminada" : "páginas eliminadas"} del resultado.`
+  );
+  resetMergeProgress();
+}
+
+function createBlankPageImageUrl() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 300;
+  canvas.height = 424;
+  const context = canvas.getContext("2d", { alpha: false });
+
+  if (!context) {
+    return "";
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#cbd5e1";
+  context.lineWidth = 3;
+  context.setLineDash([10, 8]);
+  context.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+  context.setLineDash([]);
+  context.fillStyle = "#64748b";
+  context.font = "600 18px system-ui, sans-serif";
+  context.textAlign = "center";
+  context.fillText("Página en blanco", canvas.width / 2, canvas.height / 2);
+  return canvas.toDataURL("image/png");
+}
+
+function addBlankPage() {
+  if (!pageOrganizerIsReady()) {
+    return;
+  }
+
+  pushPageHistory();
+  const selectedIndexes = pagePlan
+    .map((item, index) => (selectedPageIds.has(item.id) ? index : -1))
+    .filter((index) => index >= 0);
+  const insertIndex = selectedIndexes.length > 0
+    ? Math.max(...selectedIndexes) + 1
+    : pagePlan.length;
+  const blank = {
+    id: makePageItemId("blank"),
+    kind: "blank",
+    fileKey: "",
+    fileName: "Página en blanco",
+    fileIndex: -1,
+    pageIndex: -1,
+    pageNumber: 0,
+    imageUrl: createBlankPageImageUrl(),
+    rotation: 0,
+    blankWidth: 595.28,
+    blankHeight: 841.89,
+  };
+
+  pagePlan.splice(insertIndex, 0, blank);
+  selectedPageIds.clear();
+  selectedPageIds.add(blank.id);
+  lastSelectedPageId = blank.id;
+  renderPagePlan();
+  updatePageOrganizerSummary(`Página en blanco añadida en la posición ${insertIndex + 1}.`);
+  resetMergeProgress();
+}
+
+function undoPageChange() {
+  const snapshot = pageHistory.pop();
+  if (!snapshot || !pageOrganizerIsReady()) {
+    return;
+  }
+
+  pagePlan = clonePagePlan(snapshot);
+  clearPageSelection();
+  renderPagePlan();
+  updatePageOrganizerSummary("Se ha deshecho el último cambio de páginas.");
+  resetMergeProgress();
+}
+
+function openResultOptions() {
+  if (!resultOptionsPanel || resultOptionsButton?.disabled) {
+    return;
+  }
+
+  resultOptionsPanel.hidden = false;
+  updatePageActionControls();
+  resultOptionsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function closeResultOptions() {
+  if (!resultOptionsPanel) {
+    return;
+  }
+
+  resultOptionsPanel.hidden = true;
+  updatePageActionControls();
+  resultOptionsButton?.focus({ preventScroll: true });
+}
+
+function invalidatePageOrganizer() {
+  pageOrganizerSignature = "";
+  pageOrganizerInProgress = false;
+  pagePlan = [];
+  pageHistory.length = 0;
+  clearPageSelection();
+  cancelPageDrag();
+
+  if (pageOrganizer) {
+    pageOrganizer.hidden = true;
+  }
+
+  if (pagePreviewGroups) {
+    pagePreviewGroups.replaceChildren();
+  }
+
+  if (pageOrganizerStatus) {
+    pageOrganizerStatus.textContent =
+      "Pulsa Organizar y editar páginas para generar las miniaturas.";
+    pageOrganizerStatus.dataset.kind = "normal";
+  }
+
+  updatePageActionControls();
+}
+
+function updatePageOrganizerControls() {
+  if (!organizePagesButton) {
+    return;
+  }
+
+  const hasFiles = selectedFiles.length > 0;
+  const isOpen = Boolean(pageOrganizer && !pageOrganizer.hidden);
+  const hasPreparedPlan =
+    pageOrganizerSignature === currentSelectionSignature() &&
+    pagePlan.length > 0;
+
+  organizePagesButton.disabled =
+    mergeInProgress || pageOrganizerInProgress || !hasFiles;
+  organizePagesButton.classList.toggle("is-active", isOpen);
+  organizePagesButton.setAttribute("aria-pressed", String(isOpen));
+
+  if (pageOrganizerInProgress) {
+    organizePagesButton.textContent = "Generando miniaturas...";
+  } else if (hasPreparedPlan) {
+    organizePagesButton.textContent = `Organizar y editar páginas · ${pagePlan.length}`;
+  } else {
+    organizePagesButton.textContent = "Organizar y editar páginas";
+  }
+
+  updatePageActionControls();
+}
+
+function updatePageCardPositions() {
+  pagePreviewGroups
+    ?.querySelectorAll(".page-preview-card")
+    .forEach((card, index) => {
+      const position = card.querySelector(".page-result-position");
+      if (position) {
+        position.textContent = String(index + 1).padStart(2, "0");
+      }
+      card.dataset.resultIndex = String(index);
+      card.setAttribute(
+        "aria-label",
+        `Página ${index + 1} del resultado. ${card.dataset.sourceName}, página ${card.dataset.sourcePage}.`
+      );
+    });
+}
+
+function updatePageOrganizerSummary(message = "") {
+  if (!pageOrganizerStatus) {
+    return;
+  }
+
+  const total = pagePlan.length;
+  pageOrganizerStatus.textContent =
+    message ||
+    `${total} ${total === 1 ? "página preparada" : "páginas preparadas"} en el orden final. Arrastra cualquier miniatura para reorganizar el resultado.`;
+  pageOrganizerStatus.dataset.kind = "success";
+}
+
+function createPagePreviewCard(pageItem) {
+  const card = document.createElement("article");
+  const isSelected = selectedPageIds.has(pageItem.id);
+  const rotation = Number(pageItem.rotation) || 0;
+  card.className = "page-preview-card";
+  card.classList.toggle("is-selected", isSelected);
+  card.classList.toggle("is-rotated-sideways", rotation % 180 !== 0);
+  card.dataset.pageId = pageItem.id;
+  card.dataset.sourceName = pageItem.fileName;
+  card.dataset.sourcePage = String(pageItem.pageNumber || 0);
+  card.dataset.rotation = String(rotation);
+  card.dataset.kind = pageItem.kind || "source";
+  card.tabIndex = 0;
+  card.setAttribute("aria-selected", String(isSelected));
+
+  const dragHandle = document.createElement("button");
+  dragHandle.className = "page-drag-handle";
+  dragHandle.type = "button";
+  dragHandle.title = "Arrastrar esta página";
+  dragHandle.setAttribute(
+    "aria-label",
+    pageItem.kind === "blank"
+      ? "Arrastrar página en blanco"
+      : `Arrastrar página ${pageItem.pageNumber} de ${pageItem.fileName}`
+  );
+  dragHandle.innerHTML = '<span aria-hidden="true">⋮⋮</span>';
+
+  const resultBadge = document.createElement("span");
+  resultBadge.className = "page-result-position";
+  resultBadge.textContent = "00";
+  resultBadge.setAttribute("aria-hidden", "true");
+
+  const selectButton = document.createElement("button");
+  selectButton.className = "page-select-button";
+  selectButton.type = "button";
+  selectButton.setAttribute("aria-pressed", String(isSelected));
+  selectButton.setAttribute(
+    "aria-label",
+    `${isSelected ? "Deseleccionar" : "Seleccionar"} ${pageItem.kind === "blank" ? "página en blanco" : `página ${pageItem.pageNumber} de ${pageItem.fileName}`}`
+  );
+  selectButton.innerHTML = '<span aria-hidden="true">✓</span>';
+  selectButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    togglePageSelection(pageItem.id, true);
+  });
+
+  const topControls = document.createElement("div");
+  topControls.className = "page-card-controls";
+
+  const leftControls = document.createElement("div");
+  leftControls.className = "page-card-left-controls";
+  leftControls.append(dragHandle, selectButton);
+  topControls.append(leftControls, resultBadge);
+
+  const imageFrame = document.createElement("div");
+  imageFrame.className = "page-preview-image-frame";
+
+  const image = document.createElement("img");
+  image.className = "page-preview-image";
+  image.src = pageItem.imageUrl;
+  image.alt =
+    pageItem.kind === "blank"
+      ? "Vista previa de una página en blanco"
+      : `Página ${pageItem.pageNumber} de ${pageItem.fileName}`;
+  image.loading = "lazy";
+  image.style.setProperty("--page-rotation", `${rotation}deg`);
+  imageFrame.append(image);
+
+  const footer = document.createElement("div");
+  footer.className = "page-preview-footer";
+
+  const sourcePage = document.createElement("strong");
+  sourcePage.textContent =
+    pageItem.kind === "blank" ? "En blanco" : `Pág. ${pageItem.pageNumber}`;
+
+  const source = document.createElement("span");
+  source.textContent = pageItem.fileName;
+  source.title = pageItem.fileName;
+
+  const flags = document.createElement("span");
+  flags.className = "page-preview-flags";
+  const flagParts = [];
+  if (pageItem.duplicatedFrom) {
+    flagParts.push("Duplicada");
+  }
+  if (rotation !== 0) {
+    flagParts.push(`${rotation}°`);
+  }
+  flags.textContent = flagParts.join(" · ");
+  flags.hidden = flagParts.length === 0;
+
+  footer.append(sourcePage, source, flags);
+  card.append(topControls, imageFrame, footer);
+
+  card.addEventListener("click", (event) => {
+    if (event.target.closest("button")) {
+      return;
+    }
+    togglePageSelection(pageItem.id, true);
+  });
+
+  card.addEventListener("keydown", (event) => {
+    if ((event.key === "Enter" || event.key === " ") && event.target === card) {
+      event.preventDefault();
+      togglePageSelection(pageItem.id, true);
+    }
+  });
+
+  dragHandle.addEventListener("pointerdown", (event) =>
+    beginPageDrag(event, pageItem.id, card, dragHandle)
+  );
+
+  dragHandle.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" &&
+        event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      return;
+    }
+
+    event.preventDefault();
+    const fromIndex = pagePlan.findIndex((item) => item.id === pageItem.id);
+    const columns = estimatePageGridColumns();
+    const delta =
+      event.key === "ArrowLeft" ? -1 :
+      event.key === "ArrowRight" ? 1 :
+      event.key === "ArrowUp" ? -columns :
+      columns;
+    const toIndex = Math.max(0, Math.min(pagePlan.length - 1, fromIndex + delta));
+
+    if (fromIndex === toIndex) {
+      return;
+    }
+
+    pushPageHistory();
+    const [moved] = pagePlan.splice(fromIndex, 1);
+    pagePlan.splice(toIndex, 0, moved);
+    renderPagePlan();
+    const movedCard = pagePreviewGroups.querySelector(`[data-page-id="${CSS.escape(moved.id)}"]`);
+    movedCard?.querySelector(".page-drag-handle")?.focus({ preventScroll: true });
+    updatePageOrganizerSummary(
+      `${moved.fileName} · ${moved.kind === "blank" ? "página en blanco" : `página ${moved.pageNumber}`} movida a la posición ${toIndex + 1}.`
+    );
+    resetMergeProgress();
+  });
+
+  return card;
+}
+
+function renderPagePlan() {
+  if (!pagePreviewGroups) {
+    return;
+  }
+
+  const validIds = new Set(pagePlan.map((item) => item.id));
+  for (const selectedId of Array.from(selectedPageIds)) {
+    if (!validIds.has(selectedId)) {
+      selectedPageIds.delete(selectedId);
+    }
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const item of pagePlan) {
+    fragment.append(createPagePreviewCard(item));
+  }
+  pagePreviewGroups.replaceChildren(fragment);
+  updatePageCardPositions();
+  updatePageActionControls();
+  updateMergeControls();
+}
+
+function estimatePageGridColumns() {
+  if (!pagePreviewGroups) {
+    return 1;
+  }
+
+  const cards = Array.from(pagePreviewGroups.children);
+  if (cards.length < 2) {
+    return 1;
+  }
+
+  const firstTop = cards[0].getBoundingClientRect().top;
+  const firstRow = cards.filter(
+    (card) => Math.abs(card.getBoundingClientRect().top - firstTop) < 8
+  );
+  return Math.max(1, firstRow.length);
+}
+
+function createPageFloatingPreview(card) {
+  const bounds = card.getBoundingClientRect();
+  const preview = card.cloneNode(true);
+  preview.classList.add("page-drag-preview");
+  preview.classList.remove("is-page-placeholder");
+  preview.setAttribute("aria-hidden", "true");
+  preview.style.left = `${bounds.left}px`;
+  preview.style.top = `${bounds.top}px`;
+  preview.style.width = `${bounds.width}px`;
+  preview.style.height = `${bounds.height}px`;
+  preview.querySelectorAll("button").forEach((button) => {
+    button.tabIndex = -1;
+  });
+  document.body.append(preview);
+  return preview;
+}
+
+function beginPageDrag(event, pageId, card, handle) {
+  if (
+    mergeInProgress ||
+    pageOrganizerInProgress ||
+    (event.pointerType === "mouse" && event.button !== 0)
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  handle.focus({ preventScroll: true });
+
+  const index = pagePlan.findIndex((item) => item.id === pageId);
+  if (index < 0) {
+    return;
+  }
+
+  pageDragState = {
+    pageId,
+    pointerId: event.pointerId,
+    sourceCard: card,
+    handle,
+    preview: null,
+    startX: event.clientX,
+    startY: event.clientY,
+    currentIndex: index,
+    initialIndex: index,
+    initialPlan: clonePagePlan(),
+    active: false,
+  };
+
+  window.addEventListener("pointermove", continuePageDrag, true);
+  window.addEventListener("pointerup", endPageDrag, true);
+  window.addEventListener("pointercancel", cancelPageDrag, true);
+}
+
+function activatePageDrag(event) {
+  if (!pageDragState) {
+    return;
+  }
+
+  pageDragState.active = true;
+  pageDragState.preview = createPageFloatingPreview(pageDragState.sourceCard);
+  pageDragState.sourceCard.classList.add("is-page-placeholder");
+  document.body.classList.add("is-reordering-pages");
+  positionPagePreview(event);
+}
+
+function positionPagePreview(event) {
+  if (!pageDragState?.preview) {
+    return;
+  }
+
+  const dx = event.clientX - pageDragState.startX;
+  const dy = event.clientY - pageDragState.startY;
+  pageDragState.preview.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+}
+
+function findPageTargetIndex(clientX, clientY) {
+  const cards = Array.from(pagePreviewGroups.children).filter(
+    (card) => card !== pageDragState?.sourceCard
+  );
+
+  if (cards.length === 0) {
+    return 0;
+  }
+
+  let nearestIndex = cards.length;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  cards.forEach((card, index) => {
+    const bounds = card.getBoundingClientRect();
+    const centerX = bounds.left + bounds.width / 2;
+    const centerY = bounds.top + bounds.height / 2;
+    const distance = Math.hypot(clientX - centerX, clientY - centerY);
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      const after =
+        clientY > centerY + bounds.height * 0.12 ||
+        (Math.abs(clientY - centerY) <= bounds.height * 0.12 && clientX > centerX);
+      nearestIndex = index + (after ? 1 : 0);
+    }
+  });
+
+  return Math.max(0, Math.min(cards.length, nearestIndex));
+}
+
+function animatePageGrid(previousRects) {
+  Array.from(pagePreviewGroups.children).forEach((card) => {
+    if (card === pageDragState?.sourceCard || !previousRects.has(card)) {
+      return;
+    }
+
+    const before = previousRects.get(card);
+    const after = card.getBoundingClientRect();
+    const dx = before.left - after.left;
+    const dy = before.top - after.top;
+
+    if ((Math.abs(dx) < 1 && Math.abs(dy) < 1) || typeof card.animate !== "function") {
+      return;
+    }
+
+    card.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px)` },
+        { transform: "translate(0, 0)" },
+      ],
+      { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
+    );
+  });
+}
+
+function reorderPageDuringDrag(targetIndex) {
+  if (!pageDragState || targetIndex === pageDragState.currentIndex) {
+    return;
+  }
+
+  const sourceCard = pageDragState.sourceCard;
+  const previousRects = new Map(
+    Array.from(pagePreviewGroups.children).map((card) => [
+      card,
+      card.getBoundingClientRect(),
+    ])
+  );
+  const otherCards = Array.from(pagePreviewGroups.children).filter(
+    (card) => card !== sourceCard
+  );
+  const reference = otherCards[targetIndex] ?? null;
+
+  if (reference) {
+    pagePreviewGroups.insertBefore(sourceCard, reference);
+  } else {
+    pagePreviewGroups.append(sourceCard);
+  }
+
+  const [moved] = pagePlan.splice(pageDragState.currentIndex, 1);
+  pagePlan.splice(targetIndex, 0, moved);
+  pageDragState.currentIndex = targetIndex;
+  updatePageCardPositions();
+  animatePageGrid(previousRects);
+}
+
+function updatePageAutoScroll(clientY) {
+  if (pageDragAutoScrollFrame) {
+    cancelAnimationFrame(pageDragAutoScrollFrame);
+    pageDragAutoScrollFrame = null;
+  }
+
+  const edge = 90;
+  const speed =
+    clientY < edge ? -Math.ceil((edge - clientY) / 9) :
+    clientY > window.innerHeight - edge
+      ? Math.ceil((clientY - (window.innerHeight - edge)) / 9)
+      : 0;
+
+  if (speed === 0) {
+    return;
+  }
+
+  const tick = () => {
+    if (!pageDragState?.active) {
+      pageDragAutoScrollFrame = null;
+      return;
+    }
+    window.scrollBy(0, speed);
+    pageDragAutoScrollFrame = requestAnimationFrame(tick);
+  };
+  pageDragAutoScrollFrame = requestAnimationFrame(tick);
+}
+
+function continuePageDrag(event) {
+  if (!pageDragState || pageDragState.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (!pageDragState.active) {
+    const distance = Math.hypot(
+      event.clientX - pageDragState.startX,
+      event.clientY - pageDragState.startY
+    );
+    if (distance < 5) {
+      return;
+    }
+    activatePageDrag(event);
+  }
+
+  positionPagePreview(event);
+  updatePageAutoScroll(event.clientY);
+  reorderPageDuringDrag(findPageTargetIndex(event.clientX, event.clientY));
+}
+
+function finishPageDrag(cancelled = false) {
+  if (!pageDragState) {
+    return;
+  }
+
+  const state = pageDragState;
+  const movedItem = pagePlan.find((item) => item.id === state.pageId);
+
+  window.removeEventListener("pointermove", continuePageDrag, true);
+  window.removeEventListener("pointerup", endPageDrag, true);
+  window.removeEventListener("pointercancel", cancelPageDrag, true);
+  if (pageDragAutoScrollFrame) {
+    cancelAnimationFrame(pageDragAutoScrollFrame);
+    pageDragAutoScrollFrame = null;
+  }
+
+  state.preview?.remove();
+  state.sourceCard?.classList.remove("is-page-placeholder");
+  document.body.classList.remove("is-reordering-pages");
+  pageDragState = null;
+
+  if (cancelled && state.active) {
+    pagePlan = clonePagePlan(state.initialPlan);
+    renderPagePlan();
+    updatePageOrganizerSummary("Movimiento cancelado. Se ha restaurado el orden anterior.");
+    return;
+  }
+
+  if (state.active) {
+    const finalIndex = pagePlan.findIndex((item) => item.id === state.pageId);
+    if (finalIndex !== state.initialIndex) {
+      pushPageHistory(state.initialPlan);
+      resetMergeProgress();
+    }
+    renderPagePlan();
+    updatePageOrganizerSummary(
+      movedItem && finalIndex !== state.initialIndex
+        ? `${movedItem.fileName} · ${movedItem.kind === "blank" ? "página en blanco" : `página ${movedItem.pageNumber}`} movida a la posición ${finalIndex + 1}.`
+        : "La página conserva la misma posición."
+    );
+    const card = pagePreviewGroups.querySelector(`[data-page-id="${CSS.escape(state.pageId)}"]`);
+    card?.querySelector(".page-drag-handle")?.focus({ preventScroll: true });
+  }
+}
+
+function endPageDrag(event) {
+  if (!pageDragState || pageDragState.pointerId !== event.pointerId) {
+    return;
+  }
+  event.preventDefault();
+  finishPageDrag(false);
+}
+
+function cancelPageDrag(event) {
+  if (event && pageDragState && pageDragState.pointerId !== event.pointerId) {
+    return;
+  }
+  finishPageDrag(true);
+}
+
+async function appendPdfPagesToPlan(item, fileIndex) {
+  const sourceBytes = new Uint8Array(await item.file.arrayBuffer());
+  let loadingTask;
+
+  try {
+    loadingTask = pdfjsLib.getDocument({
+      data: sourceBytes,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+    const pdfDocument = await loadingTask.promise;
+
+    for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+      pageOrganizerStatus.textContent =
+        `Generando miniatura ${pageNumber} de ${pdfDocument.numPages} · ${item.file.name}`;
+
+      const page = await pdfDocument.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const targetWidth = 170;
+      const scale = Math.min(1.45, Math.max(0.35, targetWidth / baseViewport.width));
+      const viewport = page.getViewport({ scale });
+      const outputScale = Math.min(window.devicePixelRatio || 1, 1.5);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(viewport.width * outputScale));
+      canvas.height = Math.max(1, Math.floor(viewport.height * outputScale));
+      const context = canvas.getContext("2d", { alpha: false });
+
+      if (!context) {
+        throw new Error("No se pudo crear el lienzo local para la miniatura.");
+      }
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+        transform:
+          outputScale === 1
+            ? null
+            : [outputScale, 0, 0, outputScale, 0, 0],
+      }).promise;
+
+      pagePlan.push({
+        id: `${item.key}\u001e${pageNumber}`,
+        kind: "source",
+        fileKey: item.key,
+        fileName: item.file.name,
+        fileIndex,
+        pageIndex: pageNumber - 1,
+        pageNumber,
+        imageUrl: canvas.toDataURL("image/jpeg", 0.82),
+        rotation: 0,
+      });
+
+      page.cleanup();
+      await nextPaint();
+    }
+
+    await pdfDocument.destroy();
+  } catch (error) {
+    loadingTask?.destroy?.();
+    throw describePdfLoadError(error, item.file.name);
+  }
+}
+
+async function openPageOrganizer() {
+  if (
+    pageOrganizerInProgress ||
+    mergeInProgress ||
+    selectedFiles.length === 0
+  ) {
+    return;
+  }
+
+  const signature = currentSelectionSignature();
+
+  if (
+    pageOrganizerSignature === signature &&
+    pagePlan.length > 0 &&
+    pagePreviewGroups.childElementCount > 0
+  ) {
+    pageOrganizer.hidden = false;
+    updatePageOrganizerControls();
+    pageOrganizer.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  pageOrganizerInProgress = true;
+  updatePageOrganizerControls();
+  pageOrganizer.hidden = false;
+  pagePreviewGroups.replaceChildren();
+  pagePlan = [];
+  pageHistory.length = 0;
+  clearPageSelection();
+  pageOrganizerStatus.dataset.kind = "working";
+  pageOrganizerStatus.textContent =
+    "Preparando las miniaturas dentro de este equipo...";
+
+  try {
+    for (const [fileIndex, item] of selectedFiles.entries()) {
+      pageOrganizerStatus.textContent =
+        `Leyendo PDF ${fileIndex + 1} de ${selectedFiles.length} · ${item.file.name}`;
+      await appendPdfPagesToPlan(item, fileIndex);
+    }
+
+    pageOrganizerSignature = signature;
+    renderPagePlan();
+    updatePageOrganizerSummary();
+    setStatus("Organizador visual preparado localmente.");
+    setFeedback(
+      "Ya puedes organizar y editar las miniaturas. El orden visual se utilizará al unir y guardar.",
+      "success"
+    );
+    pageOrganizer.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    pageOrganizerSignature = "";
+    pagePlan = [];
+    pagePreviewGroups.replaceChildren();
+    const message =
+      error instanceof Error
+        ? error.message
+        : "No se pudieron generar las miniaturas.";
+    pageOrganizerStatus.textContent = message;
+    pageOrganizerStatus.dataset.kind = "error";
+    setStatus(message, "error");
+    setFeedback(message, "error");
+  } finally {
+    pageOrganizerInProgress = false;
+    updatePageOrganizerControls();
+  }
+}
+
+function closePageOrganizer() {
+  if (!pageOrganizer || pageOrganizerInProgress) {
+    return;
+  }
+
+  pageOrganizer.hidden = true;
+  updatePageOrganizerControls();
+  organizePagesButton?.focus({ preventScroll: true });
 }
 
 
@@ -681,6 +1709,8 @@ function updateMergeControls() {
   const count = selectedFiles.length;
   const engineReady = hasLocalPdfEngine();
   const enoughFiles = count >= 2;
+  const visualOrderIsReady =
+    pageOrganizerSignature === currentSelectionSignature() && pagePlan.length > 0;
 
   mergeButton.disabled = mergeInProgress || !engineReady || !enoughFiles;
   outputNameInput.disabled = mergeInProgress;
@@ -696,6 +1726,18 @@ function updateMergeControls() {
   } else if (!enoughFiles) {
     mergeRequirement.textContent = "Añade al menos 2 PDF para comenzar.";
     mergeRequirement.dataset.kind = "normal";
+  } else if (visualOrderIsReady) {
+    const changes = [];
+    const rotated = pagePlan.filter((item) => (Number(item.rotation) || 0) !== 0).length;
+    const duplicates = pagePlan.filter((item) => item.duplicatedFrom).length;
+    const blanks = pagePlan.filter((item) => item.kind === "blank").length;
+    if (rotated > 0) changes.push(`${rotated} giradas`);
+    if (duplicates > 0) changes.push(`${duplicates} duplicadas`);
+    if (blanks > 0) changes.push(`${blanks} en blanco`);
+    if (resultOptions.pageNumbers) changes.push("numeración activa");
+    mergeRequirement.textContent =
+      `${pagePlan.length} páginas en el orden visual${changes.length ? ` · ${changes.join(" · ")}` : ""}.`;
+    mergeRequirement.dataset.kind = "ready";
   } else {
     mergeRequirement.textContent =
       `Se unirán ${count} PDF siguiendo exactamente el orden mostrado.`;
@@ -887,53 +1929,167 @@ async function mergeAndSavePdfs() {
   setFeedback("Uniendo los PDF localmente...", "info");
 
   try {
-    const { PDFDocument } = window.PDFLib;
+    const { PDFDocument, StandardFonts, degrees, rgb } = window.PDFLib;
     const outputPdf = await PDFDocument.create();
     let totalPages = 0;
+    const visualOrderIsReady =
+      pageOrganizerSignature === currentSelectionSignature() &&
+      pagePlan.length > 0;
 
-    for (const [index, item] of selectedFiles.entries()) {
-      const baseProgress = 8 + (index / selectedFiles.length) * 68;
-      setMergeProgress(
-        baseProgress,
-        `Leyendo PDF ${index + 1} de ${selectedFiles.length}`,
-        item.file.name
-      );
-      setStatus(`Procesando ${item.file.name}.`);
-      await nextPaint();
+    if (visualOrderIsReady) {
+      const loadedSources = new Map();
 
-      const sourceBytes = await item.file.arrayBuffer();
-      let sourcePdf;
+      for (const [index, pageItem] of pagePlan.entries()) {
+        const rotation = Number(pageItem.rotation) || 0;
 
-      try {
-        sourcePdf = await PDFDocument.load(sourceBytes, {
-          ignoreEncryption: false,
-        });
-      } catch (error) {
-        throw describePdfLoadError(error, item.file.name);
+        if (pageItem.kind === "blank") {
+          const blankPage = outputPdf.addPage([
+            Number(pageItem.blankWidth) || 595.28,
+            Number(pageItem.blankHeight) || 841.89,
+          ]);
+          if (rotation !== 0) {
+            blankPage.setRotation(degrees(rotation));
+          }
+          totalPages += 1;
+          setMergeProgress(
+            8 + ((index + 1) / pagePlan.length) * 68,
+            `Página ${index + 1} de ${pagePlan.length} incorporada`,
+            "Página en blanco"
+          );
+          await nextPaint();
+          continue;
+        }
+
+        const sourceItem = selectedFiles.find(
+          (item) => item.key === pageItem.fileKey
+        );
+
+        if (!sourceItem) {
+          throw new Error(
+            "El orden visual ya no coincide con los archivos seleccionados. Vuelve a abrir Organizar páginas."
+          );
+        }
+
+        let sourcePdf = loadedSources.get(pageItem.fileKey);
+
+        if (!sourcePdf) {
+          setMergeProgress(
+            8 + (index / pagePlan.length) * 68,
+            "Leyendo documentos del orden visual",
+            sourceItem.file.name
+          );
+          const sourceBytes = await sourceItem.file.arrayBuffer();
+
+          try {
+            sourcePdf = await PDFDocument.load(sourceBytes, {
+              ignoreEncryption: false,
+            });
+          } catch (error) {
+            throw describePdfLoadError(error, sourceItem.file.name);
+          }
+
+          loadedSources.set(pageItem.fileKey, sourcePdf);
+        }
+
+        if (pageItem.pageIndex < 0 || pageItem.pageIndex >= sourcePdf.getPageCount()) {
+          throw new Error(
+            `No se encontró la página ${pageItem.pageNumber} de ${pageItem.fileName}.`
+          );
+        }
+
+        const [copiedPage] = await outputPdf.copyPages(sourcePdf, [
+          pageItem.pageIndex,
+        ]);
+        if (rotation !== 0) {
+          const originalRotation = Number(copiedPage.getRotation()?.angle) || 0;
+          copiedPage.setRotation(degrees((originalRotation + rotation + 360) % 360));
+        }
+        outputPdf.addPage(copiedPage);
+        totalPages += 1;
+
+        setMergeProgress(
+          8 + ((index + 1) / pagePlan.length) * 68,
+          `Página ${index + 1} de ${pagePlan.length} incorporada`,
+          `${pageItem.fileName} · página original ${pageItem.pageNumber}${rotation ? ` · giro ${rotation}°` : ""}`
+        );
+        await nextPaint();
       }
+    } else {
+      for (const [index, item] of selectedFiles.entries()) {
+        const baseProgress = 8 + (index / selectedFiles.length) * 68;
+        setMergeProgress(
+          baseProgress,
+          `Leyendo PDF ${index + 1} de ${selectedFiles.length}`,
+          item.file.name
+        );
+        setStatus(`Procesando ${item.file.name}.`);
+        await nextPaint();
 
-      const pageIndices = sourcePdf.getPageIndices();
-      const copiedPages = await outputPdf.copyPages(sourcePdf, pageIndices);
+        const sourceBytes = await item.file.arrayBuffer();
+        let sourcePdf;
 
-      for (const page of copiedPages) {
-        outputPdf.addPage(page);
+        try {
+          sourcePdf = await PDFDocument.load(sourceBytes, {
+            ignoreEncryption: false,
+          });
+        } catch (error) {
+          throw describePdfLoadError(error, item.file.name);
+        }
+
+        const pageIndices = sourcePdf.getPageIndices();
+        const copiedPages = await outputPdf.copyPages(sourcePdf, pageIndices);
+
+        for (const page of copiedPages) {
+          outputPdf.addPage(page);
+        }
+
+        totalPages += copiedPages.length;
+        setMergeProgress(
+          8 + ((index + 1) / selectedFiles.length) * 68,
+          `PDF ${index + 1} de ${selectedFiles.length} incorporado`,
+          `${item.file.name} · ${copiedPages.length} ${copiedPages.length === 1 ? "página" : "páginas"}`
+        );
+        await nextPaint();
       }
-
-      totalPages += copiedPages.length;
-      setMergeProgress(
-        8 + ((index + 1) / selectedFiles.length) * 68,
-        `PDF ${index + 1} de ${selectedFiles.length} incorporado`,
-        `${item.file.name} · ${copiedPages.length} ${copiedPages.length === 1 ? "página" : "páginas"}`
-      );
-      await nextPaint();
     }
 
     if (totalPages === 0) {
       throw new Error("Los documentos seleccionados no contienen páginas para unir.");
     }
 
-    outputPdf.setCreator("PDFPrivado Pro");
-    outputPdf.setProducer("PDFPrivado Pro");
+    if (resultOptions.cleanMetadata) {
+      const internalTitle = resultOptions.titleFromName
+        ? outputTarget.name.replace(/\.pdf$/i, "")
+        : "";
+      outputPdf.setTitle(internalTitle);
+      outputPdf.setAuthor("");
+      outputPdf.setSubject("");
+      outputPdf.setKeywords([]);
+      outputPdf.setCreator("PDFPrivado Pro");
+      outputPdf.setProducer("PDFPrivado Pro");
+    } else {
+      outputPdf.setCreator("PDFPrivado Pro");
+      outputPdf.setProducer("PDFPrivado Pro");
+    }
+
+    if (resultOptions.pageNumbers) {
+      const pageNumberFont = await outputPdf.embedFont(StandardFonts.Helvetica);
+      const pages = outputPdf.getPages();
+      for (const [index, page] of pages.entries()) {
+        const label = String(index + 1);
+        const fontSize = 9;
+        const textWidth = pageNumberFont.widthOfTextAtSize(label, fontSize);
+        const { width } = page.getSize();
+        page.drawText(label, {
+          x: Math.max(18, (width - textWidth) / 2),
+          y: 14,
+          size: fontSize,
+          font: pageNumberFont,
+          color: rgb(0.38, 0.43, 0.5),
+          opacity: 0.86,
+        });
+      }
+    }
 
     setMergeProgress(
       82,
@@ -1014,6 +2170,10 @@ clearButton?.addEventListener("click", () => {
 
   selectedFiles.length = 0;
   fileInput.value = "";
+  if (resultOptionsPanel) {
+    resultOptionsPanel.hidden = true;
+  }
+  invalidatePageOrganizer();
   resetMergeProgress();
   renderFiles();
   setStatus("Lista temporal vaciada.");
@@ -1025,5 +2185,38 @@ outputNameInput?.addEventListener("blur", () => {
 });
 
 mergeButton?.addEventListener("click", mergeAndSavePdfs);
+organizePagesButton?.addEventListener("click", openPageOrganizer);
+closePageOrganizerButton?.addEventListener("click", closePageOrganizer);
+selectAllPagesButton?.addEventListener("click", toggleAllPages);
+rotateLeftButton?.addEventListener("click", () => rotateSelectedPages(-90));
+rotateRightButton?.addEventListener("click", () => rotateSelectedPages(90));
+duplicatePagesButton?.addEventListener("click", duplicateSelectedPages);
+addBlankPageButton?.addEventListener("click", addBlankPage);
+deletePagesButton?.addEventListener("click", deleteSelectedPages);
+undoPageChangeButton?.addEventListener("click", undoPageChange);
+resultOptionsButton?.addEventListener("click", () => {
+  if (resultOptionsPanel?.hidden) {
+    openResultOptions();
+  } else {
+    closeResultOptions();
+  }
+});
+closeResultOptionsButton?.addEventListener("click", closeResultOptions);
+cleanMetadataOption?.addEventListener("change", () => {
+  resultOptions.cleanMetadata = cleanMetadataOption.checked;
+  updatePageActionControls();
+  updateMergeControls();
+  resetMergeProgress();
+});
+titleFromNameOption?.addEventListener("change", () => {
+  resultOptions.titleFromName = titleFromNameOption.checked;
+  updateMergeControls();
+  resetMergeProgress();
+});
+pageNumbersOption?.addEventListener("change", () => {
+  resultOptions.pageNumbers = pageNumbersOption.checked;
+  updateMergeControls();
+  resetMergeProgress();
+});
 
 renderFiles();
