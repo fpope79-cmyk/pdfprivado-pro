@@ -486,17 +486,6 @@
             <div class="selection-feedback" id="split-feedback" role="status" aria-live="polite" hidden></div>
           </section>
 
-          <div class="split-sticky-summary" id="split-sticky-summary" aria-live="polite" hidden>
-            <div class="split-sticky-facts">
-              <strong id="split-sticky-document">0 páginas</strong>
-              <span id="split-sticky-selection">0 seleccionadas</span>
-              <span id="split-sticky-results">0 archivos preparados</span>
-            </div>
-            <button class="secondary-button split-reset-button" id="split-reset-config-button" type="button">
-              Restablecer configuración
-            </button>
-          </div>
-
           <section class="split-pages-section" id="split-pages-section" aria-labelledby="split-pages-title" hidden>
             <div class="section-heading split-pages-heading">
               <div>
@@ -614,7 +603,7 @@
                   </div>
                 </div>
 
-                <label class="split-check-row" id="split-exclude-blank-row" hidden>
+                <label class="split-check-row">
                   <input id="split-exclude-blank-option" type="checkbox" />
                   <span>
                     <strong>Excluir posibles páginas blancas</strong>
@@ -623,7 +612,7 @@
                 </label>
 
                 <button class="primary-button split-plan-button" id="split-build-plan-button" type="button">
-                  Actualizar ahora
+                  Actualizar vista previa
                 </button>
                 <p class="helper-text" id="split-mode-help">Las páginas seleccionadas se reunirán en un único PDF nuevo.</p>
               </div>
@@ -714,9 +703,6 @@
               </div>
               <progress id="split-save-progress" max="100" value="0">0 %</progress>
               <p id="split-save-progress-detail">Esperando para comenzar.</p>
-              <div class="split-save-result-actions" id="split-save-result-actions" hidden>
-                <button class="secondary-button" id="split-open-folder-button" type="button">Abrir carpeta</button>
-              </div>
             </div>
           </section>
         </div>
@@ -740,7 +726,7 @@
       </main>
 
       <footer>
-        <span>PDFPrivado Pro · unir y dividir PDF localmente v4.1</span>
+        <span>PDFPrivado Pro · unir y dividir PDF localmente v4.0</span>
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>
