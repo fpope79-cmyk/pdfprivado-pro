@@ -91,6 +91,18 @@ const continuousList = $("#viewer-continuous-list");
 const organizeStage = $("#viewer-organize-stage");
 const organizeGrid = $("#viewer-organize-grid");
 const organizeSummary = $("#viewer-organize-summary");
+const spreadStage = $("#viewer-spread-stage");
+const spreadPages = $("#viewer-spread-pages");
+const spreadLeft = $("#viewer-spread-left");
+const spreadRight = $("#viewer-spread-right");
+const spreadLeftCanvas = $("#viewer-spread-left-canvas");
+const spreadRightCanvas = $("#viewer-spread-right-canvas");
+const spreadLeftLabel = $("#viewer-spread-left-label");
+const spreadRightLabel = $("#viewer-spread-right-label");
+const modeContinuousButton = $("#viewer-mode-continuous-button");
+const modePageButton = $("#viewer-mode-page-button");
+const modeSpreadButton = $("#viewer-mode-spread-button");
+const spreadCoverButton = $("#viewer-spread-cover-button");
 const loadingOverlay = $("#viewer-loading-overlay");
 const loadingTitle = $("#viewer-loading-title");
 const loadingDetail = $("#viewer-loading-detail");
@@ -179,6 +191,9 @@ const state = {
   viewMode: "continuous",
   activeTool: "overview",
   zoomMode: "fit-width",
+  spreadCoverAlone: true,
+  spreadRenderSerial: 0,
+  spreadTasks: new Map(),
   zoom: 1,
   renderTask: null,
   renderSerial: 0,
@@ -233,9 +248,16 @@ function readViewerLayoutPreferences() {
     return {
       thumbnailsCollapsed: Boolean(saved.thumbnailsCollapsed),
       toolsCollapsed: Boolean(saved.toolsCollapsed),
+      spreadCoverAlone: saved.spreadCoverAlone !== false,
+      readingMode: ["continuous", "page", "spread"].includes(saved.readingMode) ? saved.readingMode : "continuous",
     };
   } catch {
-    return { thumbnailsCollapsed: false, toolsCollapsed: false };
+    return {
+      thumbnailsCollapsed: false,
+      toolsCollapsed: false,
+      spreadCoverAlone: true,
+      readingMode: "continuous",
+    };
   }
 }
 
@@ -251,13 +273,19 @@ const viewerLayoutState = {
   organizeThumbnailsOverride: null,
   organizeToolsOverride: null,
   organizeReturnTool: "overview",
+  readingModeBeforeOrganize: savedViewerLayout.readingMode,
+  lastReadingMode: savedViewerLayout.readingMode,
 };
+
+state.spreadCoverAlone = savedViewerLayout.spreadCoverAlone;
 
 function persistViewerLayoutPreferences() {
   try {
     localStorage.setItem(VIEWER_LAYOUT_STORAGE_KEY, JSON.stringify({
       thumbnailsCollapsed: viewerLayoutState.manualThumbnailsCollapsed,
       toolsCollapsed: viewerLayoutState.manualToolsCollapsed,
+      spreadCoverAlone: state.spreadCoverAlone,
+      readingMode: viewerLayoutState.lastReadingMode,
     }));
   } catch {
     // La preferencia visual no debe bloquear el visor.
@@ -296,7 +324,14 @@ function applyViewerPanelLayout() {
   document.body.classList.toggle("viewer-thumbnails-collapsed", thumbnailsCollapsed);
   document.body.classList.toggle("viewer-tools-collapsed", toolsCollapsed);
   document.body.classList.toggle("viewer-compact-layout", viewerLayoutState.compact);
-  document.body.classList.toggle("viewer-reading-clean", Boolean(state.file) && state.viewMode === "continuous" && state.activeTool === "overview");
+  document.body.classList.toggle("viewer-page-active", state.viewMode === "page");
+  document.body.classList.toggle("viewer-spread-active", state.viewMode === "spread");
+  document.body.classList.toggle("viewer-spread-cover-alone", state.viewMode === "spread" && state.spreadCoverAlone);
+  document.body.classList.toggle("viewer-custom-zoom", state.zoomMode === "custom");
+  document.body.classList.toggle(
+    "viewer-reading-clean",
+    Boolean(state.file) && ["continuous", "page", "spread"].includes(state.viewMode) && state.activeTool === "overview"
+  );
   document.body.dataset.viewerActiveTool = state.activeTool || "overview";
 
   if (toggleThumbnailsButton) {
@@ -372,13 +407,11 @@ function continuousRenderBounds() {
   const pageStyles = samplePage ? getComputedStyle(samplePage) : null;
   const fallbackHorizontalChrome = stylePixels(stageStyles, "--viewer-page-horizontal-chrome") || 28;
   const fallbackVerticalChrome = stylePixels(stageStyles, "--viewer-page-vertical-chrome") || 48;
-  const horizontalChrome =
-    stylePixels(listStyles, "paddingLeft") +
-    stylePixels(listStyles, "paddingRight") +
-    (pageStyles
-      ? stylePixels(pageStyles, "paddingLeft") + stylePixels(pageStyles, "paddingRight") +
-        stylePixels(pageStyles, "borderLeftWidth") + stylePixels(pageStyles, "borderRightWidth")
-      : fallbackHorizontalChrome);
+  const listHorizontalPadding = stylePixels(listStyles, "paddingLeft") + stylePixels(listStyles, "paddingRight");
+  const pageHorizontalChrome = pageStyles
+    ? stylePixels(pageStyles, "paddingLeft") + stylePixels(pageStyles, "paddingRight") +
+      stylePixels(pageStyles, "borderLeftWidth") + stylePixels(pageStyles, "borderRightWidth")
+    : fallbackHorizontalChrome;
   const verticalChrome =
     stylePixels(listStyles, "paddingTop") +
     stylePixels(listStyles, "paddingBottom") +
@@ -386,8 +419,12 @@ function continuousRenderBounds() {
       ? stylePixels(pageStyles, "paddingTop") + stylePixels(pageStyles, "paddingBottom") +
         stylePixels(pageStyles, "borderTopWidth") + stylePixels(pageStyles, "borderBottomWidth")
       : fallbackVerticalChrome);
+  const isSpread = state.viewMode === "spread";
+  const gap = isSpread ? (stylePixels(listStyles, "columnGap") || stylePixels(listStyles, "gap") || 18) : 0;
+  const columns = isSpread ? 2 : 1;
+  const usableWidth = Math.max(180, continuousStage.clientWidth - listHorizontalPadding - gap - 4);
   return {
-    width: Math.max(180, continuousStage.clientWidth - horizontalChrome - 4),
+    width: Math.max(160, usableWidth / columns - pageHorizontalChrome),
     height: Math.max(220, continuousStage.clientHeight - verticalChrome - 4),
   };
 }
@@ -400,12 +437,181 @@ function canvasRenderBounds() {
   };
 }
 
+function spreadPairForPage(pageNumber = state.currentPage) {
+  const page = Math.max(1, Math.min(state.pageCount || 1, Number(pageNumber) || 1));
+  if (state.spreadCoverAlone && page === 1) return [1, null];
+
+  let left;
+  if (state.spreadCoverAlone) left = page % 2 === 0 ? page : page - 1;
+  else left = page % 2 === 1 ? page : page - 1;
+
+  left = Math.max(1, left);
+  return [left, left + 1 <= state.pageCount ? left + 1 : null];
+}
+
+function readingNavigationTarget(direction) {
+  const step = direction < 0 ? -1 : 1;
+  if (state.viewMode !== "spread") return state.currentPage + step;
+  const [left, right] = spreadPairForPage();
+  if (step > 0) return Math.min(state.pageCount, (right || left) + 1);
+  return Math.max(1, left - 1);
+}
+
+function spreadRenderBounds(pageCount = 2) {
+  const styles = getComputedStyle(spreadStage);
+  const pagesStyles = getComputedStyle(spreadPages);
+  const horizontalPadding =
+    stylePixels(styles, "paddingLeft") +
+    stylePixels(styles, "paddingRight") +
+    stylePixels(pagesStyles, "paddingLeft") +
+    stylePixels(pagesStyles, "paddingRight");
+  const verticalPadding =
+    stylePixels(styles, "paddingTop") +
+    stylePixels(styles, "paddingBottom") +
+    stylePixels(pagesStyles, "paddingTop") +
+    stylePixels(pagesStyles, "paddingBottom");
+  const gap = pageCount > 1 ? stylePixels(pagesStyles, "columnGap") || stylePixels(pagesStyles, "gap") || 18 : 0;
+  const pageHorizontalChrome = 30;
+  const pageVerticalChrome = 46;
+  return {
+    width: Math.max(
+      160,
+      (spreadStage.clientWidth - horizontalPadding - gap - 8) / Math.max(1, pageCount) - pageHorizontalChrome
+    ),
+    height: Math.max(220, spreadStage.clientHeight - verticalPadding - pageVerticalChrome - 8),
+  };
+}
+
+async function entryBaseDimensions(entry) {
+  let width = entry?.width || A4.width;
+  let height = entry?.height || A4.height;
+  if (!entry) return { width, height };
+  if (entry.kind === "pdf") {
+    const page = await getPdfPage(entry);
+    const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
+    const viewport = page.getViewport({ scale: 1, rotation });
+    width = viewport.width;
+    height = viewport.height;
+    page.cleanup();
+  } else if (normalizeRotation(entry.rotation || 0) % 180 !== 0) {
+    [width, height] = [height, width];
+  }
+  return { width, height };
+}
+
+function cancelSpreadRenderTasks() {
+  state.spreadRenderSerial += 1;
+  for (const holder of state.spreadTasks.values()) {
+    try { holder.cancel?.(); } catch { /* cancelación defensiva */ }
+  }
+  state.spreadTasks.clear();
+}
+
+function setSpreadArticle(article, label, pageNumber) {
+  const visible = Number.isInteger(pageNumber) && pageNumber >= 1 && pageNumber <= state.pageCount;
+  article.hidden = !visible;
+  article.dataset.page = visible ? String(pageNumber) : "";
+  article.classList.toggle("is-current", visible && pageNumber === state.currentPage);
+  label.textContent = visible ? `Página ${pageNumber}` : "";
+}
+
+async function renderSpread() {
+  if (!state.file || !state.pageCount || state.viewMode !== "spread") return;
+  cancelSpreadRenderTasks();
+  const serial = state.spreadRenderSerial;
+  const [leftPage, rightPage] = spreadPairForPage();
+  const pages = [leftPage, rightPage].filter(Boolean);
+  const single = pages.length === 1;
+
+  spreadPages.classList.toggle("is-single", single);
+  setSpreadArticle(spreadLeft, spreadLeftLabel, leftPage);
+  setSpreadArticle(spreadRight, spreadRightLabel, rightPage);
+
+  const entries = pages.map((page) => ({ page, entry: entryAt(page) })).filter((item) => item.entry);
+  if (!entries.length) return;
+
+  setLoading(
+    true,
+    single ? `Mostrando página ${entries[0].page}` : `Mostrando páginas ${entries[0].page}-${entries.at(-1).page}`,
+    "Vista doble procesada localmente."
+  );
+
+  try {
+    const dimensions = await Promise.all(
+      entries.map(async (item) => ({ ...item, ...(await entryBaseDimensions(item.entry)) }))
+    );
+    if (serial !== state.spreadRenderSerial || state.viewMode !== "spread") return;
+
+    const bounds = spreadRenderBounds(dimensions.length);
+    let scale = state.zoom;
+    if (state.zoomMode === "fit-width") {
+      scale = Math.min(...dimensions.map((item) => bounds.width / item.width));
+    } else if (state.zoomMode === "fit-page") {
+      scale = Math.min(
+        ...dimensions.map((item) => Math.min(bounds.width / item.width, bounds.height / item.height))
+      );
+    }
+    scale = Math.max(0.1, Math.min(4, scale));
+
+    const targets = [
+      { page: leftPage, canvas: spreadLeftCanvas, side: "left" },
+      { page: rightPage, canvas: spreadRightCanvas, side: "right" },
+    ].filter((target) => target.page);
+
+    await Promise.all(targets.map(async ({ page, canvas: targetCanvas, side }) => {
+      const entry = entryAt(page);
+      if (!entry) return;
+      const diagnosticToken = diagStart("render-page", { page, mode: "spread" });
+      const holder = createRenderTaskHolder();
+      state.spreadTasks.set(side, holder);
+      try {
+        const result = await renderEntryToCanvas(entry, targetCanvas, {
+          scale,
+          maxWidth: Number.MAX_SAFE_INTEGER,
+          maxHeight: Number.MAX_SAFE_INTEGER,
+          outputScale: adaptiveOutputScale("page"),
+          onTask: (task) => holder.setTask(task),
+        });
+        if (serial !== state.spreadRenderSerial || state.viewMode !== "spread") return;
+        targetCanvas.style.width = `${Math.round(result.width * result.scale)}px`;
+        targetCanvas.style.height = `${Math.round(result.height * result.scale)}px`;
+        diagEnd(diagnosticToken, { width: targetCanvas.width, height: targetCanvas.height, mode: "spread" });
+      } catch (error) {
+        diagFail(diagnosticToken, error, { page, mode: "spread" });
+        throw error;
+      }
+    }));
+
+    if (serial !== state.spreadRenderSerial || state.viewMode !== "spread") return;
+    zoomValue.textContent = `${Math.round(scale * 100)} %`;
+    pageInput.value = String(state.currentPage);
+    pageInfo.textContent = single
+      ? `Página ${pages[0]} · vista de una página dentro del modo doble`
+      : `Páginas ${pages[0]}-${pages.at(-1)} · vista doble`;
+    setLoading(false);
+    centerReadingStageHorizontal();
+  } catch (error) {
+    if (error?.name !== "RenderingCancelledException") {
+      diagFail(null, error, { mode: "spread", page: state.currentPage });
+      setLoading(true, "No se pudo mostrar la vista doble", String(error?.message || error));
+    }
+  } finally {
+    if (serial === state.spreadRenderSerial) state.spreadTasks.clear();
+    diagnosticContext();
+  }
+}
+
 let centerReadingFrame = 0;
 function centerReadingStageHorizontal(force = false) {
   if (!force && state.zoomMode === "custom") return;
   window.cancelAnimationFrame(centerReadingFrame);
   centerReadingFrame = window.requestAnimationFrame(() => {
-    const stage = state.viewMode === "page" ? canvasStage : continuousStage;
+    const stage =
+      state.viewMode === "page"
+        ? canvasStage
+        : state.viewMode === "spread"
+          ? spreadStage
+          : continuousStage;
     if (!stage || stage.hidden) return;
     const left = Math.max(0, Math.round((stage.scrollWidth - stage.clientWidth) / 2));
     stage.scrollLeft = left;
@@ -426,6 +632,20 @@ function scheduleViewerLayoutRefresh(immediate = false) {
     if (state.zoomMode === "custom") return;
     if (state.viewMode === "page") {
       renderCurrentPage();
+      return;
+    }
+    if (state.viewMode === "spread") {
+      buildContinuousList();
+      requestAnimationFrame(() => {
+        if (!scrollVirtualContinuousToPage(currentPage, false)) {
+          continuousList.querySelector(`[data-page="${currentPage}"]`)?.scrollIntoView({
+            block: "start",
+            inline: "center",
+            behavior: "auto",
+          });
+        }
+        centerReadingStageHorizontal(true);
+      });
       return;
     }
     buildContinuousList();
@@ -669,6 +889,7 @@ async function destroySources() {
     // La tarea puede haber finalizado.
   }
   state.renderTask = null;
+  cancelSpreadRenderTasks();
   renderScheduler.clear();
   await Promise.all([
     cancelTaskMap(state.thumbnailTasks),
@@ -700,8 +921,11 @@ async function resetDocument() {
   state.undoStack.length = 0;
   state.redoStack.length = 0;
   state.viewMode = "continuous";
+  viewerLayoutState.lastReadingMode = "continuous";
+  viewerLayoutState.readingModeBeforeOrganize = "continuous";
   state.zoomMode = "fit-width";
   state.zoom = 1;
+  cancelSpreadRenderTasks();
   state.renderSerial += 1;
   state.thumbnailBuildSerial += 1;
   state.continuousBuildSerial += 1;
@@ -725,6 +949,15 @@ async function resetDocument() {
   canvas.height = 1;
   canvas.style.width = "1px";
   canvas.style.height = "1px";
+  [spreadLeftCanvas, spreadRightCanvas].forEach((target) => {
+    if (!target) return;
+    target.width = 1;
+    target.height = 1;
+    target.style.width = "1px";
+    target.style.height = "1px";
+  });
+  spreadLeft.hidden = true;
+  spreadRight.hidden = true;
   pageTotal.textContent = "/ 0";
   pageInput.value = "1";
   pageInput.max = "1";
@@ -864,7 +1097,7 @@ function afterPlanChanged(options = {}) {
   blankCount.textContent = "Sin analizar";
   resetProgress();
   buildThumbnailList();
-  if (state.viewMode === "continuous") buildContinuousList();
+  if (["continuous", "spread"].includes(state.viewMode)) buildContinuousList();
   if (state.viewMode === "organize") buildOrganizeGrid();
   if (!options.skipRender && state.viewMode === "page") renderCurrentPage();
   updateDocumentIdentity();
@@ -1256,11 +1489,46 @@ function estimateContinuousStride(entry) {
   return Math.max(260, height * scale + 92);
 }
 
+function spreadRowStartIndex(index) {
+  const bounded = Math.max(0, Math.min(state.pagePlan.length - 1, Number(index) || 0));
+  if (state.spreadCoverAlone) {
+    if (bounded === 0) return 0;
+    return 1 + Math.floor((bounded - 1) / 2) * 2;
+  }
+  return Math.floor(bounded / 2) * 2;
+}
+
+function spreadRowEndIndex(index) {
+  const start = spreadRowStartIndex(index);
+  if (state.spreadCoverAlone && start === 0) return Math.min(1, state.pagePlan.length);
+  return Math.min(state.pagePlan.length, start + 2);
+}
+
 function buildContinuousOffsets() {
   const offsets = new Array(state.pagePlan.length + 1).fill(0);
-  for (let index = 0; index < state.pagePlan.length; index += 1) {
-    offsets[index + 1] = offsets[index] + estimateContinuousStride(state.pagePlan[index]);
+  if (state.viewMode !== "spread") {
+    for (let index = 0; index < state.pagePlan.length; index += 1) {
+      offsets[index + 1] = offsets[index] + estimateContinuousStride(state.pagePlan[index]);
+    }
+    return offsets;
   }
+
+  let total = 0;
+  let index = 0;
+  while (index < state.pagePlan.length) {
+    const end = state.spreadCoverAlone && index === 0
+      ? 1
+      : Math.min(state.pagePlan.length, index + 2);
+    let rowHeight = 0;
+    for (let pageIndex = index; pageIndex < end; pageIndex += 1) {
+      offsets[pageIndex] = total;
+      rowHeight = Math.max(rowHeight, estimateContinuousStride(state.pagePlan[pageIndex]));
+    }
+    total += Math.max(260, rowHeight);
+    offsets[end] = total;
+    index = end;
+  }
+  offsets[state.pagePlan.length] = total;
   return offsets;
 }
 
@@ -1305,6 +1573,10 @@ function renderVirtualContinuousWindow(forcePage = null) {
   let start = Math.max(0, binarySearchOffset(offsets, viewportTop) - 4);
   let end = Math.min(state.pagePlan.length, binarySearchOffset(offsets, viewportBottom) + 6);
   if (end <= start) end = Math.min(state.pagePlan.length, start + 10);
+  if (state.viewMode === "spread" && state.pagePlan.length) {
+    start = spreadRowStartIndex(start);
+    end = spreadRowEndIndex(Math.max(start, end - 1));
+  }
   if (virtual.start === start && virtual.end === end) return;
   state.continuousObserver?.disconnect();
   cancelScheduledChannel('continuous');
@@ -1316,7 +1588,9 @@ function renderVirtualContinuousWindow(forcePage = null) {
   continuousList.replaceChildren(fragment);
   virtual.start = start;
   virtual.end = end;
-  const centerPage = Math.max(1, Math.min(state.pagePlan.length, binarySearchOffset(offsets, viewportTop + continuousStage.clientHeight / 2) + 1));
+  let centerIndex = binarySearchOffset(offsets, viewportTop + continuousStage.clientHeight / 2);
+  if (state.viewMode === "spread" && state.pagePlan.length) centerIndex = spreadRowStartIndex(centerIndex);
+  const centerPage = Math.max(1, Math.min(state.pagePlan.length, centerIndex + 1));
   if (centerPage !== state.currentPage) {
     state.currentPage = centerPage;
     pageInput.value = String(centerPage);
@@ -1710,6 +1984,9 @@ function updateCurrentVisuals() {
   organizeGrid.querySelector(`[data-page="${state.currentPage}"]`)?.classList.add("is-current");
   continuousList.querySelectorAll(".viewer-continuous-page.is-current").forEach((node) => node.classList.remove("is-current"));
   continuousList.querySelector(`[data-page="${state.currentPage}"]`)?.classList.add("is-current");
+  [spreadLeft, spreadRight].forEach((node) => {
+    node?.classList.toggle("is-current", Number(node.dataset.page) === state.currentPage);
+  });
 }
 
 function goToPage(pageNumber, options = {}) {
@@ -1721,7 +1998,7 @@ function goToPage(pageNumber, options = {}) {
   pageInfo.textContent = currentEntry ? `Página ${page} · ${sourceLabel(currentEntry)}` : `Página ${page}`;
   updateCurrentVisuals();
   if (state.viewMode === "page") renderCurrentPage();
-  if (state.viewMode === "continuous" && options.scroll !== false) {
+  if (["continuous", "spread"].includes(state.viewMode) && options.scroll !== false) {
     if (!scrollVirtualContinuousToPage(page, true)) {
       continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -2359,40 +2636,93 @@ async function performRenderOrganizeCard(entryId) {
   }
 }
 
+function switchReadingMode(mode) {
+  if (state.viewMode === "organize" && state.activeTool === "organize") {
+    activateTool("overview");
+  }
+  setViewMode(mode);
+}
+
 function setViewMode(mode, rebuild = true) {
-  const before = { viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size, activeTool: state.activeTool };
-  const resolvedMode = mode === "organize" ? "organize" : "continuous";
-  if (resolvedMode === "organize") {
+  const before = {
+    viewMode: state.viewMode,
+    currentPage: state.currentPage,
+    selectedPages: state.selectedIds.size,
+    activeTool: state.activeTool,
+  };
+  const resolvedMode = ["continuous", "page", "spread", "organize"].includes(mode) ? mode : "continuous";
+
+  if (state.viewMode === "page" && resolvedMode !== "page") {
+    try { state.renderTask?.cancel?.(); } catch { /* la tarea puede haber terminado */ }
+    state.renderTask = null;
+    state.renderSerial += 1;
+  }
+  if (state.viewMode === "spread" && resolvedMode !== "spread") {
+    cancelSpreadRenderTasks();
+  }
+  if (!["continuous", "spread"].includes(resolvedMode)) {
     state.continuousObserver?.disconnect();
     cancelScheduledChannel("continuous");
     cancelTaskMap(state.continuousTasks);
-  } else {
+  }
+  if (resolvedMode !== "organize") {
     state.organizeObserver?.disconnect();
     cancelScheduledChannel("organize");
     cancelTaskMap(state.organizeTasks);
   }
+
+  if (resolvedMode === "organize" && ["continuous", "page", "spread"].includes(state.viewMode)) {
+    viewerLayoutState.readingModeBeforeOrganize = state.viewMode;
+  }
+
   state.viewMode = resolvedMode;
+  if (["continuous", "page", "spread"].includes(resolvedMode)) {
+    viewerLayoutState.lastReadingMode = resolvedMode;
+    persistViewerLayoutPreferences();
+  }
+
   viewerLayoutState.organizeThumbnailsOverride = null;
   viewerLayoutState.organizeToolsOverride = null;
-  canvasStage.hidden = true;
-  continuousStage.hidden = resolvedMode !== "continuous";
+  canvasStage.hidden = resolvedMode !== "page";
+  continuousStage.hidden = !["continuous", "spread"].includes(resolvedMode);
+  spreadStage.hidden = true;
   organizeStage.hidden = resolvedMode !== "organize";
   document.body.classList.toggle("viewer-organize-active", resolvedMode === "organize");
+  if (!state.loading) setLoading(false);
   applyViewerPanelLayout();
+
   if (rebuild && state.file) {
-    if (resolvedMode === "continuous") {
+    if (["continuous", "spread"].includes(resolvedMode)) {
       const page = state.currentPage;
       buildContinuousList();
       requestAnimationFrame(() => {
-        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
+        if (!scrollVirtualContinuousToPage(page, false)) {
+          continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({
+            block: "start",
+            inline: "center",
+            behavior: "auto",
+          });
+        }
         centerReadingStageHorizontal(true);
       });
+    } else if (resolvedMode === "page") {
+      renderCurrentPage();
+    } else if (resolvedMode === "organize") {
+      buildOrganizeGrid();
     }
-    if (resolvedMode === "organize") buildOrganizeGrid();
   }
+
   updateControls();
-  const after = { viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size, activeTool: state.activeTool };
-  const passed = before.currentPage === after.currentPage && before.selectedPages === after.selectedPages;
+  const after = {
+    viewMode: state.viewMode,
+    currentPage: state.currentPage,
+    selectedPages: state.selectedIds.size,
+    activeTool: state.activeTool,
+  };
+  const passed =
+    before.currentPage === after.currentPage &&
+    before.selectedPages === after.selectedPages &&
+    after.viewMode === resolvedMode;
   diagEmit("state-check", { operation: "view-change", passed, before, after });
   diagnosticContext();
 }
@@ -2403,6 +2733,9 @@ function activateTool(name) {
   const leavingOrganizeForOverview = name === "overview" && state.viewMode === "organize";
 
   if (enteringOrganize) {
+    viewerLayoutState.readingModeBeforeOrganize = ["continuous", "page", "spread"].includes(state.viewMode)
+      ? state.viewMode
+      : viewerLayoutState.lastReadingMode;
     viewerLayoutState.organizeReturnTool =
       state.activeTool && state.activeTool !== "organize" ? state.activeTool : "overview";
   } else if (state.viewMode === "organize" && !["overview", "organize"].includes(name)) {
@@ -2425,7 +2758,7 @@ function activateTool(name) {
   if (enteringOrganize) {
     setViewMode("organize");
   } else if (leavingOrganizeForOverview) {
-    setViewMode("continuous");
+    setViewMode(viewerLayoutState.readingModeBeforeOrganize || viewerLayoutState.lastReadingMode || "continuous");
   }
 
   viewerLayoutState.contextualToolsOverride = null;
@@ -2441,7 +2774,7 @@ function activateTool(name) {
   const expectedView = enteringOrganize
     ? "organize"
     : leavingOrganizeForOverview
-      ? "continuous"
+      ? (viewerLayoutState.readingModeBeforeOrganize || viewerLayoutState.lastReadingMode || "continuous")
       : before.viewMode;
   const passed = before.currentPage === after.currentPage && before.selectedPages === after.selectedPages && after.viewMode === expectedView;
   diagEmit("state-check", { operation: "tool-change", passed, before, after });
@@ -2489,11 +2822,15 @@ function updateControls() {
   previousButton.disabled = !ready || state.currentPage <= 1;
   nextButton.disabled = !ready || state.currentPage >= state.pageCount;
   pageInput.disabled = !ready;
-  const readingView = ready && state.viewMode === "continuous";
+  const readingView = ready && ["continuous", "page", "spread"].includes(state.viewMode);
   zoomOutButton.disabled = !readingView;
   zoomInButton.disabled = !readingView;
   fitWidthButton.disabled = !readingView;
   fitPageButton.disabled = !readingView;
+  modeContinuousButton.disabled = !ready;
+  modePageButton.disabled = !ready;
+  modeSpreadButton.disabled = !ready;
+  spreadCoverButton.disabled = !ready || state.viewMode !== "spread";
   selectAllButton.disabled = !ready;
   selectNoneButton.disabled = !ready || !selected;
   rotateScope.disabled = !ready;
@@ -2511,6 +2848,19 @@ function updateControls() {
   openOrganizeButton.disabled = !ready;
   openOrganizeButton.textContent = state.viewMode === "organize" ? "Volver a lectura" : "Abrir vista Organizar";
   openOrganizeButton.setAttribute("aria-pressed", String(state.viewMode === "organize"));
+  modeContinuousButton.classList.toggle("is-active", state.viewMode === "continuous");
+  modePageButton.classList.toggle("is-active", state.viewMode === "page");
+  modeSpreadButton.classList.toggle("is-active", state.viewMode === "spread");
+  spreadCoverButton.classList.toggle("is-active", state.spreadCoverAlone);
+  modeContinuousButton.setAttribute("aria-pressed", String(state.viewMode === "continuous"));
+  modePageButton.setAttribute("aria-pressed", String(state.viewMode === "page"));
+  modeSpreadButton.setAttribute("aria-pressed", String(state.viewMode === "spread"));
+  spreadCoverButton.setAttribute("aria-pressed", String(state.spreadCoverAlone));
+  const coverLabel = state.spreadCoverAlone
+    ? "Portada separada activada: página 1 sola; después 2-3, 4-5…"
+    : "Portada separada desactivada: parejas 1-2, 3-4, 5-6…";
+  spreadCoverButton.title = coverLabel;
+  spreadCoverButton.setAttribute("aria-label", coverLabel);
   insertPosition.disabled = !ready;
   panelInsertPdfButton.disabled = !ready;
   panelAddBlankButton.disabled = !ready;
@@ -2542,11 +2892,13 @@ function updateControls() {
 
 function refreshReadingView() {
   if (!state.file) return;
-  if (state.viewMode === "continuous") {
+  if (["continuous", "spread"].includes(state.viewMode)) {
     const page = state.currentPage;
     buildContinuousList();
     requestAnimationFrame(() => {
-      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
+      if (!scrollVirtualContinuousToPage(page, false)) {
+        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
+      }
       centerReadingStageHorizontal(true);
     });
   } else if (state.viewMode === "page") {
@@ -2962,7 +3314,7 @@ function handlePagePanEnd(event) {
 }
 
 function handleContinuousPanStart(event) {
-  if (state.viewMode !== "continuous" || event.button !== 0 || !state.file) return;
+  if (!["continuous", "spread"].includes(state.viewMode) || event.button !== 0 || !state.file) return;
   state.continuousPan = {
     pointerId: event.pointerId,
     startX: event.clientX,
@@ -3015,10 +3367,28 @@ emptyState?.addEventListener("drop", (event) => {
 });
 fileInput?.addEventListener("change", () => { const selected = fileInput.files?.[0]; if (selected) loadPdf(selected, "el selector de archivos"); });
 insertFileInput?.addEventListener("change", () => insertPdfFiles(insertFileInput.files || [], state.insertionPlacement));
-previousButton?.addEventListener("click", () => goToPage(state.currentPage - 1));
-nextButton?.addEventListener("click", () => goToPage(state.currentPage + 1));
+previousButton?.addEventListener("click", () => goToPage(readingNavigationTarget(-1)));
+nextButton?.addEventListener("click", () => goToPage(readingNavigationTarget(1)));
 pageInput?.addEventListener("change", () => goToPage(pageInput.value));
 pageInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); goToPage(pageInput.value); } });
+modeContinuousButton?.addEventListener("click", () => switchReadingMode("continuous"));
+modePageButton?.addEventListener("click", () => switchReadingMode("page"));
+modeSpreadButton?.addEventListener("click", () => switchReadingMode("spread"));
+spreadCoverButton?.addEventListener("click", () => {
+  state.spreadCoverAlone = !state.spreadCoverAlone;
+  persistViewerLayoutPreferences();
+  applyViewerPanelLayout();
+  if (state.viewMode === "spread") {
+    const page = state.currentPage;
+    buildContinuousList();
+    requestAnimationFrame(() => {
+      if (!scrollVirtualContinuousToPage(page, false)) {
+        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
+      }
+    });
+  }
+  updateControls();
+});
 zoomOutButton?.addEventListener("click", () => setCustomZoom((state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100) - 0.15));
 zoomInButton?.addEventListener("click", () => setCustomZoom((state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100) + 0.15));
 fitWidthButton?.addEventListener("click", () => {
@@ -3051,7 +3421,7 @@ toolLinks.forEach((button) => button.addEventListener("click", () => activateToo
 openOrganizeButton?.addEventListener("click", () => {
   if (state.viewMode === "organize") {
     const returnTool = viewerLayoutState.organizeReturnTool || "overview";
-    setViewMode("continuous");
+    setViewMode(viewerLayoutState.readingModeBeforeOrganize || viewerLayoutState.lastReadingMode || "continuous");
     activateTool(returnTool === "organize" ? "overview" : returnTool);
     return;
   }
@@ -3080,6 +3450,11 @@ continuousStage?.addEventListener("pointerdown", handleContinuousPanStart);
 continuousStage?.addEventListener("pointermove", handleContinuousPanMove);
 continuousStage?.addEventListener("pointerup", handleContinuousPanEnd);
 continuousStage?.addEventListener("pointercancel", handleContinuousPanEnd);
+spreadStage?.addEventListener("click", (event) => {
+  const pageNode = event.target.closest?.(".viewer-spread-page[data-page]");
+  const page = Number(pageNode?.dataset.page);
+  if (Number.isInteger(page) && page >= 1 && page <= state.pageCount) goToPage(page, { scroll: false });
+});
 organizeStage?.addEventListener("pointermove", moveOrganizeCardPointer);
 organizeStage?.addEventListener("pointerup", (event) => finishOrganizeCardPointer(event, false));
 organizeStage?.addEventListener("pointercancel", (event) => finishOrganizeCardPointer(event, true));
@@ -3105,7 +3480,7 @@ window.addEventListener("resize", () => {
 });
 
 continuousStage?.addEventListener("wheel", (event) => {
-  if (!state.file || state.viewMode !== "continuous" || !event.ctrlKey) return;
+  if (!state.file || !["continuous", "spread"].includes(state.viewMode) || !event.ctrlKey) return;
   event.preventDefault();
   const current = state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100;
   setCustomZoom(current + (event.deltaY < 0 ? 0.12 : -0.12));
@@ -3144,6 +3519,35 @@ canvasStage?.addEventListener("wheel", (event) => {
   }
 }, { passive: false });
 
+spreadStage?.addEventListener("dblclick", (event) => {
+  if (!state.file || event.target.closest?.(".viewer-spread-label")) return;
+  if (state.zoomMode === "fit-page") setCustomZoom(1.25);
+  else {
+    state.zoomMode = "fit-page";
+    renderSpread();
+    updateControls();
+  }
+});
+spreadStage?.addEventListener("wheel", (event) => {
+  if (!state.file || state.viewMode !== "spread") return;
+  if (event.ctrlKey) {
+    event.preventDefault();
+    const current = state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100;
+    setCustomZoom(current + (event.deltaY < 0 ? 0.12 : -0.12));
+    return;
+  }
+  const now = Date.now();
+  if (now - state.wheelTimestamp < 260) return;
+  const atBottom = spreadStage.scrollTop + spreadStage.clientHeight >= spreadStage.scrollHeight - 3;
+  const atTop = spreadStage.scrollTop <= 3;
+  const noVerticalScroll = spreadStage.scrollHeight <= spreadStage.clientHeight + 3;
+  if ((event.deltaY > 0 && (atBottom || noVerticalScroll)) || (event.deltaY < 0 && (atTop || noVerticalScroll))) {
+    event.preventDefault();
+    state.wheelTimestamp = now;
+    goToPage(readingNavigationTarget(event.deltaY > 0 ? 1 : -1));
+  }
+}, { passive: false });
+
 window.addEventListener("resize", () => {
   updateResponsiveViewerLayout();
   scheduleViewerLayoutRefresh();
@@ -3157,7 +3561,7 @@ if ("ResizeObserver" in window) {
     updateResponsiveViewerLayout();
     scheduleViewerLayoutRefresh();
   });
-  [viewerShell, canvasStage, continuousStage].forEach((element) => {
+  [viewerShell, canvasStage, continuousStage, spreadStage].forEach((element) => {
     if (element) viewerResizeObserver.observe(element);
   });
 }
@@ -3191,13 +3595,14 @@ window.addEventListener("keydown", (event) => {
   } else if (event.ctrlKey && event.key === "0") {
     event.preventDefault();
     state.zoomMode = "fit-page";
-    setViewMode("continuous");
+    refreshReadingView();
+    updateControls();
   } else if (!editing && (event.key === "ArrowRight" || event.key === "PageDown")) {
     event.preventDefault();
-    goToPage(state.currentPage + 1);
+    goToPage(readingNavigationTarget(1));
   } else if (!editing && (event.key === "ArrowLeft" || event.key === "PageUp")) {
     event.preventDefault();
-    goToPage(state.currentPage - 1);
+    goToPage(readingNavigationTarget(-1));
   } else if (!editing && event.key === "Home") {
     event.preventDefault();
     goToPage(1);

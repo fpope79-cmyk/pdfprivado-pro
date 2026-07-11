@@ -244,6 +244,20 @@
 
             <div class="viewer-center-column">
               <div class="viewer-toolbar" aria-label="Controles del lector PDF">
+                <div class="viewer-toolbar-group viewer-mode-group" role="group" aria-label="Modo de lectura">
+                  <button id="viewer-mode-continuous-button" type="button" title="Lectura continua" aria-label="Lectura continua" disabled>
+                    <span aria-hidden="true">☰</span><b>Continua</b>
+                  </button>
+                  <button id="viewer-mode-page-button" type="button" title="Una página" aria-label="Una página" disabled>
+                    <span aria-hidden="true">▯</span><b>Una página</b>
+                  </button>
+                  <button id="viewer-mode-spread-button" type="button" title="Dos páginas enfrentadas" aria-label="Dos páginas enfrentadas" disabled>
+                    <span aria-hidden="true">▯▯</span><b>Dos páginas</b>
+                  </button>
+                  <button id="viewer-spread-cover-button" type="button" title="Portada separada: página 1 sola; después 2-3, 4-5…" aria-label="Portada separada en vista de dos páginas" disabled>
+                    <span aria-hidden="true">1</span><b>Portada separada</b>
+                  </button>
+                </div>
                 <div class="viewer-toolbar-group viewer-page-navigation">
                   <button id="viewer-previous-button" type="button" title="Página anterior" disabled>←</button>
                   <label class="viewer-page-field" for="viewer-page-input">
@@ -291,17 +305,25 @@
               </div>
 
               <div class="viewer-stage-stack">
-                <div class="viewer-canvas-stage" id="viewer-canvas-stage">
+                <div class="viewer-canvas-stage" id="viewer-canvas-stage" hidden aria-label="Vista de una página">
                   <canvas id="viewer-canvas" aria-label="Página actual del PDF"></canvas>
-                  <div class="viewer-loading-overlay" id="viewer-loading-overlay" role="status" aria-live="polite" hidden>
-                    <span class="viewer-spinner" aria-hidden="true"></span>
-                    <strong id="viewer-loading-title">Preparando documento</strong>
-                    <span id="viewer-loading-detail">Todo se procesa localmente.</span>
-                  </div>
                 </div>
 
-                <div class="viewer-continuous-stage" id="viewer-continuous-stage" hidden aria-label="Desplazamiento continuo por el PDF">
+                <div class="viewer-continuous-stage" id="viewer-continuous-stage" aria-label="Desplazamiento continuo por el PDF">
                   <div class="viewer-continuous-list" id="viewer-continuous-list"></div>
+                </div>
+
+                <div class="viewer-spread-stage" id="viewer-spread-stage" hidden aria-label="Vista de dos páginas enfrentadas">
+                  <div class="viewer-spread-pages" id="viewer-spread-pages">
+                    <article class="viewer-spread-page" id="viewer-spread-left" data-side="left" hidden>
+                      <span class="viewer-spread-label" id="viewer-spread-left-label"></span>
+                      <canvas id="viewer-spread-left-canvas" aria-label="Página izquierda del PDF"></canvas>
+                    </article>
+                    <article class="viewer-spread-page" id="viewer-spread-right" data-side="right" hidden>
+                      <span class="viewer-spread-label" id="viewer-spread-right-label"></span>
+                      <canvas id="viewer-spread-right-canvas" aria-label="Página derecha del PDF"></canvas>
+                    </article>
+                  </div>
                 </div>
 
                 <div class="viewer-organize-stage" id="viewer-organize-stage" hidden aria-label="Organizar páginas del documento">
@@ -320,6 +342,12 @@
                     </div>
                   </div>
                   <div class="viewer-organize-grid" id="viewer-organize-grid"></div>
+                </div>
+
+                <div class="viewer-loading-overlay" id="viewer-loading-overlay" role="status" aria-live="polite" hidden>
+                  <span class="viewer-spinner" aria-hidden="true"></span>
+                  <strong id="viewer-loading-title">Preparando documento</strong>
+                  <span id="viewer-loading-detail">Todo se procesa localmente.</span>
                 </div>
               </div>
 

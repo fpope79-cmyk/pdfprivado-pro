@@ -4242,6 +4242,7 @@ body.viewer-active footer {
 
 .viewer-stage-stack > .viewer-canvas-stage,
 .viewer-stage-stack > .viewer-continuous-stage,
+.viewer-stage-stack > .viewer-spread-stage,
 .viewer-stage-stack > .viewer-organize-stage {
   width: 100%;
   min-height: 0;
@@ -5905,4 +5906,485 @@ body.viewer-reading-clean .viewer-continuous-list {
     width: 32px;
     min-width: 32px;
   }
+}
+
+/* Pro v2.4: modos de lectura continua, una página, vista doble y modo foco. */
+.viewer-mode-group {
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid #d8e1eb;
+}
+
+.viewer-mode-group button {
+  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+
+.viewer-mode-group button > span {
+  min-width: 16px;
+  font-size: 0.94rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.viewer-mode-group button > b {
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+body:not(.viewer-spread-active) #viewer-spread-cover-button {
+  display: none;
+}
+
+.viewer-spread-stage {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+  background:
+    linear-gradient(45deg, rgba(148, 163, 184, 0.08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(148, 163, 184, 0.08) 25%, transparent 25%),
+    #cfd8e2;
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px;
+  scrollbar-gutter: stable both-edges;
+}
+
+.viewer-spread-pages {
+  min-width: max-content;
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  padding: 14px;
+}
+
+.viewer-spread-pages.is-single {
+  min-width: 100%;
+}
+
+.viewer-spread-page {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 28px 12px 12px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: rgba(203, 213, 225, 0.45);
+  cursor: pointer;
+}
+
+.viewer-spread-page.is-current {
+  border-color: #38bdf8;
+  background: rgba(224, 242, 254, 0.58);
+}
+
+.viewer-spread-page canvas {
+  display: block;
+  max-width: none;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.27);
+}
+
+.viewer-spread-label {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #ffffff;
+  font-size: 0.61rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.viewer-stage-stack > .viewer-loading-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+body.viewer-page-active .viewer-canvas-stage {
+  align-items: flex-start;
+}
+
+body.viewer-focus-mode {
+  background: #cfd8e2;
+}
+
+body.viewer-focus-mode .app-shell {
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+}
+
+body.viewer-focus-mode .topbar,
+body.viewer-focus-mode .viewer-home-hero,
+body.viewer-focus-mode .viewer-feedback,
+body.viewer-focus-mode .viewer-status-bar,
+body.viewer-focus-mode footer {
+  display: none !important;
+}
+
+body.viewer-focus-mode main,
+body.viewer-focus-mode .viewer-workspace {
+  min-height: 0;
+  height: 100%;
+}
+
+body.viewer-focus-mode .viewer-workspace {
+  padding: 0;
+  gap: 0;
+}
+
+body.viewer-focus-mode .viewer-shell,
+body.viewer-focus-mode.viewer-thumbnails-collapsed .viewer-shell,
+body.viewer-focus-mode.viewer-tools-collapsed .viewer-shell {
+  --viewer-thumbnail-column: 0px;
+  --viewer-tools-column: 0px;
+  height: 100%;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.viewer-focus-mode .viewer-sidebar,
+body.viewer-focus-mode .viewer-tools-panel {
+  display: none !important;
+}
+
+body.viewer-focus-mode .viewer-toolbar {
+  min-height: 44px;
+  padding-block: 5px;
+  background: rgba(248, 250, 252, 0.97);
+}
+
+body.viewer-focus-mode .viewer-continuous-list {
+  padding-top: 18px;
+}
+
+body.viewer-focus-mode .viewer-canvas-stage,
+body.viewer-focus-mode .viewer-spread-stage {
+  padding-top: 18px;
+}
+
+@media (max-width: 1380px) {
+  .viewer-mode-group button > b {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .viewer-mode-group button {
+    width: 34px;
+    min-width: 34px;
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 1080px) {
+  .viewer-mode-group {
+    padding-right: 5px;
+  }
+
+  .viewer-spread-stage {
+    padding: 14px;
+  }
+
+  .viewer-spread-pages {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .viewer-spread-page {
+    padding-inline: 8px;
+  }
+}
+
+@media (max-height: 760px) {
+  body.viewer-focus-mode .viewer-toolbar {
+    min-height: 40px;
+  }
+
+  .viewer-spread-stage {
+    padding-block: 12px;
+  }
+}
+
+/* Pro v2.4.1: vista doble continua y Lectura limpia comprensible. */
+.viewer-focus-exit-button {
+  display: none;
+}
+
+body.viewer-spread-active .viewer-continuous-list {
+  width: 100%;
+  min-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+  align-content: start;
+  align-items: start;
+  gap: 28px 18px;
+  padding: 28px 24px 70px;
+}
+
+body.viewer-spread-active .viewer-continuous-page {
+  align-self: start;
+  justify-self: center;
+}
+
+body.viewer-spread-active.viewer-spread-cover-alone .viewer-continuous-page:first-of-type {
+  grid-column: 1 / -1;
+}
+
+body.viewer-spread-active .viewer-continuous-virtual-spacer {
+  grid-column: 1 / -1;
+  width: 1px;
+}
+
+body.viewer-spread-active .viewer-continuous-page canvas {
+  max-width: none;
+}
+
+body.viewer-focus-mode .viewer-focus-exit-button {
+  position: fixed;
+  z-index: 5200;
+  top: 12px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.94);
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  font-size: 0.72rem;
+  font-weight: 850;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+body.viewer-focus-mode .viewer-focus-exit-button:hover {
+  background: #ffffff;
+}
+
+@media (max-width: 1080px) {
+  body.viewer-spread-active .viewer-continuous-list {
+    gap: 18px 10px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  body.viewer-focus-mode .viewer-focus-exit-button {
+    top: 8px;
+    right: 8px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Pro v2.4.2: vista doble contenida y barra inferior sin solapamientos. */
+.viewer-center-column {
+  min-width: 0;
+}
+
+.viewer-toolbar {
+  min-width: 0;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.viewer-toolbar-group {
+  flex: 0 0 auto;
+}
+
+body.viewer-spread-active .viewer-continuous-list {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: stretch;
+  align-content: start;
+  align-items: start;
+  gap: 28px 18px;
+  padding: 28px 24px 70px;
+}
+
+body.viewer-spread-active .viewer-continuous-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  justify-self: stretch;
+  align-self: start;
+  overflow: hidden;
+}
+
+body.viewer-spread-active .viewer-continuous-page canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+body.viewer-spread-active.viewer-spread-cover-alone .viewer-continuous-page:first-of-type {
+  grid-column: 1 / -1;
+  width: calc((100% - 18px) / 2);
+  max-width: calc((100% - 18px) / 2);
+  justify-self: center;
+}
+
+body.viewer-spread-active .viewer-continuous-virtual-spacer {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Con zoom manual se permite que la pareja crezca y que el escenario completo
+   gestione el desplazamiento horizontal, sin cortar ni superponer páginas. */
+body.viewer-custom-zoom.viewer-spread-active .viewer-continuous-list {
+  width: max-content;
+  min-width: 100%;
+  grid-template-columns: repeat(2, max-content);
+  justify-content: center;
+}
+
+body.viewer-custom-zoom.viewer-spread-active .viewer-continuous-page,
+body.viewer-custom-zoom.viewer-spread-active.viewer-spread-cover-alone .viewer-continuous-page:first-of-type {
+  width: max-content;
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+}
+
+body.viewer-custom-zoom.viewer-spread-active .viewer-continuous-page canvas {
+  max-width: none;
+}
+
+/* En resoluciones Full HD o inferiores los textos secundarios se compactan.
+   Los nombres completos siguen disponibles mediante title y accesibilidad. */
+@media (max-width: 1600px) {
+  .viewer-mode-group button > b,
+  .viewer-global-history .viewer-history-command > b {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .viewer-mode-group button {
+    width: 34px;
+    min-width: 34px;
+    padding-inline: 0;
+  }
+
+  .viewer-global-history .viewer-history-command {
+    width: 36px;
+    min-width: 36px;
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 1080px) {
+  body.viewer-spread-active .viewer-continuous-list {
+    gap: 18px 10px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  body.viewer-spread-active.viewer-spread-cover-alone .viewer-continuous-page:first-of-type {
+    width: calc((100% - 10px) / 2);
+    max-width: calc((100% - 10px) / 2);
+  }
+}
+
+/* Pro v2.4.3: Lectura limpia estable basada en flex, sin alturas porcentuales encadenadas. */
+body.viewer-focus-mode {
+  min-height: 100vh;
+  overflow: hidden;
+  background: #cfd8e2;
+}
+
+body.viewer-focus-mode .app-shell {
+  width: 100%;
+  min-height: 100vh;
+  height: auto;
+  margin: 0;
+}
+
+body.viewer-focus-mode main {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  display: flex;
+}
+
+body.viewer-focus-mode .viewer-workspace {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  gap: 0;
+}
+
+body.viewer-focus-mode .viewer-shell,
+body.viewer-focus-mode.viewer-thumbnails-collapsed .viewer-shell,
+body.viewer-focus-mode.viewer-tools-collapsed .viewer-shell {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  grid-template-columns: minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.viewer-focus-mode .viewer-center-column {
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+}
+
+body.viewer-focus-mode .viewer-stage-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+body.viewer-focus-mode .viewer-toolbar {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+}
+
+body.viewer-focus-mode .viewer-continuous-stage,
+body.viewer-focus-mode .viewer-canvas-stage,
+body.viewer-focus-mode .viewer-spread-stage {
+  min-height: 0;
+}
+
+body.viewer-focus-mode .viewer-focus-exit-button {
+  z-index: 5400;
 }
