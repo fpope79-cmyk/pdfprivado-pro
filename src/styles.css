@@ -5230,3 +5230,300 @@ body.viewer-active footer {
   min-height: 220px;
   max-height: 220px;
 }
+
+/* Parche responsive del visor v1: paneles plegables, modo compacto y centrado real. */
+.viewer-shell {
+  position: relative;
+  --viewer-thumbnail-column: 220px;
+  --viewer-tools-column: 310px;
+  grid-template-columns: var(--viewer-thumbnail-column) minmax(320px, 1fr) var(--viewer-tools-column);
+}
+
+.viewer-panel-heading {
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.viewer-panel-title {
+  min-width: 0;
+}
+
+.viewer-panel-title span,
+.viewer-panel-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-mini-actions {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.viewer-mini-actions button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-panel-collapse-button {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.viewer-panel-collapse-button:hover {
+  border-color: #38bdf8;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.viewer-tools-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer-tools-heading {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid #dbe3ec;
+  background: rgba(248, 250, 252, 0.98);
+  backdrop-filter: blur(8px);
+}
+
+.viewer-tools-heading strong {
+  overflow: hidden;
+  color: #475569;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.viewer-tool-tabs {
+  top: 42px;
+  flex: 0 0 auto;
+}
+
+.viewer-tools-panel > .viewer-tool-panel {
+  flex: 0 0 auto;
+}
+
+body.viewer-thumbnails-collapsed .viewer-shell {
+  --viewer-thumbnail-column: 48px;
+}
+
+body.viewer-tools-collapsed .viewer-shell {
+  --viewer-tools-column: 48px;
+}
+
+body.viewer-thumbnails-collapsed .viewer-sidebar {
+  overflow: hidden;
+}
+
+body.viewer-thumbnails-collapsed .viewer-sidebar .viewer-panel-heading {
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px 8px;
+  border-bottom: 0;
+}
+
+body.viewer-thumbnails-collapsed .viewer-panel-title,
+body.viewer-thumbnails-collapsed .viewer-mini-actions,
+body.viewer-thumbnails-collapsed .viewer-thumbnail-list {
+  display: none !important;
+}
+
+body.viewer-tools-collapsed .viewer-tools-panel {
+  overflow: hidden;
+}
+
+body.viewer-tools-collapsed .viewer-tools-heading {
+  min-height: 100%;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10px 8px;
+  border-bottom: 0;
+}
+
+body.viewer-tools-collapsed .viewer-tools-heading strong,
+body.viewer-tools-collapsed .viewer-tool-tabs,
+body.viewer-tools-collapsed .viewer-tool-panel {
+  display: none !important;
+}
+
+.viewer-continuous-stage {
+  scrollbar-gutter: stable both-edges;
+}
+
+.viewer-continuous-list {
+  padding-right: 24px;
+  padding-left: 24px;
+}
+
+.viewer-continuous-page {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+body.viewer-compact-layout .viewer-toolbar {
+  min-height: 58px;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 6px 8px;
+  padding: 6px 8px;
+}
+
+body.viewer-compact-layout .viewer-toolbar button {
+  padding-inline: 7px;
+}
+
+body.viewer-compact-layout .viewer-page-navigation {
+  padding-right: 8px;
+}
+
+body.viewer-compact-layout .viewer-continuous-list {
+  padding-right: 16px;
+  padding-left: 16px;
+}
+
+body.viewer-compact-layout .viewer-continuous-page {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+@media (max-width: 1320px) {
+  .viewer-shell {
+    --viewer-thumbnail-column: 190px;
+    --viewer-tools-column: 290px;
+  }
+
+  body.viewer-thumbnails-collapsed .viewer-shell {
+    --viewer-thumbnail-column: 48px;
+  }
+
+  body.viewer-tools-collapsed .viewer-shell {
+    --viewer-tools-column: 48px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .viewer-shell {
+    --viewer-thumbnail-column: 180px;
+    --viewer-tools-column: 270px;
+  }
+
+  body.viewer-thumbnails-collapsed .viewer-shell {
+    --viewer-thumbnail-column: 48px;
+  }
+
+  body.viewer-tools-collapsed .viewer-shell {
+    --viewer-tools-column: 48px;
+  }
+}
+
+/* La aplicación de escritorio tiene un ancho mínimo de 940 px. Incluso en ese
+   tamaño se conserva una única fila de trabajo y los paneles pasan a ser raíles. */
+@media (max-width: 960px) {
+  body.viewer-active {
+    overflow: hidden;
+  }
+
+  body.viewer-active .app-shell {
+    height: 100vh;
+    min-height: 680px;
+  }
+
+  body.viewer-active main {
+    min-height: 0;
+    display: flex;
+  }
+
+  body.viewer-active .viewer-shell {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: var(--viewer-thumbnail-column) minmax(300px, 1fr) var(--viewer-tools-column);
+  }
+
+  body.viewer-active .viewer-sidebar {
+    min-height: 0;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 0;
+  }
+
+  body.viewer-active .viewer-thumbnail-list {
+    display: block;
+    padding: 12px 10px 40px;
+    overflow: auto;
+  }
+
+  body.viewer-active .viewer-thumbnail-item {
+    min-width: 0;
+    margin-bottom: 10px;
+  }
+
+  body.viewer-active .viewer-center-column {
+    min-height: 0;
+  }
+
+  body.viewer-active .viewer-tools-panel {
+    grid-column: auto;
+    display: flex;
+    grid-template-columns: none;
+    overflow: hidden;
+    border-top: 0;
+    border-left: 1px solid #cbd5e1;
+  }
+
+  body.viewer-active .viewer-tool-section {
+    border-right: 0;
+    border-bottom: 1px solid #dbe3ec;
+  }
+}
+
+body.viewer-active.viewer-thumbnails-collapsed .viewer-panel-title,
+body.viewer-active.viewer-thumbnails-collapsed .viewer-mini-actions,
+body.viewer-active.viewer-thumbnails-collapsed .viewer-thumbnail-list {
+  display: none !important;
+}
+
+.viewer-continuous-stage {
+  --viewer-page-horizontal-chrome: 28px;
+  --viewer-page-vertical-chrome: 48px;
+}
+
+body.viewer-compact-layout .viewer-continuous-stage {
+  --viewer-page-horizontal-chrome: 24px;
+}

@@ -222,10 +222,18 @@
           <section class="viewer-shell" id="viewer-shell" hidden>
             <aside class="viewer-sidebar" aria-label="Miniaturas y selección de páginas">
               <div class="viewer-panel-heading">
-                <div>
+                <div class="viewer-panel-title">
                   <span>Miniaturas</span>
                   <strong id="viewer-selected-count">0 seleccionadas</strong>
                 </div>
+                <button
+                  class="viewer-panel-collapse-button"
+                  id="viewer-toggle-thumbnails-button"
+                  type="button"
+                  aria-expanded="true"
+                  aria-controls="viewer-thumbnail-list"
+                  title="Ocultar miniaturas"
+                >‹</button>
                 <div class="viewer-mini-actions">
                   <button id="viewer-select-all-button" type="button">Todas</button>
                   <button id="viewer-select-none-button" type="button">Ninguna</button>
@@ -296,7 +304,18 @@
             </div>
 
             <aside class="viewer-tools-panel" aria-label="Herramientas del documento">
-              <nav class="viewer-tool-tabs" aria-label="Elegir herramienta">
+              <div class="viewer-tools-heading">
+                <strong>Herramientas</strong>
+                <button
+                  class="viewer-panel-collapse-button"
+                  id="viewer-toggle-tools-button"
+                  type="button"
+                  aria-expanded="true"
+                  aria-controls="viewer-tools-content"
+                  title="Ocultar herramientas"
+                >›</button>
+              </div>
+              <nav class="viewer-tool-tabs" id="viewer-tools-content" aria-label="Elegir herramienta">
                 <button type="button" data-viewer-tool="overview" class="is-active">Inicio</button>
                 <button type="button" data-viewer-tool="organize">Organizar</button>
                 <button type="button" data-viewer-tool="rotate">Rotar</button>

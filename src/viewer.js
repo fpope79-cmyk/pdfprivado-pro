@@ -75,6 +75,8 @@ const closeFileButton = $("#viewer-close-file-button");
 const emptyState = $("#viewer-empty-state");
 const emptyOpenButton = $("#viewer-empty-open-button");
 const viewerShell = $("#viewer-shell");
+const toggleThumbnailsButton = $("#viewer-toggle-thumbnails-button");
+const toggleToolsButton = $("#viewer-toggle-tools-button");
 const fileName = $("#viewer-file-name");
 const fileDetails = $("#viewer-file-details");
 const feedback = $("#viewer-feedback");
@@ -223,6 +225,191 @@ const renderScheduler = new RenderScheduler({
   onChange: refreshSchedulerDiagnostics,
 });
 
+const VIEWER_LAYOUT_STORAGE_KEY = "pdfprivado-viewer-layout-v1";
+
+function readViewerLayoutPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(VIEWER_LAYOUT_STORAGE_KEY) || "{}");
+    return {
+      thumbnailsCollapsed: Boolean(saved.thumbnailsCollapsed),
+      toolsCollapsed: Boolean(saved.toolsCollapsed),
+    };
+  } catch {
+    return { thumbnailsCollapsed: false, toolsCollapsed: false };
+  }
+}
+
+const savedViewerLayout = readViewerLayoutPreferences();
+const viewerLayoutState = {
+  manualThumbnailsCollapsed: savedViewerLayout.thumbnailsCollapsed,
+  manualToolsCollapsed: savedViewerLayout.toolsCollapsed,
+  compact: false,
+  veryCompact: false,
+  compactThumbnailsOverride: null,
+  compactToolsOverride: null,
+};
+
+function persistViewerLayoutPreferences() {
+  try {
+    localStorage.setItem(VIEWER_LAYOUT_STORAGE_KEY, JSON.stringify({
+      thumbnailsCollapsed: viewerLayoutState.manualThumbnailsCollapsed,
+      toolsCollapsed: viewerLayoutState.manualToolsCollapsed,
+    }));
+  } catch {
+    // La preferencia visual no debe bloquear el visor.
+  }
+}
+
+function effectivePanelCollapsed(panel) {
+  if (panel === "thumbnails") {
+    if (viewerLayoutState.veryCompact) {
+      return viewerLayoutState.compactThumbnailsOverride ?? true;
+    }
+    return viewerLayoutState.manualThumbnailsCollapsed;
+  }
+  if (viewerLayoutState.compact) {
+    return viewerLayoutState.compactToolsOverride ?? true;
+  }
+  return viewerLayoutState.manualToolsCollapsed;
+}
+
+function applyViewerPanelLayout() {
+  const thumbnailsCollapsed = effectivePanelCollapsed("thumbnails");
+  const toolsCollapsed = effectivePanelCollapsed("tools");
+  document.body.classList.toggle("viewer-thumbnails-collapsed", thumbnailsCollapsed);
+  document.body.classList.toggle("viewer-tools-collapsed", toolsCollapsed);
+  document.body.classList.toggle("viewer-compact-layout", viewerLayoutState.compact);
+
+  if (toggleThumbnailsButton) {
+    toggleThumbnailsButton.textContent = thumbnailsCollapsed ? "›" : "‹";
+    toggleThumbnailsButton.title = thumbnailsCollapsed ? "Mostrar miniaturas" : "Ocultar miniaturas";
+    toggleThumbnailsButton.setAttribute("aria-label", toggleThumbnailsButton.title);
+    toggleThumbnailsButton.setAttribute("aria-expanded", String(!thumbnailsCollapsed));
+  }
+  if (toggleToolsButton) {
+    toggleToolsButton.textContent = toolsCollapsed ? "‹" : "›";
+    toggleToolsButton.title = toolsCollapsed ? "Mostrar herramientas" : "Ocultar herramientas";
+    toggleToolsButton.setAttribute("aria-label", toggleToolsButton.title);
+    toggleToolsButton.setAttribute("aria-expanded", String(!toolsCollapsed));
+  }
+}
+
+function updateResponsiveViewerLayout() {
+  const compact = window.innerWidth < 1160;
+  const veryCompact = window.innerWidth < 1000;
+  if (compact !== viewerLayoutState.compact) {
+    viewerLayoutState.compact = compact;
+    viewerLayoutState.compactToolsOverride = null;
+  }
+  if (veryCompact !== viewerLayoutState.veryCompact) {
+    viewerLayoutState.veryCompact = veryCompact;
+    viewerLayoutState.compactThumbnailsOverride = null;
+  }
+  applyViewerPanelLayout();
+}
+
+function toggleViewerPanel(panel) {
+  const collapsed = effectivePanelCollapsed(panel);
+  if (panel === "thumbnails") {
+    if (viewerLayoutState.veryCompact) viewerLayoutState.compactThumbnailsOverride = !collapsed;
+    else {
+      viewerLayoutState.manualThumbnailsCollapsed = !collapsed;
+      persistViewerLayoutPreferences();
+    }
+  } else if (viewerLayoutState.compact) {
+    viewerLayoutState.compactToolsOverride = !collapsed;
+  } else {
+    viewerLayoutState.manualToolsCollapsed = !collapsed;
+    persistViewerLayoutPreferences();
+  }
+  applyViewerPanelLayout();
+  scheduleViewerLayoutRefresh(true);
+}
+
+function stylePixels(styles, property) {
+  const raw = property.startsWith("--") ? styles?.getPropertyValue(property) : styles?.[property];
+  return Math.max(0, Number.parseFloat(raw) || 0);
+}
+
+function continuousRenderBounds() {
+  const stageStyles = getComputedStyle(continuousStage);
+  const listStyles = getComputedStyle(continuousList);
+  const samplePage = continuousList.querySelector(".viewer-continuous-page");
+  const pageStyles = samplePage ? getComputedStyle(samplePage) : null;
+  const fallbackHorizontalChrome = stylePixels(stageStyles, "--viewer-page-horizontal-chrome") || 28;
+  const fallbackVerticalChrome = stylePixels(stageStyles, "--viewer-page-vertical-chrome") || 48;
+  const horizontalChrome =
+    stylePixels(listStyles, "paddingLeft") +
+    stylePixels(listStyles, "paddingRight") +
+    (pageStyles
+      ? stylePixels(pageStyles, "paddingLeft") + stylePixels(pageStyles, "paddingRight") +
+        stylePixels(pageStyles, "borderLeftWidth") + stylePixels(pageStyles, "borderRightWidth")
+      : fallbackHorizontalChrome);
+  const verticalChrome =
+    stylePixels(listStyles, "paddingTop") +
+    stylePixels(listStyles, "paddingBottom") +
+    (pageStyles
+      ? stylePixels(pageStyles, "paddingTop") + stylePixels(pageStyles, "paddingBottom") +
+        stylePixels(pageStyles, "borderTopWidth") + stylePixels(pageStyles, "borderBottomWidth")
+      : fallbackVerticalChrome);
+  return {
+    width: Math.max(180, continuousStage.clientWidth - horizontalChrome - 4),
+    height: Math.max(220, continuousStage.clientHeight - verticalChrome - 4),
+  };
+}
+
+function canvasRenderBounds() {
+  const styles = getComputedStyle(canvasStage);
+  return {
+    width: Math.max(180, canvasStage.clientWidth - stylePixels(styles, "paddingLeft") - stylePixels(styles, "paddingRight") - 2),
+    height: Math.max(220, canvasStage.clientHeight - stylePixels(styles, "paddingTop") - stylePixels(styles, "paddingBottom") - 2),
+  };
+}
+
+let centerReadingFrame = 0;
+function centerReadingStageHorizontal(force = false) {
+  if (!force && state.zoomMode === "custom") return;
+  window.cancelAnimationFrame(centerReadingFrame);
+  centerReadingFrame = window.requestAnimationFrame(() => {
+    const stage = state.viewMode === "page" ? canvasStage : continuousStage;
+    if (!stage || stage.hidden) return;
+    const left = Math.max(0, Math.round((stage.scrollWidth - stage.clientWidth) / 2));
+    stage.scrollLeft = left;
+  });
+}
+
+let viewerLayoutRefreshTimer = 0;
+function scheduleViewerLayoutRefresh(immediate = false) {
+  window.clearTimeout(viewerLayoutRefreshTimer);
+  const refresh = () => {
+    viewerLayoutRefreshTimer = 0;
+    if (viewerView.hidden || !state.file) return;
+    const currentPage = state.currentPage;
+    if (state.viewMode === "organize") {
+      if (state.organizeVirtual) renderVirtualOrganizeWindow(currentPage);
+      return;
+    }
+    if (state.zoomMode === "custom") return;
+    if (state.viewMode === "page") {
+      renderCurrentPage();
+      return;
+    }
+    buildContinuousList();
+    requestAnimationFrame(() => {
+      if (!scrollVirtualContinuousToPage(currentPage, false)) {
+        continuousList.querySelector(`[data-page="${currentPage}"]`)?.scrollIntoView({
+          block: "start",
+          inline: "center",
+          behavior: "auto",
+        });
+      }
+      centerReadingStageHorizontal(true);
+    });
+  };
+  if (immediate) refresh();
+  else viewerLayoutRefreshTimer = window.setTimeout(refresh, 180);
+}
+
 const canvasRenderSlots = new WeakMap();
 
 function createRenderingCancelledError() {
@@ -348,6 +535,7 @@ function showWorkspace(openPicker = false) {
   splitView.hidden = true;
   viewerView.hidden = false;
   document.body.classList.add("viewer-active");
+  updateResponsiveViewerLayout();
   document.title = state.file ? `${state.file.name} | PDFPrivado Pro` : "PDFPrivado Pro";
   window.scrollTo({ top: 0, behavior: "auto" });
   requestAnimationFrame(() => {
@@ -1026,8 +1214,7 @@ function estimateContinuousStride(entry) {
   let width = Math.max(1, Number(entry?.width) || A4.width);
   let height = Math.max(1, Number(entry?.height) || A4.height);
   if (normalizeRotation(entry?.rotation || 0) % 180 !== 0) [width, height] = [height, width];
-  const availableWidth = Math.max(320, continuousStage.clientWidth - 96);
-  const availableHeight = Math.max(300, continuousStage.clientHeight - 86);
+  const { width: availableWidth, height: availableHeight } = continuousRenderBounds();
   let scale;
   if (state.zoomMode === 'custom') scale = Math.max(0.1, state.zoom);
   else if (state.zoomMode === 'fit-page') scale = Math.max(0.1, Math.min(availableWidth / width, availableHeight / height));
@@ -1415,8 +1602,7 @@ async function performRenderThumbnail(entryId, force = false) {
 }
 
 function getFitScale(baseWidth, baseHeight) {
-  const availableWidth = Math.max(260, canvasStage.clientWidth - 56);
-  const availableHeight = Math.max(260, canvasStage.clientHeight - 56);
+  const { width: availableWidth, height: availableHeight } = canvasRenderBounds();
   if (state.zoomMode === "fit-page") return Math.max(0.1, Math.min(availableWidth / baseWidth, availableHeight / baseHeight));
   if (state.zoomMode === "fit-width") return Math.max(0.1, availableWidth / baseWidth);
   return Math.max(0.1, state.zoom);
@@ -1464,6 +1650,7 @@ async function renderCurrentPage() {
     pageInfo.textContent = `Página ${state.currentPage} · ${Math.round(result.width)} × ${Math.round(result.height)} pt · ${sourceLabel(entry)}`;
     zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     setLoading(false);
+    centerReadingStageHorizontal();
     diagEnd(diagnosticToken, { width: canvas.width, height: canvas.height });
   } catch (error) {
     diagFail(diagnosticToken, error, { page: state.currentPage });
@@ -1657,8 +1844,7 @@ async function performRenderContinuousPage(entryId) {
   const signature = `${entry.id}:${normalizeRotation(entry.rotation || 0)}:${state.zoomMode}:${state.zoom}:${continuousStage.clientWidth}:${continuousStage.clientHeight}`;
   if (target.dataset.renderedSignature === signature && target.width > 1) return;
 
-  const availableWidth = Math.max(320, continuousStage.clientWidth - 96);
-  const availableHeight = Math.max(300, continuousStage.clientHeight - 86);
+  const { width: availableWidth, height: availableHeight } = continuousRenderBounds();
   const outputScale = adaptiveOutputScale("continuous");
   const options = state.zoomMode === "custom"
     ? { scale: state.zoom, maxWidth: 100000, maxHeight: 100000, outputScale }
@@ -1681,6 +1867,7 @@ async function performRenderContinuousPage(entryId) {
     if (Number(item.dataset.page) === state.currentPage || state.zoomMode === "custom") {
       zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     }
+    centerReadingStageHorizontal();
     diagEnd(diagnosticToken, { width: target.width, height: target.height });
   } catch (error) {
     diagFail(diagnosticToken, error, { page: Number(item.dataset.page) || positionOfId(entryId) });
@@ -2160,7 +2347,8 @@ function setViewMode(mode, rebuild = true) {
       const page = state.currentPage;
       buildContinuousList();
       requestAnimationFrame(() => {
-        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
+        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
+        centerReadingStageHorizontal(true);
       });
     }
     if (resolvedMode === "organize") buildOrganizeGrid();
@@ -2295,7 +2483,8 @@ function refreshReadingView() {
     const page = state.currentPage;
     buildContinuousList();
     requestAnimationFrame(() => {
-      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
+      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
+      centerReadingStageHorizontal(true);
     });
   } else if (state.viewMode === "page") {
     renderCurrentPage();
@@ -2769,8 +2958,18 @@ pageInput?.addEventListener("change", () => goToPage(pageInput.value));
 pageInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); goToPage(pageInput.value); } });
 zoomOutButton?.addEventListener("click", () => setCustomZoom((state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100) - 0.15));
 zoomInButton?.addEventListener("click", () => setCustomZoom((state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100) + 0.15));
-fitWidthButton?.addEventListener("click", () => { state.zoomMode = "fit-width"; refreshReadingView(); updateControls(); });
-fitPageButton?.addEventListener("click", () => { state.zoomMode = "fit-page"; refreshReadingView(); updateControls(); });
+fitWidthButton?.addEventListener("click", () => {
+  state.zoomMode = "fit-width";
+  refreshReadingView();
+  updateControls();
+  centerReadingStageHorizontal(true);
+});
+fitPageButton?.addEventListener("click", () => {
+  state.zoomMode = "fit-page";
+  refreshReadingView();
+  updateControls();
+  centerReadingStageHorizontal(true);
+});
 selectAllButton?.addEventListener("click", () => replaceSelection(state.pagePlan.map((entry) => entry.id)));
 selectNoneButton?.addEventListener("click", () => replaceSelection([]));
 rotateScope?.addEventListener("change", () => { updateScopeControls(); updateControls(); });
@@ -2877,14 +3076,22 @@ canvasStage?.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 window.addEventListener("resize", () => {
-  if (!viewerView.hidden && state.file) {
-    window.clearTimeout(window.__pdfPrivadoViewerResizeTimer);
-    window.__pdfPrivadoViewerResizeTimer = window.setTimeout(() => {
-      if (state.viewMode === "page" && (state.zoomMode === "fit-width" || state.zoomMode === "fit-page")) renderCurrentPage();
-      if (state.viewMode === "continuous") buildContinuousList();
-    }, 160);
-  }
+  updateResponsiveViewerLayout();
+  scheduleViewerLayoutRefresh();
 });
+
+toggleThumbnailsButton?.addEventListener("click", () => toggleViewerPanel("thumbnails"));
+toggleToolsButton?.addEventListener("click", () => toggleViewerPanel("tools"));
+
+if ("ResizeObserver" in window) {
+  const viewerResizeObserver = new ResizeObserver(() => {
+    updateResponsiveViewerLayout();
+    scheduleViewerLayoutRefresh();
+  });
+  [viewerShell, canvasStage, continuousStage].forEach((element) => {
+    if (element) viewerResizeObserver.observe(element);
+  });
+}
 
 window.addEventListener("keydown", (event) => {
   if (event.ctrlKey && event.key.toLowerCase() === "o") {
@@ -2935,6 +3142,8 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
 
+updateResponsiveViewerLayout();
+applyViewerPanelLayout();
 updateScopeControls();
 activateTool("overview");
 setViewMode("continuous", false);
