@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.pdfprivado.pro",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "../dist",
+    "beforeDevCommand": "node scripts/prepare-frontend.mjs dev",
+    "beforeBuildCommand": "node scripts/prepare-frontend.mjs release"
   },
   "app": {
     "withGlobalTauri": true,

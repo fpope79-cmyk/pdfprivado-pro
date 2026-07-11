@@ -10,6 +10,7 @@ import {
   buildSplitPlan,
   summarizePages,
 } from "./split-core.js";
+import { RenderScheduler } from "./render-scheduler.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -18,6 +19,47 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+function diagnostics() {
+  return window.PDFPrivadoDiagnostics;
+}
+
+function diagEmit(type, details = {}) {
+  diagnostics()?.emit?.(type, details);
+}
+
+function diagStart(name, details = {}) {
+  return diagnostics()?.start?.(name, details) || null;
+}
+
+function diagEnd(token, details = {}, status = "ok") {
+  if (token) diagnostics()?.end?.(token, details, status);
+}
+
+function diagFail(token, error, details = {}) {
+  if (token) diagnostics()?.fail?.(token, error, details);
+  else if (error?.name !== "RenderingCancelledException") diagnostics()?.error?.(error, "visor", details);
+}
+
+function diagnosticContext() {
+  diagnostics()?.context?.({
+    documentOpen: Boolean(state.file && state.pageCount),
+    fileSizeBytes: Number(state.file?.size) || null,
+    pages: state.pageCount,
+    currentPage: state.currentPage,
+    selectedPages: state.selectedIds.size,
+    sourceDocuments: sourceCountInPlan(),
+    viewMode: state.viewMode,
+    activeTool: state.activeTool,
+    zoomMode: state.zoomMode,
+    zoomPercent: state.zoomMode === "custom" ? Math.round(state.zoom * 100) : Number.parseInt(zoomValue?.textContent || "0", 10) || null,
+    pendingThumbnailTasks: state.thumbnailTasks.size,
+    pendingContinuousTasks: state.continuousTasks.size,
+    pendingOrganizeTasks: state.organizeTasks.size,
+    queuedRenderTasks: renderScheduler.snapshot().queued,
+    activeRenderTasks: renderScheduler.snapshot().active,
+  });
+}
 
 const homeView = $("#home-view");
 const mergeView = $("#merge-view");
@@ -117,6 +159,7 @@ const splitPreview = $("#viewer-split-preview");
 const splitSaveButton = $("#viewer-split-save-button");
 
 const A4 = { width: 595.28, height: 841.89 };
+const ORGANIZE_VIRTUALIZATION_VERSION = "organize-virtual-v1";
 
 const state = {
   file: null,
@@ -157,7 +200,92 @@ const state = {
   organizePointer: null,
   organizeMarquee: null,
   wheelTimestamp: 0,
+  thumbnailBuildSerial: 0,
+  continuousBuildSerial: 0,
+  virtualThreshold: 2000,
+  thumbnailVirtual: null,
+  continuousVirtual: null,
+  organizeVirtual: null,
 };
+
+let schedulerDiagnosticTimer = 0;
+function refreshSchedulerDiagnostics() {
+  if (schedulerDiagnosticTimer) return;
+  schedulerDiagnosticTimer = window.setTimeout(() => {
+    schedulerDiagnosticTimer = 0;
+    diagnosticContext();
+  }, 100);
+}
+
+const renderScheduler = new RenderScheduler({
+  maxConcurrent: 3,
+  channelLimits: { thumbnail: 1, continuous: 2, organize: 2 },
+  onChange: refreshSchedulerDiagnostics,
+});
+
+const canvasRenderSlots = new WeakMap();
+
+function createRenderingCancelledError() {
+  const error = new Error("El renderizado anterior fue sustituido por una solicitud más reciente.");
+  error.name = "RenderingCancelledException";
+  return error;
+}
+
+function createRenderTaskHolder() {
+  return {
+    task: null,
+    cancelled: false,
+    setTask(task) {
+      this.task = task;
+      if (this.cancelled) {
+        try { task.cancel?.(); } catch { /* la tarea puede haber finalizado */ }
+      }
+    },
+    cancel() {
+      this.cancelled = true;
+      try { this.task?.cancel?.(); } catch { /* la tarea puede haber finalizado */ }
+    },
+  };
+}
+
+async function confirmDiscardChanges(message) {
+  const dialog = window.__TAURI__?.dialog;
+  if (typeof dialog?.message === "function") {
+    try {
+      const result = await dialog.message(message, {
+        title: "PDFPrivado Pro",
+        kind: "warning",
+        buttons: { ok: "Descartar cambios", cancel: "Cancelar" },
+      });
+      return result === "Descartar cambios" || result === "Ok";
+    } catch (error) {
+      diagnostics()?.error?.(error, "confirmar-cambios-pendientes");
+    }
+  }
+
+  const fallback = document.createElement("dialog");
+  fallback.className = "viewer-confirm-fallback";
+  fallback.innerHTML = `
+    <form method="dialog">
+      <h2>Cambios sin guardar</h2>
+      <p></p>
+      <div>
+        <button type="submit" value="cancel" class="secondary-button">Cancelar</button>
+        <button type="submit" value="discard" class="primary-button">Descartar cambios</button>
+      </div>
+    </form>
+  `;
+  fallback.querySelector("p").textContent = message;
+  document.body.append(fallback);
+  return new Promise((resolve) => {
+    fallback.addEventListener("close", () => {
+      const confirmed = fallback.returnValue === "discard";
+      fallback.remove();
+      resolve(confirmed);
+    }, { once: true });
+    fallback.showModal();
+  });
+}
 
 function formatBytes(bytes) {
   const value = Number(bytes);
@@ -288,6 +416,10 @@ function sourceLabel(entry) {
   return `${source?.file?.name || "PDF"} · original ${entry.sourcePage}`;
 }
 
+function cancelScheduledChannel(channel) {
+  renderScheduler.cancelChannel(channel);
+}
+
 async function cancelTaskMap(map) {
   for (const task of map.values()) {
     try {
@@ -315,6 +447,7 @@ async function destroySources() {
     // La tarea puede haber finalizado.
   }
   state.renderTask = null;
+  renderScheduler.clear();
   await Promise.all([
     cancelTaskMap(state.thumbnailTasks),
     cancelTaskMap(state.organizeTasks),
@@ -348,6 +481,12 @@ async function resetDocument() {
   state.zoomMode = "fit-width";
   state.zoom = 1;
   state.renderSerial += 1;
+  state.thumbnailBuildSerial += 1;
+  state.continuousBuildSerial += 1;
+  state.thumbnailVirtual = null;
+  state.continuousVirtual = null;
+  state.organizeVirtual = null;
+  organizeGrid.classList.remove("is-virtualized");
   state.blankPages.clear();
   state.splitPlan = [];
   state.splitErrors = [];
@@ -375,31 +514,55 @@ async function resetDocument() {
   setViewMode("continuous", false);
   updateControls();
   updateSplitPlan();
+  diagnosticContext();
 }
 
 async function closeCurrentPdf() {
   if (!state.file || state.loading || state.saving) return;
   if (isDocumentChanged()) {
-    const confirmed = window.confirm("Hay cambios pendientes que todavía no se han guardado. ¿Quieres cerrar el PDF y descartarlos?");
+    const confirmed = await confirmDiscardChanges("Hay cambios pendientes que todavía no se han guardado. ¿Quieres cerrar el PDF y descartarlos?");
     if (!confirmed) return;
   }
   const previousName = state.file.name;
+  diagEmit("document-close-start", {
+    pages: state.pageCount,
+    currentPage: state.currentPage,
+    selectedPages: state.selectedIds.size,
+    sourceDocuments: sourceCountInPlan(),
+  });
   await resetDocument();
+  diagEmit("document-closed", {});
   setFeedback(`${previousName} se cerró. Ya puedes abrir otro documento.`, "info");
 }
 
-async function createSource(file) {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
-  const pdfDocument = await loadingTask.promise;
-  if (!pdfDocument.numPages) {
-    await pdfDocument.destroy();
-    throw new Error(`${file.name} no contiene páginas.`);
+async function createSource(file, purpose = "source") {
+  const readToken = diagStart("pdf-read", { purpose, fileSizeBytes: Number(file?.size) || null });
+  let bytes;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+    diagEnd(readToken, { bytes: bytes.byteLength });
+  } catch (error) {
+    diagFail(readToken, error, { purpose });
+    throw error;
   }
-  const id = `source-${++state.sourceSequence}`;
-  const source = { id, file, bytes, pdfDocument };
-  state.sources.set(id, source);
-  return source;
+
+  const loadToken = diagStart("pdfjs-load", { purpose, bytes: bytes.byteLength });
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
+    const pdfDocument = await loadingTask.promise;
+    if (!pdfDocument.numPages) {
+      await pdfDocument.destroy();
+      throw new Error("El documento no contiene páginas.");
+    }
+    const id = `source-${++state.sourceSequence}`;
+    const source = { id, file, bytes, pdfDocument };
+    state.sources.set(id, source);
+    diagEnd(loadToken, { pages: pdfDocument.numPages });
+    return source;
+  } catch (error) {
+    diagFail(loadToken, error, { purpose });
+    throw error;
+  }
 }
 
 function entriesForSource(source) {
@@ -505,13 +668,23 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
     return;
   }
   if (state.file && isDocumentChanged()) {
-    const confirmed = window.confirm("Hay cambios pendientes que todavía no se han guardado. ¿Quieres abrir otro PDF y descartarlos?");
+    const confirmed = await confirmDiscardChanges("Hay cambios pendientes que todavía no se han guardado. ¿Quieres abrir otro PDF y descartarlos?");
     if (!confirmed) return;
   }
 
+  if (state.file) {
+    diagEmit("document-replace-start", {
+      pages: state.pageCount,
+      currentPage: state.currentPage,
+      selectedPages: state.selectedIds.size,
+      sourceDocuments: sourceCountInPlan(),
+    });
+  }
   state.loading = true;
   showWorkspace(false);
   await resetDocument();
+  diagEmit("document-open-start", { fileSizeBytes: Number(file.size) || null, source: sourceText === "Windows" ? "windows" : "manual" });
+  const openDiagnosticToken = diagStart("pdf-open-ready", { fileSizeBytes: Number(file.size) || null });
   state.loading = true;
   state.file = file;
   emptyState.hidden = true;
@@ -522,7 +695,7 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
   hideFeedback();
 
   try {
-    const source = await createSource(file);
+    const source = await createSource(file, "open");
     state.pagePlan = entriesForSource(source);
     state.originalPlan = clonePlan();
     state.pageCount = state.pagePlan.length;
@@ -538,6 +711,9 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
     continuousStage.scrollTo({ top: 0, left: 0, behavior: "auto" });
     setFeedback(`${file.name} abierto desde ${sourceText}. El documento ya es el inicio de tu espacio de trabajo.`, "success");
     document.title = `${file.name} | PDFPrivado Pro`;
+    diagEnd(openDiagnosticToken, { pages: state.pageCount });
+    diagEmit("document-open-ready", { pages: state.pageCount, fileSizeBytes: Number(file.size) || null });
+    diagnosticContext();
   } catch (error) {
     const detail = String(error?.message || error);
     const message = /password|encrypt/i.test(detail)
@@ -545,6 +721,8 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
       : `No se pudo abrir ${file.name}. Puede estar dañado o usar una estructura no compatible.`;
     setLoading(true, "No se pudo abrir el PDF", message);
     setFeedback(message, "error");
+    diagFail(openDiagnosticToken, error, { stage: "open" });
+    diagEmit("document-open-failed", { errorType: error?.name || "Error" });
     await destroySources();
     state.file = null;
     state.pagePlan = [];
@@ -556,6 +734,7 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
     setLoading(false);
     updateControls();
     updateSplitPlan();
+    diagnosticContext();
   }
 }
 
@@ -568,7 +747,7 @@ async function insertPdfFiles(files, placement = state.insertionPlacement) {
     const inserted = [];
     for (let index = 0; index < valid.length; index += 1) {
       loadingDetail.textContent = `Preparando ${valid[index].name} (${index + 1} de ${valid.length}).`;
-      const source = await createSource(valid[index]);
+      const source = await createSource(valid[index], "insert");
       inserted.push(...entriesForSource(source));
     }
     const at = insertionIndex(placement);
@@ -650,55 +829,450 @@ async function getPdfPage(entry) {
 }
 
 async function renderEntryToCanvas(entry, targetCanvas, options = {}) {
-  const maxWidth = Math.max(20, Number(options.maxWidth) || 600);
-  const maxHeight = Math.max(20, Number(options.maxHeight) || 900);
-  const outputScale = Math.min(window.devicePixelRatio || 1, Number(options.outputScale) || 2);
-  const explicitScale = Number(options.scale) || 0;
+  const previousSlot = canvasRenderSlots.get(targetCanvas);
+  let resolveDone;
+  const slot = {
+    task: null,
+    cancelled: false,
+    done: new Promise((resolve) => { resolveDone = resolve; }),
+    cancel() {
+      this.cancelled = true;
+      try { this.task?.cancel?.(); } catch { /* la tarea puede haber finalizado */ }
+    },
+  };
+  canvasRenderSlots.set(targetCanvas, slot);
 
-  if (entry.kind === "blank") {
-    const baseWidth = entry.width || A4.width;
-    const baseHeight = entry.height || A4.height;
-    const rotated = normalizeRotation(entry.rotation || 0) % 180 !== 0;
-    const width = rotated ? baseHeight : baseWidth;
-    const height = rotated ? baseWidth : baseHeight;
-    const scale = explicitScale || Math.min(maxWidth / width, maxHeight / height);
-    const cssWidth = Math.max(1, Math.round(width * scale));
-    const cssHeight = Math.max(1, Math.round(height * scale));
-    targetCanvas.width = Math.max(1, Math.floor(cssWidth * outputScale));
-    targetCanvas.height = Math.max(1, Math.floor(cssHeight * outputScale));
-    targetCanvas.style.width = `${cssWidth}px`;
-    targetCanvas.style.height = `${cssHeight}px`;
+  if (previousSlot) {
+    previousSlot.cancel();
+    await previousSlot.done;
+  }
+
+  const ensureCurrent = () => {
+    if (slot.cancelled || canvasRenderSlots.get(targetCanvas) !== slot) {
+      throw createRenderingCancelledError();
+    }
+  };
+
+  let page = null;
+  try {
+    ensureCurrent();
+    const maxWidth = Math.max(20, Number(options.maxWidth) || 600);
+    const maxHeight = Math.max(20, Number(options.maxHeight) || 900);
+    const outputScale = Math.min(window.devicePixelRatio || 1, Number(options.outputScale) || 2);
+    const explicitScale = Number(options.scale) || 0;
+
+    if (entry.kind === "blank") {
+      const baseWidth = entry.width || A4.width;
+      const baseHeight = entry.height || A4.height;
+      const rotated = normalizeRotation(entry.rotation || 0) % 180 !== 0;
+      const width = rotated ? baseHeight : baseWidth;
+      const height = rotated ? baseWidth : baseHeight;
+      const scale = explicitScale || Math.min(maxWidth / width, maxHeight / height);
+      const cssWidth = Math.max(1, Math.round(width * scale));
+      const cssHeight = Math.max(1, Math.round(height * scale));
+      targetCanvas.width = Math.max(1, Math.floor(cssWidth * outputScale));
+      targetCanvas.height = Math.max(1, Math.floor(cssHeight * outputScale));
+      targetCanvas.style.width = `${cssWidth}px`;
+      targetCanvas.style.height = `${cssHeight}px`;
+      const context = targetCanvas.getContext("2d", { alpha: false });
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+      return { width, height, scale, task: null };
+    }
+
+    page = await getPdfPage(entry);
+    ensureCurrent();
+    const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
+    const base = page.getViewport({ scale: 1, rotation });
+    const scale = explicitScale || Math.max(0.05, Math.min(maxWidth / base.width, maxHeight / base.height));
+    const viewport = page.getViewport({ scale, rotation });
+    targetCanvas.width = Math.max(1, Math.floor(viewport.width * outputScale));
+    targetCanvas.height = Math.max(1, Math.floor(viewport.height * outputScale));
+    targetCanvas.style.width = `${Math.round(viewport.width)}px`;
+    targetCanvas.style.height = `${Math.round(viewport.height)}px`;
     const context = targetCanvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error("No se pudo preparar el lienzo de la página.");
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
-    return { width, height, scale, task: null };
+    const task = page.render({
+      canvasContext: context,
+      viewport,
+      transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0],
+    });
+    slot.task = task;
+    options.onTask?.(task);
+    if (slot.cancelled) task.cancel?.();
+    await task.promise;
+    ensureCurrent();
+    return { width: base.width, height: base.height, scale, task };
+  } finally {
+    try { page?.cleanup?.(); } catch { /* limpieza defensiva de PDF.js */ }
+    resolveDone();
+    if (canvasRenderSlots.get(targetCanvas) === slot) {
+      canvasRenderSlots.delete(targetCanvas);
+    }
+  }
+}
+
+
+function adaptiveOutputScale(kind) {
+  if (state.pageCount >= 2000) return 1;
+  if (state.pageCount >= 500) return kind === "continuous" ? 1.05 : 1.1;
+  if (state.pageCount >= 200) return kind === "continuous" ? 1.2 : 1.25;
+  if (kind === "thumbnail") return 1.5;
+  if (kind === "organize") return 1.4;
+  return 1.5;
+}
+
+function renderPriority(observed, root, fallbackPage = state.currentPage) {
+  const page = Number(observed.target?.dataset?.page) || fallbackPage || 1;
+  const rect = observed.boundingClientRect || observed.target?.getBoundingClientRect?.();
+  const rootRect = observed.rootBounds || root?.getBoundingClientRect?.();
+  const ratio = Number(observed.intersectionRatio) || 0;
+  let distance = Math.abs(page - state.currentPage) * 3;
+  if (rect && rootRect) {
+    const center = (rect.top + rect.bottom) / 2;
+    const rootCenter = (rootRect.top + rootRect.bottom) / 2;
+    distance += Math.abs(center - rootCenter) / 8;
+  }
+  return Math.round(2000 * ratio - distance);
+}
+
+function releaseRenderedCanvas(node) {
+  const target = node?.querySelector?.("canvas");
+  if (!target || target.width <= 1) return;
+  try { canvasRenderSlots.get(target)?.cancel?.(); } catch { /* limpieza defensiva */ }
+  target.width = 1;
+  target.height = 1;
+  target.dataset.renderedSignature = "";
+}
+
+function scheduleIdle(callback) {
+  if (typeof window.requestIdleCallback === "function") {
+    return window.requestIdleCallback(callback, { timeout: 90 });
+  }
+  return window.setTimeout(() => callback({ didTimeout: true, timeRemaining: () => 8 }), 0);
+}
+
+function appendCardsProgressively({ serialProperty, container, entries, initialCount, batchSize, createCard, observeCard, onComplete }) {
+  const serial = ++state[serialProperty];
+  let index = 0;
+
+  const appendBatch = (limit) => {
+    if (serial !== state[serialProperty]) return false;
+    const fragment = document.createDocumentFragment();
+    const added = [];
+    const end = Math.min(entries.length, index + limit);
+    while (index < end) {
+      const card = createCard(entries[index], index + 1);
+      fragment.append(card);
+      added.push(card);
+      index += 1;
+    }
+    container.append(fragment);
+    added.forEach((card) => observeCard?.(card));
+    return index < entries.length;
+  };
+
+  const hasMore = appendBatch(Math.max(1, initialCount));
+  if (!hasMore) {
+    onComplete?.();
+    return;
   }
 
-  const page = await getPdfPage(entry);
-  const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
-  const base = page.getViewport({ scale: 1, rotation });
-  const scale = explicitScale || Math.max(0.05, Math.min(maxWidth / base.width, maxHeight / base.height));
-  const viewport = page.getViewport({ scale, rotation });
-  targetCanvas.width = Math.max(1, Math.floor(viewport.width * outputScale));
-  targetCanvas.height = Math.max(1, Math.floor(viewport.height * outputScale));
-  targetCanvas.style.width = `${Math.round(viewport.width)}px`;
-  targetCanvas.style.height = `${Math.round(viewport.height)}px`;
-  const context = targetCanvas.getContext("2d", { alpha: false });
-  if (!context) throw new Error("No se pudo preparar el lienzo de la página.");
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
-  const task = page.render({
-    canvasContext: context,
-    viewport,
-    transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0],
-  });
-  options.onTask?.(task);
-  try {
-    await task.promise;
-  } finally {
-    page.cleanup();
+  const pump = (deadline) => {
+    if (serial !== state[serialProperty]) return;
+    let batches = 0;
+    while (index < entries.length && batches < 3 && (deadline.didTimeout || deadline.timeRemaining() > 3)) {
+      appendBatch(batchSize);
+      batches += 1;
+    }
+    if (index < entries.length) scheduleIdle(pump);
+    else onComplete?.();
+  };
+  scheduleIdle(pump);
+}
+
+
+
+function isExtremeDocument() {
+  return state.pagePlan.length >= state.virtualThreshold;
+}
+
+function binarySearchOffset(offsets, value) {
+  let low = 0;
+  let high = Math.max(0, offsets.length - 1);
+  while (low < high) {
+    const mid = Math.floor((low + high + 1) / 2);
+    if (offsets[mid] <= value) low = mid;
+    else high = mid - 1;
   }
-  return { width: base.width, height: base.height, scale, task };
+  return low;
+}
+
+function createVirtualSpacer(className, height) {
+  const spacer = document.createElement('div');
+  spacer.className = className;
+  spacer.style.height = `${Math.max(0, Math.round(height))}px`;
+  spacer.setAttribute('aria-hidden', 'true');
+  return spacer;
+}
+
+function thumbnailStride() {
+  return 198;
+}
+
+function estimateContinuousStride(entry) {
+  let width = Math.max(1, Number(entry?.width) || A4.width);
+  let height = Math.max(1, Number(entry?.height) || A4.height);
+  if (normalizeRotation(entry?.rotation || 0) % 180 !== 0) [width, height] = [height, width];
+  const availableWidth = Math.max(320, continuousStage.clientWidth - 96);
+  const availableHeight = Math.max(300, continuousStage.clientHeight - 86);
+  let scale;
+  if (state.zoomMode === 'custom') scale = Math.max(0.1, state.zoom);
+  else if (state.zoomMode === 'fit-page') scale = Math.max(0.1, Math.min(availableWidth / width, availableHeight / height));
+  else scale = Math.max(0.1, availableWidth / width);
+  return Math.max(260, height * scale + 92);
+}
+
+function buildContinuousOffsets() {
+  const offsets = new Array(state.pagePlan.length + 1).fill(0);
+  for (let index = 0; index < state.pagePlan.length; index += 1) {
+    offsets[index + 1] = offsets[index] + estimateContinuousStride(state.pagePlan[index]);
+  }
+  return offsets;
+}
+
+function renderVirtualThumbnailWindow(forcePage = null) {
+  const virtual = state.thumbnailVirtual;
+  if (!virtual) return;
+  const stride = virtual.stride;
+  const viewport = Math.max(1, thumbnailList.clientHeight);
+  const anchor = forcePage ? Math.max(0, forcePage - 1) : Math.floor(thumbnailList.scrollTop / stride);
+  const visibleCount = Math.ceil(viewport / stride);
+  const start = Math.max(0, anchor - 8);
+  const end = Math.min(state.pagePlan.length, anchor + visibleCount + 12);
+  if (virtual.start === start && virtual.end === end) return;
+  state.thumbObserver?.disconnect();
+  cancelScheduledChannel('thumbnail');
+  cancelTaskMap(state.thumbnailTasks);
+  const fragment = document.createDocumentFragment();
+  fragment.append(createVirtualSpacer('viewer-virtual-spacer viewer-thumbnail-virtual-spacer', start * stride));
+  for (let index = start; index < end; index += 1) {
+    const card = createThumbnailCard(state.pagePlan[index], index + 1);
+    fragment.append(card);
+  }
+  fragment.append(createVirtualSpacer('viewer-virtual-spacer viewer-thumbnail-virtual-spacer', (state.pagePlan.length - end) * stride));
+  thumbnailList.replaceChildren(fragment);
+  virtual.start = start;
+  virtual.end = end;
+  for (const item of thumbnailList.querySelectorAll('.viewer-thumbnail-item')) {
+    const page = Number(item.dataset.page) || 1;
+    scheduleThumbnail(item.dataset.entryId, 10000 - Math.abs(page - (anchor + 1)) * 10);
+  }
+  refreshSelectionVisuals();
+  thumbnailList.querySelector(`[data-page="${state.currentPage}"]`)?.classList.add('is-current');
+  diagEmit('virtual-thumbnail-window', { start: start + 1, end, total: state.pagePlan.length });
+}
+
+function renderVirtualContinuousWindow(forcePage = null) {
+  const virtual = state.continuousVirtual;
+  if (!virtual) return;
+  const offsets = virtual.offsets;
+  const viewportTop = forcePage ? offsets[Math.max(0, forcePage - 1)] : continuousStage.scrollTop;
+  const viewportBottom = viewportTop + Math.max(1, continuousStage.clientHeight);
+  let start = Math.max(0, binarySearchOffset(offsets, viewportTop) - 4);
+  let end = Math.min(state.pagePlan.length, binarySearchOffset(offsets, viewportBottom) + 6);
+  if (end <= start) end = Math.min(state.pagePlan.length, start + 10);
+  if (virtual.start === start && virtual.end === end) return;
+  state.continuousObserver?.disconnect();
+  cancelScheduledChannel('continuous');
+  cancelTaskMap(state.continuousTasks);
+  const fragment = document.createDocumentFragment();
+  fragment.append(createVirtualSpacer('viewer-virtual-spacer viewer-continuous-virtual-spacer', offsets[start]));
+  for (let index = start; index < end; index += 1) fragment.append(createContinuousItem(state.pagePlan[index], index + 1));
+  fragment.append(createVirtualSpacer('viewer-virtual-spacer viewer-continuous-virtual-spacer', offsets[state.pagePlan.length] - offsets[end]));
+  continuousList.replaceChildren(fragment);
+  virtual.start = start;
+  virtual.end = end;
+  const centerPage = Math.max(1, Math.min(state.pagePlan.length, binarySearchOffset(offsets, viewportTop + continuousStage.clientHeight / 2) + 1));
+  if (centerPage !== state.currentPage) {
+    state.currentPage = centerPage;
+    pageInput.value = String(centerPage);
+    scrollVirtualThumbnailToPage(centerPage, false);
+  }
+  for (const item of continuousList.querySelectorAll('.viewer-continuous-page')) {
+    const page = Number(item.dataset.page) || 1;
+    scheduleContinuousPage(item.dataset.entryId, 10000 - Math.abs(page - centerPage) * 20);
+    item.classList.toggle('is-current', page === state.currentPage);
+  }
+  diagEmit('virtual-continuous-window', { start: start + 1, end, total: state.pagePlan.length, currentPage: state.currentPage });
+  updateControls();
+}
+
+function scrollVirtualThumbnailToPage(page, smooth = false) {
+  if (!state.thumbnailVirtual) return false;
+  thumbnailList.scrollTo({ top: Math.max(0, page - 1) * state.thumbnailVirtual.stride, behavior: smooth ? 'smooth' : 'auto' });
+  renderVirtualThumbnailWindow(page);
+  return true;
+}
+
+function scrollVirtualContinuousToPage(page, smooth = false) {
+  if (!state.continuousVirtual) return false;
+  const top = state.continuousVirtual.offsets[Math.max(0, page - 1)] || 0;
+  continuousStage.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
+  renderVirtualContinuousWindow(page);
+  return true;
+}
+
+
+function organizeVirtualMetrics() {
+  const style = getComputedStyle(organizeGrid);
+  const gap = Math.max(0, Number.parseFloat(style.rowGap) || 14);
+  const columnGap = Math.max(0, Number.parseFloat(style.columnGap) || gap);
+  const paddingLeft = Math.max(0, Number.parseFloat(style.paddingLeft) || 18);
+  const paddingRight = Math.max(0, Number.parseFloat(style.paddingRight) || 18);
+  const contentWidth = Math.max(168, organizeGrid.clientWidth - paddingLeft - paddingRight);
+  const columns = Math.max(1, Math.floor((contentWidth + columnGap) / (168 + columnGap)));
+  const cardHeight = 310;
+  const rowStride = cardHeight + gap;
+  const rows = Math.max(1, Math.ceil(state.pagePlan.length / columns));
+  return { gap, columns, cardHeight, rowStride, rows };
+}
+
+function clearVirtualOrganizeDropTarget() {
+  organizeGrid.querySelectorAll('.viewer-organize-card.is-drop-before, .viewer-organize-card.is-drop-after')
+    .forEach((card) => card.classList.remove('is-drop-before', 'is-drop-after'));
+}
+
+function renderVirtualOrganizeWindow(forcePage = null) {
+  const virtual = state.organizeVirtual;
+  if (!virtual) return;
+  const metrics = organizeVirtualMetrics();
+  const columnsChanged = virtual.columns !== metrics.columns;
+
+  const viewport = Math.max(1, organizeGrid.clientHeight);
+  const anchorPage = forcePage
+    ? Math.max(1, Math.min(state.pagePlan.length, Number(forcePage) || 1))
+    : Math.max(1, Math.min(state.pagePlan.length, Math.floor(organizeGrid.scrollTop / metrics.rowStride) * metrics.columns + 1));
+  const anchorRow = Math.floor((anchorPage - 1) / metrics.columns);
+  const visibleRows = Math.max(1, Math.ceil(viewport / metrics.rowStride));
+  const startRow = Math.max(0, anchorRow - 3);
+  const endRow = Math.min(metrics.rows, anchorRow + visibleRows + 5);
+  const start = startRow * metrics.columns;
+  const end = Math.min(state.pagePlan.length, endRow * metrics.columns);
+  if (virtual.start === start && virtual.end === end && !columnsChanged) return;
+
+  state.organizeObserver?.disconnect();
+  cancelScheduledChannel('organize');
+  cancelTaskMap(state.organizeTasks);
+
+  const space = document.createElement('div');
+  space.className = 'viewer-organize-virtual-space';
+  space.style.height = `${Math.max(metrics.cardHeight, metrics.rows * metrics.rowStride - metrics.gap)}px`;
+
+  const windowNode = document.createElement('div');
+  windowNode.className = 'viewer-organize-virtual-window';
+  windowNode.style.top = `${startRow * metrics.rowStride}px`;
+  for (let index = start; index < end; index += 1) {
+    windowNode.append(createOrganizeCard(state.pagePlan[index], index + 1));
+  }
+  space.append(windowNode);
+  organizeGrid.replaceChildren(space);
+
+  virtual.start = start;
+  virtual.end = end;
+  virtual.columns = metrics.columns;
+  virtual.cardHeight = metrics.cardHeight;
+  virtual.rowStride = metrics.rowStride;
+  virtual.rows = metrics.rows;
+
+  const centerPage = Math.max(1, Math.min(state.pagePlan.length, anchorRow * metrics.columns + Math.ceil(metrics.columns / 2)));
+  for (const card of organizeGrid.querySelectorAll('.viewer-organize-card')) {
+    const page = Number(card.dataset.page) || 1;
+    scheduleOrganizeCard(card.dataset.entryId, 10000 - Math.abs(page - centerPage) * 10);
+  }
+  refreshSelectionVisuals();
+  organizeGrid.querySelectorAll('.viewer-organize-card.is-current').forEach((node) => node.classList.remove('is-current'));
+  organizeGrid.querySelector(`[data-page="${state.currentPage}"]`)?.classList.add('is-current');
+  if (state.organizeDrag) {
+    for (const card of organizeGrid.querySelectorAll('.viewer-organize-card.is-selected')) {
+      card.classList.add('is-dragging');
+      card.setAttribute('aria-grabbed', 'true');
+    }
+  }
+  diagEmit('virtual-organize-window', {
+    start: start + 1,
+    end,
+    total: state.pagePlan.length,
+    columns: metrics.columns,
+    domCards: end - start,
+  });
+  diagnosticContext();
+}
+
+function scrollVirtualOrganizeToPage(page, smooth = false) {
+  if (!state.organizeVirtual) return false;
+  const metrics = organizeVirtualMetrics();
+  const row = Math.floor((Math.max(1, page) - 1) / metrics.columns);
+  organizeGrid.scrollTo({ top: row * metrics.rowStride, behavior: smooth ? 'smooth' : 'auto' });
+  renderVirtualOrganizeWindow(page);
+  return true;
+}
+
+function updateVirtualOrganizeDropTarget(target, clientY) {
+  const dragState = state.organizeDrag;
+  if (!dragState) return;
+  clearVirtualOrganizeDropTarget();
+  let candidate = target?.candidate || null;
+  let placement = target?.placement || 'after';
+  if (!candidate) {
+    const cards = [...organizeGrid.querySelectorAll('.viewer-organize-card')]
+      .filter((card) => !dragState.ids.includes(card.dataset.entryId));
+    if (cards.length) {
+      candidate = clientY < organizeGrid.getBoundingClientRect().top + organizeGrid.clientHeight / 2 ? cards[0] : cards.at(-1);
+      placement = candidate === cards[0] ? 'before' : 'after';
+    }
+  }
+  dragState.dropEntryId = candidate?.dataset.entryId || null;
+  dragState.dropPlacement = placement;
+  candidate?.classList.add(placement === 'before' ? 'is-drop-before' : 'is-drop-after');
+}
+
+function finishVirtualOrganizeReorder(dragState) {
+  clearVirtualOrganizeDropTarget();
+  const selectedSet = new Set(dragState.ids);
+  const moving = state.pagePlan.filter((entry) => selectedSet.has(entry.id));
+  const remaining = state.pagePlan.filter((entry) => !selectedSet.has(entry.id));
+  if (!moving.length || !remaining.length || !dragState.dropEntryId) {
+    refreshSelectionVisuals();
+    renderVirtualOrganizeWindow(state.currentPage);
+    return;
+  }
+  const targetIndex = remaining.findIndex((entry) => entry.id === dragState.dropEntryId);
+  if (targetIndex < 0) {
+    refreshSelectionVisuals();
+    renderVirtualOrganizeWindow(state.currentPage);
+    return;
+  }
+  const insertionIndex = targetIndex + (dragState.dropPlacement === 'after' ? 1 : 0);
+  const next = [
+    ...remaining.slice(0, insertionIndex),
+    ...moving,
+    ...remaining.slice(insertionIndex),
+  ].map((entry) => ({ ...entry }));
+  if (next.map((entry) => entry.id).join('|') === dragState.originalOrder.join('|')) {
+    refreshSelectionVisuals();
+    renderVirtualOrganizeWindow(state.currentPage);
+    return;
+  }
+  state.currentPage = Math.max(1, insertionIndex + 1);
+  commitPlan(next, moving.length === 1 ? 'Página movida' : `${moving.length} páginas movidas`);
+}
+
+function cancelScheduledRender(channel, entryId, releaseNode = null) {
+  renderScheduler.cancel(`${channel}:${entryId}`);
+  if (releaseNode) releaseRenderedCanvas(releaseNode);
 }
 
 function createThumbnailCard(entry, position) {
@@ -706,12 +1280,13 @@ function createThumbnailCard(entry, position) {
   item.className = "viewer-thumbnail-item";
   item.dataset.entryId = entry.id;
   item.dataset.page = String(position);
+  item.classList.toggle("is-selected", state.selectedIds.has(entry.id));
 
   const selectButton = document.createElement("button");
   selectButton.type = "button";
   selectButton.className = "viewer-thumbnail-select";
   selectButton.setAttribute("aria-label", `Seleccionar página ${position}`);
-  selectButton.setAttribute("aria-pressed", "false");
+  selectButton.setAttribute("aria-pressed", String(state.selectedIds.has(entry.id)));
   selectButton.textContent = "✓";
   selectButton.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -740,42 +1315,102 @@ function createThumbnailCard(entry, position) {
 }
 
 function buildThumbnailList() {
+  const diagnosticToken = diagStart("build-thumbnails", { pages: state.pagePlan.length });
   state.thumbObserver?.disconnect();
+  cancelScheduledChannel("thumbnail");
   cancelTaskMap(state.thumbnailTasks);
   thumbnailList.replaceChildren();
-  const fragment = document.createDocumentFragment();
-  state.pagePlan.forEach((entry, index) => fragment.append(createThumbnailCard(entry, index + 1)));
-  thumbnailList.append(fragment);
+  state.thumbnailVirtual = null;
 
-  const renderVisible = (entryId) => renderThumbnail(entryId).catch(() => {});
+  if (isExtremeDocument()) {
+    state.thumbnailVirtual = { stride: thumbnailStride(), start: -1, end: -1 };
+    renderVirtualThumbnailWindow(state.currentPage);
+    diagEnd(diagnosticToken, { virtualized: true, cards: state.pagePlan.length, domCards: thumbnailList.querySelectorAll('.viewer-thumbnail-item').length });
+    diagnosticContext();
+    return;
+  }
+
+  const renderVisible = (entryId, priority = 0, force = false) => scheduleThumbnail(entryId, priority, force);
   if ("IntersectionObserver" in window) {
     state.thumbObserver = new IntersectionObserver(
-      (entries) => entries.forEach((observed) => observed.isIntersecting && renderVisible(observed.target.dataset.entryId)),
-      { root: thumbnailList, rootMargin: "320px 0px" }
+      (entries) => entries.forEach((observed) => {
+        const entryId = observed.target.dataset.entryId;
+        if (observed.isIntersecting) renderVisible(entryId, renderPriority(observed, thumbnailList));
+        else cancelScheduledRender("thumbnail", entryId);
+      }),
+      { root: thumbnailList, rootMargin: "140px 0px", threshold: [0.01, 0.25, 0.6] }
     );
-    thumbnailList.querySelectorAll(".viewer-thumbnail-item").forEach((item) => state.thumbObserver.observe(item));
-  } else {
-    state.pagePlan.slice(0, 30).forEach((entry) => renderVisible(entry.id));
   }
+
+  const initialCount = Math.min(state.pagePlan.length, Math.max(160, state.currentPage + 24));
+  appendCardsProgressively({
+    serialProperty: "thumbnailBuildSerial",
+    container: thumbnailList,
+    entries: state.pagePlan,
+    initialCount,
+    batchSize: 220,
+    createCard: createThumbnailCard,
+    observeCard: (item) => {
+      if (state.thumbObserver) state.thumbObserver.observe(item);
+      else if (Number(item.dataset.page) <= 30) renderVisible(item.dataset.entryId, 1000 - Number(item.dataset.page));
+    },
+    onComplete: () => diagEmit("build-thumbnails-complete", { cards: state.pagePlan.length }),
+  });
+
   refreshSelectionVisuals();
   scrollCurrentThumbnail(false);
+  diagEnd(diagnosticToken, { initialCards: initialCount, cards: state.pagePlan.length, progressive: state.pagePlan.length > initialCount });
+  diagnosticContext();
 }
 
-async function renderThumbnail(entryId, force = false) {
+function scheduleThumbnail(entryId, priority = 0, force = false) {
+  const key = `thumbnail:${entryId}`;
+  if (force) {
+    renderScheduler.cancel(key);
+    state.thumbnailTasks.get(entryId)?.cancel?.();
+  }
+  renderScheduler.enqueue({
+    key,
+    channel: "thumbnail",
+    priority,
+    cancel: () => state.thumbnailTasks.get(entryId)?.cancel?.(),
+    run: () => performRenderThumbnail(entryId, force),
+  });
+}
+
+async function performRenderThumbnail(entryId, force = false) {
   const item = thumbnailList.querySelector(`[data-entry-id="${entryId}"]`);
   const target = item?.querySelector("canvas");
   const entry = state.pagePlan.find((candidate) => candidate.id === entryId);
   if (!item || !target || !entry) return;
   const signature = `${entry.kind}:${entry.sourceId || "blank"}:${entry.sourcePage || 0}:${normalizeRotation(entry.rotation || 0)}`;
   if (!force && target.dataset.renderedSignature === signature && target.width > 1) return;
+  if (state.thumbnailTasks.has(entryId)) {
+    if (!force) return;
+    state.thumbnailTasks.get(entryId)?.cancel?.();
+  }
+  const diagnosticToken = diagStart("render-thumbnail", { page: positionOfId(entryId) });
+  const taskHolder = createRenderTaskHolder();
+  state.thumbnailTasks.set(entryId, taskHolder);
+  diagnosticContext();
   try {
-    const result = await renderEntryToCanvas(entry, target, { maxWidth: 138, maxHeight: 155, outputScale: 1.5 });
-    if (result.task) state.thumbnailTasks.set(entryId, result.task);
+    await renderEntryToCanvas(entry, target, {
+      maxWidth: 138,
+      maxHeight: 155,
+      outputScale: adaptiveOutputScale("thumbnail"),
+      onTask: (task) => {
+        taskHolder.setTask(task);
+        diagnosticContext();
+      },
+    });
     target.dataset.renderedSignature = signature;
+    diagEnd(diagnosticToken, { width: target.width, height: target.height });
   } catch (error) {
+    diagFail(diagnosticToken, error, { page: positionOfId(entryId) });
     if (error?.name !== "RenderingCancelledException") throw error;
   } finally {
-    state.thumbnailTasks.delete(entryId);
+    if (state.thumbnailTasks.get(entryId) === taskHolder) state.thumbnailTasks.delete(entryId);
+    diagnosticContext();
   }
 }
 
@@ -789,6 +1424,7 @@ function getFitScale(baseWidth, baseHeight) {
 
 async function renderCurrentPage() {
   if (!state.file || !state.pageCount || state.viewMode !== "page") return;
+  const diagnosticToken = diagStart("render-page", { page: state.currentPage });
   const entry = entryAt(state.currentPage);
   if (!entry) return;
   const serial = ++state.renderSerial;
@@ -798,6 +1434,7 @@ async function renderCurrentPage() {
     // La tarea anterior puede haber terminado.
   }
   setLoading(true, `Mostrando página ${state.currentPage}`, "El PDF se representa localmente con PDF.js.");
+  let activeTask = null;
   try {
     let baseWidth = entry.width || A4.width;
     let baseHeight = entry.height || A4.height;
@@ -817,21 +1454,29 @@ async function renderCurrentPage() {
       maxWidth: baseWidth * scale,
       maxHeight: baseHeight * scale,
       outputScale: 2,
-      onTask: (task) => { state.renderTask = task; },
+      onTask: (task) => {
+        activeTask = task;
+        state.renderTask = task;
+      },
     });
     if (serial !== state.renderSerial) return;
-    state.renderTask = result.task;
     pageInput.value = String(state.currentPage);
     pageInfo.textContent = `Página ${state.currentPage} · ${Math.round(result.width)} × ${Math.round(result.height)} pt · ${sourceLabel(entry)}`;
     zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     setLoading(false);
+    diagEnd(diagnosticToken, { width: canvas.width, height: canvas.height });
   } catch (error) {
+    diagFail(diagnosticToken, error, { page: state.currentPage });
     if (error?.name === "RenderingCancelledException") return;
     setLoading(true, "No se pudo mostrar la página", String(error?.message || error));
+  } finally {
+    if (state.renderTask === activeTask) state.renderTask = null;
+    diagnosticContext();
   }
 }
 
 function scrollCurrentThumbnail(smooth = true) {
+  if (scrollVirtualThumbnailToPage(state.currentPage, smooth)) return;
   const item = thumbnailList.querySelector(`[data-page="${state.currentPage}"]`);
   thumbnailList.querySelectorAll(".viewer-thumbnail-item.is-current").forEach((node) => node.classList.remove("is-current"));
   item?.classList.add("is-current");
@@ -856,10 +1501,14 @@ function goToPage(pageNumber, options = {}) {
   updateCurrentVisuals();
   if (state.viewMode === "page") renderCurrentPage();
   if (state.viewMode === "continuous" && options.scroll !== false) {
-    continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!scrollVirtualContinuousToPage(page, true)) {
+      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
   if (state.viewMode === "organize" && options.scroll !== false) {
-    organizeGrid.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!scrollVirtualOrganizeToPage(page, true)) {
+      organizeGrid.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }
   updateControls();
 }
@@ -936,33 +1585,71 @@ function createContinuousItem(entry, position) {
 }
 
 function buildContinuousList() {
+  const diagnosticToken = diagStart("build-continuous", { pages: state.pagePlan.length });
   state.continuousObserver?.disconnect();
+  cancelScheduledChannel("continuous");
   cancelTaskMap(state.continuousTasks);
   continuousList.replaceChildren();
-  const fragment = document.createDocumentFragment();
-  state.pagePlan.forEach((entry, index) => fragment.append(createContinuousItem(entry, index + 1)));
-  continuousList.append(fragment);
+  state.continuousVirtual = null;
+
+  if (isExtremeDocument()) {
+    state.continuousVirtual = { offsets: buildContinuousOffsets(), start: -1, end: -1 };
+    renderVirtualContinuousWindow(state.currentPage);
+    diagEnd(diagnosticToken, { virtualized: true, cards: state.pagePlan.length, domCards: continuousList.querySelectorAll('.viewer-continuous-page').length });
+    diagnosticContext();
+    return;
+  }
+
   if ("IntersectionObserver" in window) {
     state.continuousObserver = new IntersectionObserver(
       (entries) => {
         const visible = entries.filter((entry) => entry.isIntersecting);
-        visible.forEach((observed) => renderContinuousPage(observed.target.dataset.entryId).catch(() => {}));
+        entries.forEach((observed) => {
+          const entryId = observed.target.dataset.entryId;
+          if (observed.isIntersecting) scheduleContinuousPage(entryId, renderPriority(observed, continuousStage));
+          else cancelScheduledRender("continuous", entryId, observed.target);
+        });
         const main = visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (main?.intersectionRatio > 0.35) {
           const page = Number(main.target.dataset.page);
-          if (page && page !== state.currentPage) {
-            goToPage(page, { scroll: false });
-          }
+          if (page && page !== state.currentPage) goToPage(page, { scroll: false });
         }
       },
-      { root: continuousStage, rootMargin: "600px 0px", threshold: [0.1, 0.35, 0.65] }
+      { root: continuousStage, rootMargin: "240px 0px", threshold: [0.01, 0.35, 0.65] }
     );
-    continuousList.querySelectorAll(".viewer-continuous-page").forEach((item) => state.continuousObserver.observe(item));
   }
+
+  const initialCount = Math.min(state.pagePlan.length, Math.max(48, state.currentPage + 8));
+  appendCardsProgressively({
+    serialProperty: "continuousBuildSerial",
+    container: continuousList,
+    entries: state.pagePlan,
+    initialCount,
+    batchSize: 180,
+    createCard: createContinuousItem,
+    observeCard: (item) => {
+      if (state.continuousObserver) state.continuousObserver.observe(item);
+      else if (Number(item.dataset.page) <= 12) scheduleContinuousPage(item.dataset.entryId, 1000 - Number(item.dataset.page));
+    },
+    onComplete: () => diagEmit("build-continuous-complete", { cards: state.pagePlan.length }),
+  });
+
   updateCurrentVisuals();
+  diagEnd(diagnosticToken, { initialCards: initialCount, cards: state.pagePlan.length, progressive: state.pagePlan.length > initialCount });
+  diagnosticContext();
 }
 
-async function renderContinuousPage(entryId) {
+function scheduleContinuousPage(entryId, priority = 0) {
+  renderScheduler.enqueue({
+    key: `continuous:${entryId}`,
+    channel: "continuous",
+    priority,
+    cancel: () => state.continuousTasks.get(entryId)?.cancel?.(),
+    run: () => performRenderContinuousPage(entryId),
+  });
+}
+
+async function performRenderContinuousPage(entryId) {
   const item = continuousList.querySelector(`[data-entry-id="${entryId}"]`);
   const target = item?.querySelector("canvas");
   const entry = state.pagePlan.find((candidate) => candidate.id === entryId);
@@ -972,21 +1659,35 @@ async function renderContinuousPage(entryId) {
 
   const availableWidth = Math.max(320, continuousStage.clientWidth - 96);
   const availableHeight = Math.max(300, continuousStage.clientHeight - 86);
+  const outputScale = adaptiveOutputScale("continuous");
   const options = state.zoomMode === "custom"
-    ? { scale: state.zoom, maxWidth: 100000, maxHeight: 100000, outputScale: 1.5 }
+    ? { scale: state.zoom, maxWidth: 100000, maxHeight: 100000, outputScale }
     : state.zoomMode === "fit-page"
-      ? { maxWidth: availableWidth, maxHeight: availableHeight, outputScale: 1.5 }
-      : { maxWidth: availableWidth, maxHeight: 100000, outputScale: 1.5 };
+      ? { maxWidth: availableWidth, maxHeight: availableHeight, outputScale }
+      : { maxWidth: availableWidth, maxHeight: 100000, outputScale };
 
+  if (state.continuousTasks.has(entryId)) return;
+  const diagnosticToken = diagStart("render-continuous", { page: Number(item.dataset.page) || positionOfId(entryId) });
+  const taskHolder = createRenderTaskHolder();
+  state.continuousTasks.set(entryId, taskHolder);
+  diagnosticContext();
+  options.onTask = (task) => {
+    taskHolder.setTask(task);
+    diagnosticContext();
+  };
   try {
     const result = await renderEntryToCanvas(entry, target, options);
-    if (result.task) state.continuousTasks.set(entryId, result.task);
     target.dataset.renderedSignature = signature;
     if (Number(item.dataset.page) === state.currentPage || state.zoomMode === "custom") {
       zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     }
+    diagEnd(diagnosticToken, { width: target.width, height: target.height });
+  } catch (error) {
+    diagFail(diagnosticToken, error, { page: Number(item.dataset.page) || positionOfId(entryId) });
+    if (error?.name !== "RenderingCancelledException") throw error;
   } finally {
-    state.continuousTasks.delete(entryId);
+    if (state.continuousTasks.get(entryId) === taskHolder) state.continuousTasks.delete(entryId);
+    diagnosticContext();
   }
 }
 
@@ -1064,7 +1765,7 @@ function animateOrganizeReflow(beforeRects, excludedIds = new Set()) {
 }
 
 function nearestOrganizeDropTarget(clientX, clientY, draggedIds) {
-  const candidates = [...organizeGrid.querySelectorAll(":scope > .viewer-organize-card")]
+  const candidates = [...organizeGrid.querySelectorAll(".viewer-organize-card")]
     .filter((card) => !draggedIds.has(card.dataset.entryId));
   if (!candidates.length) return { candidate: null, placement: "after" };
 
@@ -1137,6 +1838,9 @@ function startOrganizeCardDrag(pointer, event) {
     cards,
     originalOrder: state.pagePlan.map((entry) => entry.id),
     ghost,
+    virtual: Boolean(state.organizeVirtual),
+    dropEntryId: null,
+    dropPlacement: "after",
   };
   positionOrganizeDragGhost(ghost, event.clientX, event.clientY);
 }
@@ -1178,7 +1882,8 @@ function moveOrganizeCardPointer(event) {
   else if (event.clientY > gridRect.bottom - edge) organizeGrid.scrollBy({ top: 26, behavior: "auto" });
 
   const target = nearestOrganizeDropTarget(event.clientX, event.clientY, new Set(dragState.ids));
-  moveOrganizeCardsLive(dragState.cards, target.candidate, target.placement);
+  if (dragState.virtual) updateVirtualOrganizeDropTarget(target, event.clientY);
+  else moveOrganizeCardsLive(dragState.cards, target.candidate, target.placement);
 }
 
 function finishOrganizeCardPointer(event, cancelled = false) {
@@ -1206,6 +1911,11 @@ function finishOrganizeCardPointer(event, cancelled = false) {
     return;
   }
 
+  if (dragState.virtual) {
+    finishVirtualOrganizeReorder(dragState);
+    return;
+  }
+
   const order = organizeCardOrder();
   if (order.join("|") === dragState.originalOrder.join("|")) {
     refreshSelectionVisuals();
@@ -1228,7 +1938,7 @@ function marqueeIntersection(rect, cardRect) {
 }
 
 function beginOrganizeMarquee(event) {
-  if (event.button !== 0 || state.loading || state.saving || event.target !== organizeGrid) return;
+  if (event.button !== 0 || state.loading || state.saving || event.target.closest?.('.viewer-organize-card, button')) return;
   event.preventDefault();
   const marquee = document.createElement("div");
   marquee.className = "viewer-organize-marquee";
@@ -1262,7 +1972,7 @@ function moveOrganizeMarquee(event) {
 
   const selectionRect = { left, top, right, bottom };
   const next = new Set(drag.baseSelection);
-  for (const card of organizeGrid.querySelectorAll(":scope > .viewer-organize-card")) {
+  for (const card of organizeGrid.querySelectorAll(".viewer-organize-card")) {
     if (marqueeIntersection(selectionRect, card.getBoundingClientRect())) next.add(card.dataset.entryId);
   }
   state.selectedIds = next;
@@ -1339,42 +2049,107 @@ function createOrganizeCard(entry, position) {
 }
 
 function buildOrganizeGrid() {
+  const diagnosticToken = diagStart("build-organize", { pages: state.pagePlan.length });
   state.organizeObserver?.disconnect();
+  cancelScheduledChannel("organize");
   cancelTaskMap(state.organizeTasks);
   organizeGrid.replaceChildren();
+  state.organizeVirtual = null;
+  organizeGrid.classList.remove('is-virtualized');
+  organizeSummary.textContent = `${state.pageCount} ${state.pageCount === 1 ? "página" : "páginas"} · ${state.selectedIds.size} seleccionadas`;
+
+  if (isExtremeDocument()) {
+    state.organizeVirtual = { start: -1, end: -1, columns: 0, cardHeight: 310, rowStride: 324, rows: 0 };
+    organizeGrid.classList.add('is-virtualized');
+    const metrics = organizeVirtualMetrics();
+    const currentRow = Math.floor((Math.max(1, state.currentPage) - 1) / metrics.columns);
+    renderVirtualOrganizeWindow(state.currentPage);
+    organizeGrid.scrollTop = currentRow * metrics.rowStride;
+    diagEnd(diagnosticToken, {
+      virtualized: true,
+      cards: state.pagePlan.length,
+      domCards: organizeGrid.querySelectorAll('.viewer-organize-card').length,
+    });
+    diagnosticContext();
+    return;
+  }
+
   const fragment = document.createDocumentFragment();
   state.pagePlan.forEach((entry, index) => fragment.append(createOrganizeCard(entry, index + 1)));
   organizeGrid.append(fragment);
-  organizeSummary.textContent = `${state.pageCount} ${state.pageCount === 1 ? "página" : "páginas"} · ${state.selectedIds.size} seleccionadas`;
   if ("IntersectionObserver" in window) {
     state.organizeObserver = new IntersectionObserver(
-      (entries) => entries.forEach((observed) => observed.isIntersecting && renderOrganizeCard(observed.target.dataset.entryId).catch(() => {})),
-      { root: organizeStage, rootMargin: "400px 0px" }
+      (entries) => entries.forEach((observed) => {
+        const entryId = observed.target.dataset.entryId;
+        if (observed.isIntersecting) scheduleOrganizeCard(entryId, renderPriority(observed, organizeStage));
+        else cancelScheduledRender("organize", entryId, observed.target);
+      }),
+      { root: organizeStage, rootMargin: "220px 0px", threshold: [0.01, 0.3, 0.6] }
     );
     organizeGrid.querySelectorAll(".viewer-organize-card").forEach((item) => state.organizeObserver.observe(item));
   }
   refreshSelectionVisuals();
   updateCurrentVisuals();
+  diagEnd(diagnosticToken, { cards: state.pagePlan.length });
+  diagnosticContext();
 }
 
-async function renderOrganizeCard(entryId) {
+function scheduleOrganizeCard(entryId, priority = 0) {
+  renderScheduler.enqueue({
+    key: `organize:${entryId}`,
+    channel: "organize",
+    priority,
+    cancel: () => state.organizeTasks.get(entryId)?.cancel?.(),
+    run: () => performRenderOrganizeCard(entryId),
+  });
+}
+
+async function performRenderOrganizeCard(entryId) {
   const card = organizeGrid.querySelector(`[data-entry-id="${entryId}"]`);
   const target = card?.querySelector("canvas");
-  const entry = state.pagePlan.find((candidate) => candidate.id === entryId);
+  const position = positionOfId(entryId);
+  const entry = position ? entryAt(position) : null;
   if (!card || !target || !entry) return;
   const signature = `${entry.id}:${normalizeRotation(entry.rotation || 0)}`;
   if (target.dataset.renderedSignature === signature && target.width > 1) return;
+  if (state.organizeTasks.has(entryId)) return;
+  const diagnosticToken = diagStart("render-organize", { page: positionOfId(entryId) });
+  const taskHolder = createRenderTaskHolder();
+  state.organizeTasks.set(entryId, taskHolder);
+  diagnosticContext();
   try {
-    const result = await renderEntryToCanvas(entry, target, { maxWidth: 190, maxHeight: 230, outputScale: 1.4 });
-    if (result.task) state.organizeTasks.set(entryId, result.task);
+    await renderEntryToCanvas(entry, target, {
+      maxWidth: 190,
+      maxHeight: 230,
+      outputScale: adaptiveOutputScale("organize"),
+      onTask: (task) => {
+        taskHolder.setTask(task);
+        diagnosticContext();
+      },
+    });
     target.dataset.renderedSignature = signature;
+    diagEnd(diagnosticToken, { width: target.width, height: target.height });
+  } catch (error) {
+    diagFail(diagnosticToken, error, { page: positionOfId(entryId) });
+    if (error?.name !== "RenderingCancelledException") throw error;
   } finally {
-    state.organizeTasks.delete(entryId);
+    if (state.organizeTasks.get(entryId) === taskHolder) state.organizeTasks.delete(entryId);
+    diagnosticContext();
   }
 }
 
 function setViewMode(mode, rebuild = true) {
+  const before = { viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size, activeTool: state.activeTool };
   const resolvedMode = mode === "organize" ? "organize" : "continuous";
+  if (resolvedMode === "organize") {
+    state.continuousObserver?.disconnect();
+    cancelScheduledChannel("continuous");
+    cancelTaskMap(state.continuousTasks);
+  } else {
+    state.organizeObserver?.disconnect();
+    cancelScheduledChannel("organize");
+    cancelTaskMap(state.organizeTasks);
+  }
   state.viewMode = resolvedMode;
   canvasStage.hidden = true;
   continuousStage.hidden = resolvedMode !== "continuous";
@@ -1391,9 +2166,14 @@ function setViewMode(mode, rebuild = true) {
     if (resolvedMode === "organize") buildOrganizeGrid();
   }
   updateControls();
+  const after = { viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size, activeTool: state.activeTool };
+  const passed = before.currentPage === after.currentPage && before.selectedPages === after.selectedPages;
+  diagEmit("state-check", { operation: "view-change", passed, before, after });
+  diagnosticContext();
 }
 
 function activateTool(name) {
+  const before = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
   state.activeTool = name;
   toolTabs.forEach((button) => button.classList.toggle("is-active", button.dataset.viewerTool === name));
   toolPanels.forEach((panel) => {
@@ -1411,6 +2191,11 @@ function activateTool(name) {
 
   if (name === "split") updateSplitPlan();
   document.querySelector(`.viewer-tool-panel[data-viewer-tool-panel="${name}"]`)?.scrollTo?.({ top: 0 });
+  const after = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
+  const expectedView = name === "organize" && state.file ? "organize" : before.viewMode;
+  const passed = before.currentPage === after.currentPage && before.selectedPages === after.selectedPages && after.viewMode === expectedView;
+  diagEmit("state-check", { operation: "tool-change", passed, before, after });
+  diagnosticContext();
 }
 
 function targetPagesForRotation() {
@@ -1501,6 +2286,7 @@ function updateControls() {
   if (rotateScope.value === "selected" && !selected) rotationSummary.textContent = "Selecciona páginas en las miniaturas para girarlas juntas.";
   fitWidthButton.classList.toggle("is-active", state.zoomMode === "fit-width");
   fitPageButton.classList.toggle("is-active", state.zoomMode === "fit-page");
+  diagnosticContext();
 }
 
 function refreshReadingView() {
@@ -2033,6 +2819,23 @@ organizeGrid?.addEventListener("pointerdown", beginOrganizeMarquee);
 organizeGrid?.addEventListener("pointermove", moveOrganizeMarquee);
 organizeGrid?.addEventListener("pointerup", (event) => finishOrganizeMarquee(event, false));
 organizeGrid?.addEventListener("pointercancel", (event) => finishOrganizeMarquee(event, true));
+const pauseQueuedRenderingDuringScroll = () => renderScheduler.pauseFor(115);
+thumbnailList?.addEventListener("scroll", pauseQueuedRenderingDuringScroll, { passive: true });
+thumbnailList?.addEventListener("scroll", () => {
+  if (state.thumbnailVirtual) renderVirtualThumbnailWindow();
+}, { passive: true });
+continuousStage?.addEventListener("scroll", () => {
+  if (state.continuousVirtual) renderVirtualContinuousWindow();
+}, { passive: true });
+continuousStage?.addEventListener("scroll", pauseQueuedRenderingDuringScroll, { passive: true });
+organizeGrid?.addEventListener("scroll", () => {
+  if (state.organizeVirtual) renderVirtualOrganizeWindow();
+}, { passive: true });
+organizeGrid?.addEventListener("scroll", pauseQueuedRenderingDuringScroll, { passive: true });
+window.addEventListener("resize", () => {
+  if (state.organizeVirtual && state.viewMode === "organize") renderVirtualOrganizeWindow(state.currentPage);
+});
+
 continuousStage?.addEventListener("wheel", (event) => {
   if (!state.file || state.viewMode !== "continuous" || !event.ctrlKey) return;
   event.preventDefault();
@@ -2129,6 +2932,8 @@ window.addEventListener("keydown", (event) => {
     activateTool("overview");
   }
 });
+
+window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
 
 updateScopeControls();
 activateTool("overview");

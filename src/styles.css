@@ -5123,3 +5123,110 @@ body.viewer-active footer {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
   pointer-events: none;
 }
+
+/* Confirmación local de seguridad para cambios sin guardar. */
+.viewer-confirm-fallback {
+  width: min(460px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.viewer-confirm-fallback::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.viewer-confirm-fallback form {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+  margin: 0;
+}
+
+.viewer-confirm-fallback h2,
+.viewer-confirm-fallback p {
+  margin: 0;
+}
+
+.viewer-confirm-fallback h2 {
+  font-size: 1.15rem;
+}
+
+.viewer-confirm-fallback p {
+  color: var(--muted-text, #596579);
+  line-height: 1.55;
+}
+
+.viewer-confirm-fallback form > div {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Optimización temporal de renderizado para documentos extensos. */
+.viewer-thumbnail-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 190px;
+}
+
+.viewer-continuous-page {
+  content-visibility: auto;
+  contain-intrinsic-size: 1500px 2150px;
+}
+
+/* Virtualización para documentos extremos: solo se conservan las tarjetas próximas a la vista. */
+.viewer-virtual-spacer {
+  flex: 0 0 auto;
+  width: 1px;
+  min-width: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.viewer-thumbnail-virtual-spacer {
+  display: block;
+}
+
+.viewer-continuous-virtual-spacer {
+  align-self: stretch;
+}
+
+
+/* Virtualización de Organizar para documentos extremos. */
+.viewer-organize-grid.is-virtualized {
+  display: block;
+  contain: layout paint style;
+}
+
+.viewer-organize-virtual-space {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.viewer-organize-virtual-window {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  align-content: start;
+  gap: 14px;
+}
+
+.viewer-organize-grid.is-virtualized .viewer-organize-card {
+  height: 310px;
+  min-height: 310px;
+  box-sizing: border-box;
+}
+
+.viewer-organize-grid.is-virtualized .viewer-organize-preview {
+  min-height: 220px;
+  max-height: 220px;
+}

@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "prepare:dev": "node scripts/prepare-frontend.mjs dev",
+    "prepare:release": "node scripts/prepare-frontend.mjs release",
     "tauri": "tauri"
   },
   "devDependencies": {
