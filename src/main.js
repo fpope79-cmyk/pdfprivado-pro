@@ -8,6 +8,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 const year = document.querySelector("#current-year");
 const homeView = document.querySelector("#home-view");
 const mergeView = document.querySelector("#merge-view");
+const viewerView = document.querySelector("#viewer-view");
+const splitView = document.querySelector("#split-view");
 const mergeTitle = document.querySelector("#merge-title");
 const backHomeButton = document.querySelector("#back-home-button");
 const openMergeButtons = document.querySelectorAll('[data-open-tool="merge"]');
@@ -89,6 +91,9 @@ let lastMergeTrigger = null;
 function showMergeView(trigger = null) {
   lastMergeTrigger = trigger instanceof HTMLElement ? trigger : null;
   homeView.hidden = true;
+  if (viewerView) viewerView.hidden = true;
+  if (splitView) splitView.hidden = true;
+  document.body.classList.remove("viewer-active");
   mergeView.hidden = false;
   document.title = "Unir PDF | PDFPrivado Pro";
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -100,6 +105,9 @@ function showMergeView(trigger = null) {
 
 function showHomeView() {
   mergeView.hidden = true;
+  if (viewerView) viewerView.hidden = true;
+  if (splitView) splitView.hidden = true;
+  document.body.classList.remove("viewer-active");
   homeView.hidden = false;
   document.title = "PDFPrivado Pro";
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -2143,6 +2151,24 @@ async function mergeAndSavePdfs() {
     renderFiles();
   }
 }
+
+
+window.addEventListener("pdfprivado:open-merge-file", (event) => {
+  const file = event.detail?.file;
+  if (!(file instanceof File)) return;
+
+  const key = fileKey(file);
+  const existingIndex = selectedFiles.findIndex((item) => item.key === key);
+  if (existingIndex >= 0) selectedFiles.splice(existingIndex, 1);
+  selectedFiles.unshift({ key, file });
+  invalidatePageOrganizer();
+  resetMergeProgress();
+  renderFiles();
+
+  showMergeView();
+  setStatus(`${file.name} preparado como primer documento.`);
+  setFeedback(`${file.name} se ha añadido desde el lector como primer documento preparado.`, "success");
+});
 
 openMergeButtons.forEach((button) => {
   button.addEventListener("click", () => showMergeView(button));

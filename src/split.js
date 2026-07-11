@@ -19,6 +19,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const homeView = $("#home-view");
 const mergeView = $("#merge-view");
 const splitView = $("#split-view");
+const viewerView = $("#viewer-view");
 const splitTitle = $("#split-title");
 const openSplitButtons = $$('[data-open-tool="split"]');
 const backHomeButton = $("#split-back-home-button");
@@ -166,6 +167,8 @@ function showSplitView(trigger = null) {
   state.lastOpenTrigger = trigger instanceof HTMLElement ? trigger : null;
   if (homeView) homeView.hidden = true;
   if (mergeView) mergeView.hidden = true;
+  if (viewerView) viewerView.hidden = true;
+  document.body.classList.remove("viewer-active");
   if (splitView) splitView.hidden = false;
   document.title = "Dividir PDF | PDFPrivado Pro";
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -174,6 +177,8 @@ function showSplitView(trigger = null) {
 
 function showHomeView() {
   if (splitView) splitView.hidden = true;
+  if (viewerView) viewerView.hidden = true;
+  document.body.classList.remove("viewer-active");
   if (homeView) homeView.hidden = false;
   document.title = "PDFPrivado Pro";
   window.scrollTo({ top: 0, behavior: "auto" });
@@ -1154,6 +1159,14 @@ async function savePlan() {
     updatePlanPreview();
   }
 }
+
+
+window.addEventListener("pdfprivado:open-split-file", (event) => {
+  const file = event.detail?.file;
+  if (!(file instanceof File)) return;
+  showSplitView();
+  loadPdf(file);
+});
 
 openSplitButtons.forEach((button) => button.addEventListener("click", () => showSplitView(button)));
 backHomeButton?.addEventListener("click", showHomeView);
