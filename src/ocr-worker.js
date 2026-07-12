@@ -5,6 +5,7 @@ const { createWorker, OEM, PSM } = Tesseract;
 const WORKER_PATH = new URL("./vendor/tesseract/worker.min.js", import.meta.url).href;
 const CORE_PATH = new URL("./vendor/tesseract/core", import.meta.url).href.replace(/\/$/, "");
 const LANG_PATH = new URL("./vendor/tesseract/lang", import.meta.url).href.replace(/\/$/, "");
+const MAXIMUM_LANGUAGES_PER_WORKER = 2;
 
 export class OcrCancelledError extends Error {
   constructor(message = "OCR cancelado") {
@@ -14,10 +15,26 @@ export class OcrCancelledError extends Error {
 }
 
 let worker = null;
-let workerLanguage = "";
+let workerLanguageKey = "";
 let workerPromise = null;
 let epoch = 0;
 let activeOperation = null;
+
+function normalizeWorkerLanguages(value) {
+  const rawCodes = Array.isArray(value) ? value : String(value || "").split("+");
+  const codes = [];
+  for (const rawCode of rawCodes) {
+    const code = String(rawCode || "").trim().toLowerCase();
+    if (!code || codes.includes(code)) continue;
+    if (!/^[a-z0-9_]+$/.test(code)) throw new Error(`Código de idioma OCR no válido: ${code}`);
+    codes.push(code);
+  }
+  if (!codes.length) throw new Error("No se indicó ningún idioma para el motor OCR.");
+  if (codes.length > MAXIMUM_LANGUAGES_PER_WORKER) {
+    throw new Error(`El motor OCR admite como máximo ${MAXIMUM_LANGUAGES_PER_WORKER} idiomas simultáneos.`);
+  }
+  return codes;
+}
 
 function createCancellationSignal() {
   let rejectOperation = null;
@@ -41,19 +58,22 @@ async function terminateCandidate(candidate) {
   }
 }
 
-async function ensureWorker(language, onProgress, operationEpoch) {
-  if (worker && workerLanguage === language) return worker;
+async function ensureWorker(languages, onProgress, operationEpoch) {
+  const languageCodes = normalizeWorkerLanguages(languages);
+  const languageKey = languageCodes.join("+");
+  if (worker && workerLanguageKey === languageKey) return worker;
 
   if (worker) {
     const previous = worker;
     worker = null;
-    workerLanguage = "";
+    workerLanguageKey = "";
     await terminateCandidate(previous);
   }
 
   if (!workerPromise) {
     const creationEpoch = operationEpoch;
-    workerPromise = createWorker(language, OEM.LSTM_ONLY, {
+    const workerLanguages = languageCodes.length === 1 ? languageCodes[0] : languageCodes;
+    workerPromise = createWorker(workerLanguages, OEM.LSTM_ONLY, {
       workerPath: WORKER_PATH,
       corePath: CORE_PATH,
       langPath: LANG_PATH,
@@ -81,7 +101,7 @@ async function ensureWorker(language, onProgress, operationEpoch) {
   }
 
   worker = candidate;
-  workerLanguage = language;
+  workerLanguageKey = languageKey;
   await worker.setParameters({
     tessedit_pageseg_mode: PSM.AUTO,
     preserve_interword_spaces: "1",
@@ -89,14 +109,14 @@ async function ensureWorker(language, onProgress, operationEpoch) {
   return worker;
 }
 
-export async function recognizeOcrImage(image, language, { onProgress } = {}) {
+export async function recognizeOcrImage(image, languages, { onProgress } = {}) {
   const operationEpoch = epoch;
   const operation = createCancellationSignal();
   activeOperation = operation;
 
   try {
     const activeWorker = await Promise.race([
-      ensureWorker(language, onProgress, operationEpoch),
+      ensureWorker(languages, onProgress, operationEpoch),
       operation.promise,
     ]);
 
@@ -123,7 +143,7 @@ export async function cancelOcrEngine() {
   const activeWorker = worker;
   const pendingWorker = workerPromise;
   worker = null;
-  workerLanguage = "";
+  workerLanguageKey = "";
   workerPromise = null;
 
   await terminateCandidate(activeWorker);

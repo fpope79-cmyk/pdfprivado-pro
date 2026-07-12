@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
@@ -14,6 +14,28 @@ if (!new Set(["dev", "release"]).has(mode)) {
 }
 
 const diagnosticsFilePattern = /^diagnostics(?:\.|$)/i;
+
+async function validateOcrLanguageAssets() {
+  const manifestPath = path.join(sourceDir, "ocr-language-manifest.js");
+  const manifestUrl = `${pathToFileURL(manifestPath).href}?validation=${Date.now()}`;
+  const { OCR_LANGUAGE_LIMITS, OCR_LANGUAGE_MANIFEST } = await import(manifestUrl);
+
+  if (OCR_LANGUAGE_MANIFEST.length < OCR_LANGUAGE_LIMITS.minimumCatalogLanguages) {
+    throw new Error(`El catálogo OCR debe incluir al menos ${OCR_LANGUAGE_LIMITS.minimumCatalogLanguages} idiomas.`);
+  }
+
+  const installed = OCR_LANGUAGE_MANIFEST.filter((language) => language.installed);
+  if (installed.length < 2) {
+    throw new Error("La compilación OCR debe incluir al menos español e inglés.");
+  }
+
+  for (const language of installed) {
+    await assertFile(path.join(sourceDir, "vendor", "tesseract", "lang", language.file), true);
+  }
+
+  await assertFile(path.join(sourceDir, "vendor", "tesseract", "LICENSE-TESSDATA-APACHE-2.0.txt"), true);
+  await assertFile(path.join(sourceDir, "vendor", "tesseract", "NOTICE-LANGUAGE-DATA.txt"), true);
+}
 
 async function copyDirectory(source, destination) {
   await mkdir(destination, { recursive: true });
@@ -69,6 +91,7 @@ async function assertFile(filePath, shouldExist) {
   }
 }
 
+await validateOcrLanguageAssets();
 await rm(outputDir, { recursive: true, force: true });
 await copyDirectory(sourceDir, outputDir);
 

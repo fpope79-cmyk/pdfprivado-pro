@@ -6,6 +6,7 @@
   "scripts": {
     "prepare:dev": "node scripts/prepare-frontend.mjs dev",
     "prepare:release": "node scripts/prepare-frontend.mjs release",
+    "verify:ocr-languages": "node scripts/verify-ocr-language-architecture.mjs",
     "tauri": "tauri"
   },
   "devDependencies": {

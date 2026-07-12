@@ -6890,6 +6890,18 @@ body.viewer-focus-mode .viewer-focus-exit-button {
   padding: 7px 10px;
 }
 
+.viewer-ocr-language-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.viewer-ocr-language-availability {
+  margin: -3px 0 0;
+  color: #64748b;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
 .viewer-ocr-actions {
   display: grid;
   gap: 8px;

@@ -491,13 +491,23 @@
                     <strong id="viewer-ocr-page-label">Ninguna página abierta</strong>
                   </div>
 
-                  <label class="viewer-field" for="viewer-ocr-language">
-                    <span>Idioma del documento</span>
-                    <select id="viewer-ocr-language" disabled>
-                      <option value="spa">Español</option>
-                      <option value="eng">Inglés</option>
-                    </select>
-                  </label>
+                  <div class="viewer-ocr-language-grid">
+                    <label class="viewer-field" for="viewer-ocr-language">
+                      <span>Idioma principal</span>
+                      <select id="viewer-ocr-language" disabled>
+                        <option value="spa">Español</option>
+                        <option value="eng">Inglés</option>
+                      </select>
+                    </label>
+
+                    <label class="viewer-field" for="viewer-ocr-language-secondary">
+                      <span>Segundo idioma opcional</span>
+                      <select id="viewer-ocr-language-secondary" disabled>
+                        <option value="">Ninguno</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p class="viewer-ocr-language-availability" id="viewer-ocr-language-availability">15 idiomas catalogados · 2 incluidos en esta compilación</p>
 
                   <div class="viewer-ocr-actions">
                     <button class="primary-button" id="viewer-ocr-start" type="button" disabled>Reconocer página elegida</button>
@@ -516,7 +526,7 @@
                     <strong>Texto reconocido</strong>
                     <span id="viewer-ocr-summary">Sin OCR</span>
                   </div>
-                  <pre class="viewer-ocr-preview" id="viewer-ocr-preview">Abre un PDF para reconocer la página actual.</pre>
+                  <pre class="viewer-ocr-preview" id="viewer-ocr-preview" dir="auto">Abre un PDF para reconocer la página actual.</pre>
 
                   <div class="viewer-ocr-privacy-note">
                     <strong>Privacidad real</strong>

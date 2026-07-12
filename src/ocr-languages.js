@@ -1,10 +1,17 @@
-export const OCR_LANGUAGES = Object.freeze([
-  Object.freeze({ code: "spa", label: "Español" }),
-  Object.freeze({ code: "eng", label: "Inglés" }),
-]);
+// Fachada estable para el visor. La definición y la lógica viven en módulos
+// separados para que el OCR por lotes y los paquetes offline puedan reutilizarlas.
+export {
+  OCR_LANGUAGE_LIMITS,
+  OCR_LANGUAGE_MANIFEST as OCR_LANGUAGES,
+  OCR_LANGUAGE_MAP,
+} from "./ocr-language-manifest.js";
 
-const OCR_LANGUAGE_MAP = new Map(OCR_LANGUAGES.map((language) => [language.code, language]));
-
-export function resolveOcrLanguage(code) {
-  return OCR_LANGUAGE_MAP.get(String(code || "").toLowerCase()) || OCR_LANGUAGE_MAP.get("spa");
-}
+export {
+  formatOcrModelSize,
+  listInstalledOcrLanguages,
+  listOcrLanguages,
+  normalizeOcrLanguageSelection,
+  resolveOcrLanguage,
+  resolveOcrLanguageSelection,
+  summarizeOcrLanguageCatalog,
+} from "./ocr-language-manager.js";

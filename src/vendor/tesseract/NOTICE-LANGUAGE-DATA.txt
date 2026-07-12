@@ -1,0 +1,12 @@
+PDFPrivado Pro incluye datos de idioma locales para Tesseract.js.
+
+Paquetes de distribución:
+  @tesseract.js-data/<idioma> 1.0.0
+  https://github.com/naptha/tessdata
+
+Los metadatos de los paquetes distribuidos declaran licencia MIT. Los modelos
+traineddata proceden de los repositorios tessdata de Tesseract, publicados bajo
+Apache License 2.0. Se conservan ambos textos de licencia para redistribución.
+
+No se descarga ningún modelo durante el uso de PDFPrivado Pro. Los modelos que
+figuran como instalados están incluidos físicamente en la aplicación.

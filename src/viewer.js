@@ -19,7 +19,12 @@ import {
   textItemsToString,
 } from "./search-core.js";
 import { RenderScheduler } from "./render-scheduler.js";
-import { OCR_LANGUAGES, resolveOcrLanguage } from "./ocr-languages.js";
+import {
+  OCR_LANGUAGES,
+  resolveOcrLanguage,
+  resolveOcrLanguageSelection,
+  summarizeOcrLanguageCatalog,
+} from "./ocr-languages.js";
 import {
   OCR_RENDER_LIMITS,
   buildOcrRecord,
@@ -215,6 +220,8 @@ const searchWarningText = $("#viewer-search-warning-text");
 const searchResultSummary = $("#viewer-search-result-summary");
 const searchResults = $("#viewer-search-results");
 const ocrLanguage = $("#viewer-ocr-language");
+const ocrLanguageSecondary = $("#viewer-ocr-language-secondary");
+const ocrLanguageAvailability = $("#viewer-ocr-language-availability");
 const ocrPageLabel = $("#viewer-ocr-page-label");
 const ocrPagePreviousButton = $("#viewer-ocr-page-previous");
 const ocrPageNumberInput = $("#viewer-ocr-page-number");
@@ -1906,6 +1913,26 @@ function refreshOcrPanel({ force = false } = {}) {
   }
 }
 
+function selectedOcrLanguageSelection() {
+  return resolveOcrLanguageSelection(ocrLanguage?.value || "spa", ocrLanguageSecondary?.value || "");
+}
+
+function syncOcrLanguageSelectors({ announce = false } = {}) {
+  const primary = resolveOcrLanguage(ocrLanguage?.value || "spa", { installedOnly: true });
+  if (ocrLanguage) ocrLanguage.value = primary.code;
+
+  if (ocrLanguageSecondary) {
+    if (ocrLanguageSecondary.value === primary.code) ocrLanguageSecondary.value = "";
+    for (const option of ocrLanguageSecondary.options) {
+      option.disabled = Boolean(option.value && (option.value === primary.code || option.dataset.installed === "false"));
+    }
+  }
+
+  const selection = selectedOcrLanguageSelection();
+  if (announce) setOcrStatus(`Idiomas preparados: ${selection.label}.`, "info");
+  return selection;
+}
+
 function updateOcrControls() {
   const targetPage = normalizedOcrTargetPage();
   const targetEntry = targetPage ? entryAt(targetPage) : null;
@@ -1913,6 +1940,7 @@ function updateOcrControls() {
   const record = currentOcrRecord(targetEntry);
   const busy = state.ocr.running || state.saving || state.search.running;
   if (ocrLanguage) ocrLanguage.disabled = !ready || busy;
+  if (ocrLanguageSecondary) ocrLanguageSecondary.disabled = !ready || busy;
   if (ocrPageNumberInput) {
     ocrPageNumberInput.disabled = !state.file || !state.pageCount || busy;
     ocrPageNumberInput.min = "1";
@@ -1972,15 +2000,14 @@ async function recognizeCurrentPage() {
   if (!state.file || !entry || entry.kind !== "pdf" || state.ocr.running || state.search.running || state.saving) return;
 
   state.ocr.targetPage = pageNumber;
-  const language = resolveOcrLanguage(ocrLanguage?.value || "spa");
-  if (ocrLanguage) ocrLanguage.value = language.code;
+  const languageSelection = syncOcrLanguageSelectors();
   const entryId = entry.id;
   const serial = ++state.ocr.serial;
-  const diagnosticToken = diagStart("ocr-page", { page: pageNumber, language: language.code });
+  const diagnosticToken = diagStart("ocr-page", { page: pageNumber, language: languageSelection.key });
   state.ocr.running = true;
   state.ocr.activeEntryId = entryId;
   setOcrProgress(true, 2);
-  setOcrStatus(`Preparando la página ${pageNumber} para OCR en ${language.label}…`);
+  setOcrStatus(`Preparando la página ${pageNumber} para OCR en ${languageSelection.label}…`);
   updateOcrControls();
   diagnosticContext();
 
@@ -2002,7 +2029,7 @@ async function recognizeCurrentPage() {
 
     setOcrProgress(true, 25);
     setOcrStatus(`Imagen temporal preparada a ${rendered.effectiveDpi} PPP. Iniciando OCR local…`);
-    const result = await recognizeOcrImage(rendered.canvas, language.code, {
+    const result = await recognizeOcrImage(rendered.canvas, languageSelection.codes, {
       onProgress(message) {
         if (serial !== state.ocr.serial || !state.ocr.running) return;
         const translated = translateOcrProgress(message);
@@ -2015,8 +2042,8 @@ async function recognizeCurrentPage() {
     const record = buildOcrRecord(result?.data, {
       imageWidth: rendered.width,
       imageHeight: rendered.height,
-      language: language.code,
-      languageLabel: language.label,
+      language: languageSelection.key,
+      languageLabel: languageSelection.label,
       rotation: rendered.rotation,
       effectiveDpi: rendered.effectiveDpi,
     });
@@ -2037,7 +2064,7 @@ async function recognizeCurrentPage() {
     }
     diagEnd(diagnosticToken, {
       page: pageNumber,
-      language: language.code,
+      language: languageSelection.key,
       hasText: record.hasText,
       words: record.words.length,
       confidence: Number.isFinite(record.confidence) ? Math.round(record.confidence) : null,
@@ -2046,12 +2073,12 @@ async function recognizeCurrentPage() {
     });
   } catch (error) {
     if (serial !== state.ocr.serial || isOcrCancelledError(error) || error?.name === "AbortError") {
-      diagEnd(diagnosticToken, { page: pageNumber, language: language.code }, "cancelled");
+      diagEnd(diagnosticToken, { page: pageNumber, language: languageSelection.key }, "cancelled");
       return;
     }
     setOcrProgress(false, 0);
     setOcrStatus(`No se pudo completar el OCR: ${error?.message || error}.`, "error");
-    diagFail(diagnosticToken, error, { operation: "ocr-page", page: pageNumber, language: language.code });
+    diagFail(diagnosticToken, error, { operation: "ocr-page", page: pageNumber, language: languageSelection.key });
   } finally {
     try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
     if (serial === state.ocr.serial) {
@@ -5069,8 +5096,10 @@ ocrPageNumberInput?.addEventListener("keydown", (event) => {
   }
 });
 ocrLanguage?.addEventListener("change", () => {
-  const language = resolveOcrLanguage(ocrLanguage.value);
-  ocrLanguage.value = language.code;
+  syncOcrLanguageSelectors({ announce: true });
+});
+ocrLanguageSecondary?.addEventListener("change", () => {
+  syncOcrLanguageSelectors({ announce: true });
 });
 toolTabs.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.viewerTool)));
 toolLinks.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.activateTool)));
@@ -5313,15 +5342,33 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
 
+function createOcrLanguageOption(language) {
+  const option = document.createElement("option");
+  option.value = language.code;
+  option.dataset.installed = String(language.installed);
+  option.disabled = !language.installed;
+  option.textContent = language.installed
+    ? `${language.label} · ${language.nativeName}`
+    : `${language.label} · paquete offline pendiente`;
+  return option;
+}
+
 if (ocrLanguage) {
-  ocrLanguage.replaceChildren(...OCR_LANGUAGES.map((language) => {
-    const option = document.createElement("option");
-    option.value = language.code;
-    option.textContent = language.label;
-    return option;
-  }));
+  ocrLanguage.replaceChildren(...OCR_LANGUAGES.map(createOcrLanguageOption));
   ocrLanguage.value = "spa";
 }
+if (ocrLanguageSecondary) {
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "Ninguno";
+  ocrLanguageSecondary.replaceChildren(none, ...OCR_LANGUAGES.map(createOcrLanguageOption));
+  ocrLanguageSecondary.value = "";
+}
+if (ocrLanguageAvailability) {
+  const catalog = summarizeOcrLanguageCatalog();
+  ocrLanguageAvailability.textContent = `${catalog.catalogued} idiomas catalogados · ${catalog.installed} incluidos en esta compilación`;
+}
+syncOcrLanguageSelectors();
 updateResponsiveViewerLayout();
 applyViewerPanelLayout();
 updateScopeControls();
