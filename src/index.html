@@ -372,6 +372,7 @@
               <nav class="viewer-tool-tabs" id="viewer-tools-content" aria-label="Elegir herramienta">
                 <button type="button" data-viewer-tool="overview" class="is-active">Inicio</button>
                 <button type="button" data-viewer-tool="search">Buscar</button>
+                <button type="button" data-viewer-tool="ocr">OCR</button>
                 <button type="button" data-viewer-tool="organize">Organizar</button>
                 <button type="button" data-viewer-tool="rotate">Rotar</button>
                 <button type="button" data-viewer-tool="split">Dividir</button>
@@ -384,7 +385,10 @@
                   <p class="eyebrow">Herramientas del documento</p>
                   <h2>Elige qué quieres hacer</h2>
                   <button class="viewer-tool-link" type="button" data-activate-tool="search">
-                    <span><strong>Buscar en el PDF</strong><small>Encuentra texto, revisa resultados y salta a cada página.</small></span><b>→</b>
+                    <span><strong>Buscar en el PDF</strong><small>Encuentra texto original y texto reconocido mediante OCR.</small></span><b>→</b>
+                  </button>
+                  <button class="viewer-tool-link" type="button" data-activate-tool="ocr">
+                    <span><strong>OCR local</strong><small>Reconoce el texto de la página actual sin subir el documento.</small></span><b>→</b>
                   </button>
                   <button class="viewer-tool-link" type="button" data-activate-tool="organize">
                     <span><strong>Organizar páginas</strong><small>Mover, eliminar, duplicar o insertar.</small></span><b>→</b>
@@ -410,7 +414,7 @@
                 <section class="viewer-tool-section viewer-search-tool">
                   <p class="eyebrow">Búsqueda local</p>
                   <h2>Buscar en el documento</h2>
-                  <p class="viewer-tool-help">El texto se analiza únicamente en este equipo. Las páginas escaneadas sin capa de texto se señalarán para un futuro OCR.</p>
+                  <p class="viewer-tool-help">El texto se analiza únicamente en este equipo. Buscar combina la capa de texto original con el OCR realizado durante esta sesión.</p>
 
                   <div class="viewer-search-controls-sticky">
                     <form class="viewer-search-form" id="viewer-search-form" role="search">
@@ -465,6 +469,61 @@
                 </section>
               </div>
 
+
+              <div class="viewer-tool-panel" data-viewer-tool-panel="ocr" hidden>
+                <section class="viewer-tool-section viewer-ocr-tool">
+                  <p class="eyebrow">Pro v2.6 · OCR local piloto</p>
+                  <h2>Reconocer una página</h2>
+                  <p class="viewer-tool-help">Elige de forma explícita la página que quieres reconocer. La página se convierte temporalmente en una imagen, se analiza dentro de la aplicación y el PDF original no se modifica.</p>
+
+                  <div class="viewer-ocr-page-card">
+                    <span>Página a reconocer</span>
+                    <div class="viewer-ocr-page-picker" aria-label="Elegir página para OCR">
+                      <button id="viewer-ocr-page-previous" type="button" disabled aria-label="Página OCR anterior">←</button>
+                      <label class="viewer-ocr-page-number" for="viewer-ocr-page-number">
+                        <span class="visually-hidden">Número de página para OCR</span>
+                        <input id="viewer-ocr-page-number" type="number" min="1" value="1" inputmode="numeric" disabled />
+                      </label>
+                      <span id="viewer-ocr-page-total">/ 0</span>
+                      <button id="viewer-ocr-page-next" type="button" disabled aria-label="Página OCR siguiente">→</button>
+                    </div>
+                    <button class="viewer-ocr-use-visible" id="viewer-ocr-use-visible" type="button" disabled>Usar página visible</button>
+                    <strong id="viewer-ocr-page-label">Ninguna página abierta</strong>
+                  </div>
+
+                  <label class="viewer-field" for="viewer-ocr-language">
+                    <span>Idioma del documento</span>
+                    <select id="viewer-ocr-language" disabled>
+                      <option value="spa">Español</option>
+                      <option value="eng">Inglés</option>
+                    </select>
+                  </label>
+
+                  <div class="viewer-ocr-actions">
+                    <button class="primary-button" id="viewer-ocr-start" type="button" disabled>Reconocer página elegida</button>
+                    <button class="secondary-button" id="viewer-ocr-cancel" type="button" hidden disabled>Cancelar OCR</button>
+                    <button class="secondary-button" id="viewer-ocr-clear" type="button" disabled>Eliminar OCR de la página</button>
+                  </div>
+
+                  <div class="viewer-ocr-progress" id="viewer-ocr-progress-wrap" hidden>
+                    <progress id="viewer-ocr-progress" max="100" value="0">0 %</progress>
+                    <span id="viewer-ocr-progress-value">0 %</span>
+                  </div>
+
+                  <p class="viewer-ocr-status" id="viewer-ocr-status" role="status" aria-live="polite">Abre un PDF para iniciar el OCR local.</p>
+
+                  <div class="viewer-ocr-preview-heading">
+                    <strong>Texto reconocido</strong>
+                    <span id="viewer-ocr-summary">Sin OCR</span>
+                  </div>
+                  <pre class="viewer-ocr-preview" id="viewer-ocr-preview">Abre un PDF para reconocer la página actual.</pre>
+
+                  <div class="viewer-ocr-privacy-note">
+                    <strong>Privacidad real</strong>
+                    <span>Motor, idiomas y procesamiento incluidos localmente. Sin Internet, CDN ni telemetría de contenido.</span>
+                  </div>
+                </section>
+              </div>
               <div class="viewer-tool-panel" data-viewer-tool-panel="organize" hidden>
                 <section class="viewer-tool-section">
                   <p class="eyebrow">Edición visual</p>

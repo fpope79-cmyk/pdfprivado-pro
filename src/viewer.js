@@ -19,6 +19,19 @@ import {
   textItemsToString,
 } from "./search-core.js";
 import { RenderScheduler } from "./render-scheduler.js";
+import { OCR_LANGUAGES, resolveOcrLanguage } from "./ocr-languages.js";
+import {
+  OCR_RENDER_LIMITS,
+  buildOcrRecord,
+  locateOcrWordRanges,
+  renderPageForOcr,
+} from "./ocr-core.js";
+import {
+  cancelOcrEngine,
+  destroyOcrEngine,
+  isOcrCancelledError,
+  recognizeOcrImage,
+} from "./ocr-worker.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -70,6 +83,8 @@ function diagnosticContext() {
     searchCachedPages: state.search?.cache?.size || 0,
     searchStoredResults: state.search?.results?.length || 0,
     searchMatchesFound: state.search?.totalMatches || 0,
+    ocrRunning: Boolean(state.ocr?.running),
+    ocrRecognizedPages: state.ocr?.records?.size || 0,
   });
 }
 
@@ -199,6 +214,22 @@ const searchWarning = $("#viewer-search-warning");
 const searchWarningText = $("#viewer-search-warning-text");
 const searchResultSummary = $("#viewer-search-result-summary");
 const searchResults = $("#viewer-search-results");
+const ocrLanguage = $("#viewer-ocr-language");
+const ocrPageLabel = $("#viewer-ocr-page-label");
+const ocrPagePreviousButton = $("#viewer-ocr-page-previous");
+const ocrPageNumberInput = $("#viewer-ocr-page-number");
+const ocrPageTotal = $("#viewer-ocr-page-total");
+const ocrPageNextButton = $("#viewer-ocr-page-next");
+const ocrUseVisibleButton = $("#viewer-ocr-use-visible");
+const ocrStartButton = $("#viewer-ocr-start");
+const ocrCancelButton = $("#viewer-ocr-cancel");
+const ocrClearButton = $("#viewer-ocr-clear");
+const ocrProgressWrap = $("#viewer-ocr-progress-wrap");
+const ocrProgress = $("#viewer-ocr-progress");
+const ocrProgressValue = $("#viewer-ocr-progress-value");
+const ocrStatus = $("#viewer-ocr-status");
+const ocrSummary = $("#viewer-ocr-summary");
+const ocrPreview = $("#viewer-ocr-preview");
 
 const A4 = { width: 595.28, height: 841.89 };
 const ORGANIZE_VIRTUALIZATION_VERSION = "organize-virtual-v1";
@@ -229,6 +260,7 @@ const state = {
   thumbObserver: null,
   organizeObserver: null,
   continuousObserver: null,
+  readingVisibleNodes: new Set(),
   thumbnailTasks: new Map(),
   organizeTasks: new Map(),
   continuousTasks: new Map(),
@@ -252,6 +284,14 @@ const state = {
   thumbnailVirtual: null,
   continuousVirtual: null,
   organizeVirtual: null,
+  readingNavigation: {
+    targetPage: 0,
+    lockUntil: 0,
+    syncFrame: 0,
+    settleTimer: 0,
+    serial: 0,
+    attempts: 0,
+  },
   search: {
     cache: new Map(),
     results: [],
@@ -272,6 +312,15 @@ const state = {
     positioning: false,
     targetPage: 0,
     fitApplied: false,
+  },
+  ocr: {
+    records: new Map(),
+    running: false,
+    serial: 0,
+    renderTask: null,
+    activeEntryId: "",
+    panelKey: "",
+    targetPage: 0,
   },
 };
 
@@ -687,26 +736,16 @@ function scheduleViewerLayoutRefresh(immediate = false) {
     if (state.viewMode === "spread") {
       buildContinuousList();
       requestAnimationFrame(() => {
-        if (!scrollVirtualContinuousToPage(currentPage, false)) {
-          continuousList.querySelector(`[data-page="${currentPage}"]`)?.scrollIntoView({
-            block: "start",
-            inline: "center",
-            behavior: "auto",
-          });
-        }
+        beginReadingNavigation(currentPage, "auto");
+        scrollReadingPageIntoView(currentPage, { behavior: "auto", block: "start" });
         centerReadingStageHorizontal(true);
       });
       return;
     }
     buildContinuousList();
     requestAnimationFrame(() => {
-      if (!scrollVirtualContinuousToPage(currentPage, false)) {
-        continuousList.querySelector(`[data-page="${currentPage}"]`)?.scrollIntoView({
-          block: "start",
-          inline: "center",
-          behavior: "auto",
-        });
-      }
+      beginReadingNavigation(currentPage, "auto");
+      scrollReadingPageIntoView(currentPage, { behavior: "auto", block: "start" });
       centerReadingStageHorizontal(true);
     });
   };
@@ -803,10 +842,20 @@ function hideFeedback() {
   feedback.hidden = true;
 }
 
+function ocrRecordKey(entry) {
+  if (!entry || entry.kind !== "pdf") return "";
+  return `ocr:${entry.id}:r${normalizeRotation(entry.rotation || 0)}`;
+}
+
+function currentOcrRecord(entry = ocrTargetEntry()) {
+  const key = ocrRecordKey(entry);
+  return key ? state.ocr.records.get(key) || null : null;
+}
+
 function searchCacheKey(entry) {
   if (!entry) return "";
   if (entry.kind === "blank") return `blank:${entry.id}`;
-  return `pdf:${entry.sourceId}:${entry.sourcePage}`;
+  return `pdf:${entry.id}:${entry.sourceId}:${entry.sourcePage}:r${normalizeRotation(entry.rotation || 0)}`;
 }
 
 function setSearchStatus(message, kind = "info") {
@@ -1087,44 +1136,68 @@ async function renderSearchHighlight(result, expectedIndex = state.search.curren
   const entry = entryAt(result.page);
   if (!entry || entry.kind !== "pdf") return;
 
+  const layer = document.createElement("div");
+  layer.className = "viewer-search-highlight-layer";
+  layer.dataset.page = String(result.page);
+  Object.assign(layer.style, {
+    left: `${target.canvas.offsetLeft}px`,
+    top: `${target.canvas.offsetTop}px`,
+    width: `${target.canvas.clientWidth}px`,
+    height: `${target.canvas.clientHeight}px`,
+  });
+
   let page = null;
   try {
-    page = await getPdfPage(entry);
-    const content = await page.getTextContent();
-    if (serial !== state.search.highlightSerial || expectedIndex !== state.search.currentIndex) return;
+    if (result.source === "ocr") {
+      const record = state.ocr.records.get(result.ocrKey || ocrRecordKey(entry));
+      if (!record) return;
+      const ranges = locateOcrWordRanges(record, result.start, state.search.query.length);
+      const scaleX = target.canvas.clientWidth / Math.max(1, record.imageWidth);
+      const scaleY = target.canvas.clientHeight / Math.max(1, record.imageHeight);
 
-    const located = locateSearchItemRanges(content?.items || [], result.start, state.search.query.length);
-    if (!located.ranges.length) return;
+      for (const range of ranges) {
+        const bbox = range.word.bbox;
+        const wordWidth = Math.max(1, bbox.x1 - bbox.x0);
+        const left = (bbox.x0 + wordWidth * range.startRatio) * scaleX;
+        const width = Math.max(3, wordWidth * Math.max(0.03, range.endRatio - range.startRatio) * scaleX);
+        const marker = document.createElement("span");
+        marker.className = "viewer-search-highlight is-ocr";
+        Object.assign(marker.style, {
+          left: `${left}px`,
+          top: `${bbox.y0 * scaleY}px`,
+          width: `${width}px`,
+          height: `${Math.max(3, (bbox.y1 - bbox.y0) * scaleY)}px`,
+        });
+        layer.append(marker);
+      }
+    } else {
+      page = await getPdfPage(entry);
+      const content = await page.getTextContent();
+      if (serial !== state.search.highlightSerial || expectedIndex !== state.search.currentIndex) return;
 
-    const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
-    const base = page.getViewport({ scale: 1, rotation });
-    const cssScale = Math.max(0.01, target.canvas.getBoundingClientRect().width / Math.max(1, base.width));
-    const viewport = page.getViewport({ scale: cssScale, rotation });
+      const located = locateSearchItemRanges(content?.items || [], result.start, state.search.query.length);
+      if (!located.ranges.length) return;
 
-    const layer = document.createElement("div");
-    layer.className = "viewer-search-highlight-layer";
-    layer.dataset.page = String(result.page);
-    Object.assign(layer.style, {
-      left: `${target.canvas.offsetLeft}px`,
-      top: `${target.canvas.offsetTop}px`,
-      width: `${target.canvas.clientWidth}px`,
-      height: `${target.canvas.clientHeight}px`,
-    });
+      const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
+      const base = page.getViewport({ scale: 1, rotation });
+      const cssScale = Math.max(0.01, target.canvas.getBoundingClientRect().width / Math.max(1, base.width));
+      const viewport = page.getViewport({ scale: cssScale, rotation });
 
-    for (const range of located.ranges) {
-      const item = content.items?.[range.itemIndex];
-      if (!item?.transform) continue;
-      const geometry = searchTextGeometry(item, content.styles?.[item.fontName], viewport, range);
-      const marker = document.createElement("span");
-      marker.className = "viewer-search-highlight";
-      Object.assign(marker.style, {
-        left: `${geometry.left}px`,
-        top: `${geometry.top}px`,
-        width: `${geometry.width}px`,
-        height: `${geometry.height}px`,
-        transform: `rotate(${geometry.angle}rad)`,
-      });
-      layer.append(marker);
+      for (const range of located.ranges) {
+        const item = content.items?.[range.itemIndex];
+        if (!item?.transform) continue;
+        const geometry = searchTextGeometry(item, content.styles?.[item.fontName], viewport, range);
+        const marker = document.createElement("span");
+        marker.className = "viewer-search-highlight";
+        Object.assign(marker.style, {
+          left: `${geometry.left}px`,
+          top: `${geometry.top}px`,
+          width: `${geometry.width}px`,
+          height: `${geometry.height}px`,
+          transform: `rotate(${geometry.angle}rad)`,
+        });
+        layer.append(marker);
+      }
     }
 
     if (!layer.childElementCount) return null;
@@ -1138,10 +1211,10 @@ async function renderSearchHighlight(result, expectedIndex = state.search.curren
     updateControls();
     target.host.classList.add("has-search-highlight");
     window.setTimeout(() => target.host.classList.remove("has-search-highlight"), 900);
-    diagEmit("search-highlight-shown", { page: result.page, mode: state.viewMode });
+    diagEmit("search-highlight-shown", { page: result.page, mode: state.viewMode, source: result.source || "original" });
     return { marker, serial };
   } catch (error) {
-    diagFail(null, error, { operation: "search-highlight", page: result.page });
+    diagFail(null, error, { operation: "search-highlight", page: result.page, source: result.source || "original" });
   } finally {
     try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
   }
@@ -1190,16 +1263,17 @@ function updateSearchNavigationControls() {
   const hasResults = count > 0;
   const hasInput = Boolean(normalizeExtractedText(searchInput?.value || ""));
 
-  if (searchInput) searchInput.disabled = !ready || state.saving || state.search.running;
-  if (searchButton) searchButton.disabled = !ready || !hasInput || state.saving || state.search.running;
+  if (searchInput) searchInput.disabled = !ready || state.saving || state.search.running || state.ocr.running;
+  if (searchButton) searchButton.disabled = !ready || !hasInput || state.saving || state.search.running || state.ocr.running;
   if (searchClearButton) {
     searchClearButton.disabled =
       !ready ||
       state.saving ||
+      state.ocr.running ||
       (!hasInput && !hasResults && !state.search.running && !state.search.query);
   }
-  if (searchPreviousButton) searchPreviousButton.disabled = !hasResults || state.saving;
-  if (searchNextButton) searchNextButton.disabled = !hasResults || state.saving;
+  if (searchPreviousButton) searchPreviousButton.disabled = !hasResults || state.saving || state.ocr.running;
+  if (searchNextButton) searchNextButton.disabled = !hasResults || state.saving || state.ocr.running;
 
   if (searchCounter) {
     const current = hasResults && state.search.currentIndex >= 0 ? state.search.currentIndex + 1 : 0;
@@ -1244,8 +1318,8 @@ function resetSearchSession() {
   if (searchWarning) searchWarning.hidden = true;
   setSearchStatus(
     state.file
-      ? "Escribe una palabra o frase para buscar en la capa de texto del documento."
-      : "Abre un PDF para buscar en su capa de texto."
+      ? "Escribe una palabra o frase para buscar en el texto original y el OCR de esta sesión."
+      : "Abre un PDF para buscar en su texto original y en el OCR de esta sesión."
   );
   resetSearchResultsView();
   updateSearchNavigationControls();
@@ -1296,8 +1370,8 @@ function clearSearch({ keepFocus = true } = {}) {
   setSearchProgress(false, 0);
   setSearchStatus(
     state.file
-      ? "Escribe una palabra o frase para buscar en la capa de texto del documento."
-      : "Abre un PDF para buscar en su capa de texto."
+      ? "Escribe una palabra o frase para buscar en el texto original y el OCR de esta sesión."
+      : "Abre un PDF para buscar en su texto original y en el OCR de esta sesión."
   );
   resetSearchResultsView();
   updateSearchNavigationControls();
@@ -1310,12 +1384,13 @@ function nextSearchYield() {
 
 async function extractSearchRecord(entry, serial) {
   const key = searchCacheKey(entry);
-  if (!key) return { text: "", folded: "", hasText: false, failed: true };
+  if (!key) return { original: null, ocr: null, hasText: false, failed: true };
   const cached = state.search.cache.get(key);
   if (cached) return cached;
 
+  const ocr = currentOcrRecord(entry);
   if (entry.kind === "blank") {
-    const record = { text: "", folded: "", hasText: false, failed: false };
+    const record = { original: null, ocr: null, hasText: false, failed: false };
     state.search.cache.set(key, record);
     return record;
   }
@@ -1330,41 +1405,60 @@ async function extractSearchRecord(entry, serial) {
     const content = await page.getTextContent();
     if (serial !== state.search.serial) return null;
     const text = textItemsToString(content?.items || []);
-    const record = {
+    const original = {
       text,
       folded: foldSearchText(text),
       hasText: Boolean(text),
+    };
+    const record = {
+      original,
+      ocr,
+      hasText: Boolean(original.hasText || ocr?.hasText),
       failed: false,
     };
     state.search.cache.set(key, record);
     return record;
   } catch (error) {
     if (serial !== state.search.serial) return null;
-    const record = { text: "", folded: "", hasText: false, failed: true };
+    const record = {
+      original: null,
+      ocr,
+      hasText: Boolean(ocr?.hasText),
+      failed: !ocr?.hasText,
+    };
     diagFail(null, error, { operation: "search-text-extraction" });
+    state.search.cache.set(key, record);
     return record;
   } finally {
     try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
   }
 }
 
-function appendMatchesFromRecord(record, pageNumber) {
-  if (!record?.hasText || !state.search.foldedQuery) return;
+function appendMatchesFromText(sourceRecord, pageNumber, source, ocrKey = "") {
+  if (!sourceRecord?.hasText || !state.search.foldedQuery) return;
   const remaining = Math.max(0, MAX_STORED_SEARCH_RESULTS - state.search.results.length);
-  const found = findSearchMatches(record.folded, state.search.foldedQuery, remaining);
+  const found = findSearchMatches(sourceRecord.folded, state.search.foldedQuery, remaining);
   state.search.totalMatches += found.total;
   if (found.truncated || state.search.results.length >= MAX_STORED_SEARCH_RESULTS) {
     state.search.truncated = state.search.totalMatches > state.search.results.length;
   }
 
   for (const start of found.indices) {
-    const snippet = buildSearchSnippet(record.text, start, state.search.query.length);
+    const snippet = buildSearchSnippet(sourceRecord.text, start, state.search.query.length);
     state.search.results.push({
       page: pageNumber,
       start,
       snippet,
+      source,
+      ocrKey,
+      languageLabel: sourceRecord.languageLabel || "",
     });
   }
+}
+
+function appendMatchesFromRecord(record, pageNumber, entry) {
+  appendMatchesFromText(record?.original, pageNumber, "original");
+  appendMatchesFromText(record?.ocr, pageNumber, "ocr", ocrRecordKey(entry));
 }
 
 function renderSearchResults() {
@@ -1379,7 +1473,7 @@ function renderSearchResults() {
       searchResultSummary.textContent = `${state.search.processedPages} de ${state.pageCount} páginas`;
     } else if (state.search.query) {
       empty.textContent = state.search.pagesWithoutText
-        ? "No se encontraron coincidencias en las páginas con texto analizadas. Revisa el aviso sobre páginas que pueden necesitar OCR."
+        ? "No se encontraron coincidencias en el texto disponible. Revisa el aviso sobre páginas que pueden necesitar OCR."
         : "No se encontraron coincidencias en la capa de texto del documento.";
       searchResultSummary.textContent = "0 coincidencias";
     } else {
@@ -1416,6 +1510,12 @@ function renderSearchResults() {
   heading.className = "viewer-search-page-heading";
   const strong = document.createElement("strong");
   strong.textContent = `Página ${result.page}`;
+  const origin = document.createElement("small");
+  origin.className = "viewer-search-origin";
+  origin.textContent = result.source === "ocr"
+    ? `OCR${result.languageLabel ? ` · ${result.languageLabel}` : ""}`
+    : "Texto original";
+  strong.append(origin);
   const count = document.createElement("span");
   count.textContent = `Coincidencia ${state.search.currentIndex + 1} de ${results.length}${state.search.truncated ? "+" : ""}`;
   heading.append(strong, count);
@@ -1516,7 +1616,7 @@ function navigateSearchResults(delta) {
 }
 
 async function runDocumentSearch() {
-  if (!state.file || !state.pageCount || state.saving) return;
+  if (!state.file || !state.pageCount || state.saving || state.ocr.running) return;
   const query = normalizeExtractedText(searchInput?.value || "");
   if (!query) {
     setSearchStatus("Escribe una palabra o frase antes de buscar.", "warning");
@@ -1586,7 +1686,7 @@ async function runDocumentSearch() {
       state.search.processedPages = index + 1;
       if (record.failed) state.search.failedPages += 1;
       else if (!record.hasText) state.search.pagesWithoutText += 1;
-      else appendMatchesFromRecord(record, index + 1);
+      else appendMatchesFromRecord(record, index + 1, entry);
 
       const percent = (state.search.processedPages / state.pageCount) * 100;
       setSearchProgress(true, percent);
@@ -1632,7 +1732,7 @@ async function runDocumentSearch() {
       await activateSearchResult(0, { focus: false });
     } else if (pagesWithoutText) {
       setSearchStatus(
-        `Búsqueda terminada sin coincidencias en las páginas con texto. ${pagesWithoutText} ${pagesWithoutText === 1 ? "página puede necesitar" : "páginas pueden necesitar"} OCR.`,
+        `Búsqueda terminada sin coincidencias en el texto disponible. ${pagesWithoutText} ${pagesWithoutText === 1 ? "página puede necesitar" : "páginas pueden necesitar"} OCR.`,
         "warning"
       );
     } else {
@@ -1664,22 +1764,321 @@ async function runDocumentSearch() {
   }
 }
 
-function scheduleSearchRefreshAfterPlanChange() {
+function scheduleSearchRefresh(message = "El documento cambió. Actualizando los resultados de búsqueda…") {
   window.clearTimeout(state.search.refreshTimer);
   if (!state.search.query || !state.file) return;
   state.search.serial += 1;
   state.search.running = false;
   setSearchProgress(false, 0);
-  setSearchStatus("El documento cambió. Actualizando los resultados de búsqueda…");
+  setSearchStatus(message);
   state.search.refreshTimer = window.setTimeout(() => {
     if (!state.file || !state.search.query) return;
-    if (state.loading || state.saving) {
-      scheduleSearchRefreshAfterPlanChange();
+    if (state.loading || state.saving || state.ocr.running) {
+      scheduleSearchRefresh(message);
       return;
     }
     if (searchInput) searchInput.value = state.search.query;
     runDocumentSearch();
   }, 180);
+}
+
+function scheduleSearchRefreshAfterPlanChange() {
+  scheduleSearchRefresh();
+}
+
+function pruneOcrRecordsForPlan() {
+  const validKeys = new Set(
+    state.pagePlan
+      .filter((entry) => entry?.kind === "pdf")
+      .map((entry) => ocrRecordKey(entry))
+      .filter(Boolean)
+  );
+  for (const key of state.ocr.records.keys()) {
+    if (!validKeys.has(key)) state.ocr.records.delete(key);
+  }
+
+  const validSearchKeys = new Set(state.pagePlan.map((entry) => searchCacheKey(entry)).filter(Boolean));
+  for (const key of state.search.cache.keys()) {
+    if (!validSearchKeys.has(key)) state.search.cache.delete(key);
+  }
+  state.ocr.panelKey = "";
+}
+
+function normalizedOcrTargetPage(value = state.ocr.targetPage) {
+  if (!state.pageCount) return 0;
+  const fallback = Math.max(1, Math.min(state.pageCount, Number(state.currentPage) || 1));
+  const numeric = Number(value);
+  return Number.isInteger(numeric)
+    ? Math.max(1, Math.min(state.pageCount, numeric))
+    : fallback;
+}
+
+function ocrTargetEntry() {
+  const page = normalizedOcrTargetPage();
+  return page ? entryAt(page) : null;
+}
+
+function setOcrTargetPage(pageNumber, { navigate = false, announce = false } = {}) {
+  if (!state.pageCount || state.ocr.running) return;
+  const page = normalizedOcrTargetPage(pageNumber);
+  state.ocr.targetPage = page;
+  state.ocr.panelKey = "";
+  if (navigate) goToPage(page, { behavior: "auto" });
+  updateOcrTargetVisuals();
+  updateOcrControls();
+  if (announce) setOcrStatus(`Página ${page} elegida para OCR.`, "info");
+}
+
+function chooseVisiblePageForOcr({ announce = true } = {}) {
+  const visiblePage = detectedVisibleReadingPage();
+  setOcrTargetPage(visiblePage || state.currentPage, { navigate: false, announce });
+}
+
+function setOcrTargetFromExplicitPageChoice(pageNumber) {
+  if (state.activeTool !== "ocr" || state.ocr.running) return;
+  setOcrTargetPage(pageNumber, { navigate: false, announce: false });
+}
+
+function setOcrProgress(visible, percent = 0) {
+  if (!ocrProgressWrap || !ocrProgress || !ocrProgressValue) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+  ocrProgressWrap.hidden = !visible;
+  ocrProgress.value = value;
+  ocrProgress.textContent = `${value} %`;
+  ocrProgressValue.textContent = `${value} %`;
+}
+
+function setOcrStatus(message, kind = "info") {
+  if (!ocrStatus) return;
+  ocrStatus.textContent = message;
+  ocrStatus.dataset.kind = kind;
+}
+
+function formatOcrConfidence(value) {
+  return Number.isFinite(value) ? `${Math.round(value)} % de confianza aproximada` : "Confianza no disponible";
+}
+
+function refreshOcrPanel({ force = false } = {}) {
+  if (!ocrPageLabel || !ocrPreview || !ocrSummary) return;
+  const targetPage = normalizedOcrTargetPage();
+  const entry = targetPage ? entryAt(targetPage) : null;
+  const key = ocrRecordKey(entry);
+  if (!force && state.ocr.panelKey === key && !state.ocr.running) return;
+  state.ocr.panelKey = key;
+
+  if (!state.file || !entry) {
+    ocrPageLabel.textContent = "Ninguna página abierta";
+    if (ocrPageNumberInput) {
+      ocrPageNumberInput.value = "1";
+      ocrPageNumberInput.max = "1";
+    }
+    if (ocrPageTotal) ocrPageTotal.textContent = "/ 0";
+    ocrSummary.textContent = "Sin OCR";
+    ocrPreview.textContent = "Abre un PDF para elegir y reconocer una página.";
+    if (!state.ocr.running) setOcrStatus("Abre un PDF para iniciar el OCR local.");
+    return;
+  }
+
+  state.ocr.targetPage = targetPage;
+  if (ocrPageNumberInput) {
+    ocrPageNumberInput.value = String(targetPage);
+    ocrPageNumberInput.max = String(state.pageCount);
+  }
+  if (ocrPageTotal) ocrPageTotal.textContent = `/ ${state.pageCount}`;
+  ocrPageLabel.textContent = `Elegida: página ${targetPage} de ${state.pageCount}`;
+  const record = currentOcrRecord(entry);
+  if (!record) {
+    ocrSummary.textContent = "Sin OCR en esta sesión";
+    ocrPreview.textContent = "Todavía no se ha reconocido texto en esta página.";
+    if (!state.ocr.running) setOcrStatus("El reconocimiento se guardará únicamente en memoria durante esta sesión.");
+    return;
+  }
+
+  ocrSummary.textContent = `${record.languageLabel} · ${formatOcrConfidence(record.confidence)} · ${record.effectiveDpi} PPP`;
+  ocrPreview.textContent = record.text || "No se reconoció texto utilizable.";
+  if (!state.ocr.running) {
+    setOcrStatus(
+      record.hasText
+        ? "OCR disponible para Buscar. El PDF original no se ha modificado."
+        : "El OCR terminó, pero no encontró texto utilizable.",
+      record.hasText ? "success" : "warning"
+    );
+  }
+}
+
+function updateOcrControls() {
+  const targetPage = normalizedOcrTargetPage();
+  const targetEntry = targetPage ? entryAt(targetPage) : null;
+  const ready = Boolean(state.file && state.pageCount && targetEntry?.kind === "pdf");
+  const record = currentOcrRecord(targetEntry);
+  const busy = state.ocr.running || state.saving || state.search.running;
+  if (ocrLanguage) ocrLanguage.disabled = !ready || busy;
+  if (ocrPageNumberInput) {
+    ocrPageNumberInput.disabled = !state.file || !state.pageCount || busy;
+    ocrPageNumberInput.min = "1";
+    ocrPageNumberInput.max = String(Math.max(1, state.pageCount));
+    if (targetPage) ocrPageNumberInput.value = String(targetPage);
+  }
+  if (ocrPageTotal) ocrPageTotal.textContent = `/ ${state.pageCount || 0}`;
+  if (ocrPagePreviousButton) ocrPagePreviousButton.disabled = !ready || busy || targetPage <= 1;
+  if (ocrPageNextButton) ocrPageNextButton.disabled = !ready || busy || targetPage >= state.pageCount;
+  if (ocrUseVisibleButton) {
+    ocrUseVisibleButton.disabled = !state.file || !state.pageCount || busy;
+    const visiblePage = state.file && state.pageCount ? detectedVisibleReadingPage() : 0;
+    ocrUseVisibleButton.textContent = visiblePage
+      ? `Usar página visible (${visiblePage})`
+      : "Usar página visible";
+  }
+  if (ocrStartButton) {
+    ocrStartButton.disabled = !ready || busy;
+    ocrStartButton.textContent = record ? "Repetir OCR de la página elegida" : "Reconocer página elegida";
+  }
+  if (ocrCancelButton) {
+    ocrCancelButton.hidden = !state.ocr.running;
+    ocrCancelButton.disabled = !state.ocr.running;
+  }
+  if (ocrClearButton) ocrClearButton.disabled = !ready || !record || state.ocr.running || state.saving;
+  refreshOcrPanel();
+}
+
+function translateOcrProgress(message) {
+  const status = String(message?.status || "").toLowerCase();
+  const progress = Math.max(0, Math.min(1, Number(message?.progress) || 0));
+  if (status.includes("loading tesseract core")) return { percent: 28 + progress * 10, text: "Cargando el motor OCR local…" };
+  if (status.includes("loading language")) return { percent: 38 + progress * 10, text: "Cargando el idioma incluido en la aplicación…" };
+  if (status.includes("initializing")) return { percent: 48 + progress * 8, text: "Inicializando el reconocimiento…" };
+  if (status.includes("recognizing text")) return { percent: 56 + progress * 40, text: "Reconociendo el texto de la página…" };
+  if (status === "error") return { percent: 0, text: "El motor OCR informó de un error." };
+  return { percent: 30 + progress * 25, text: "Preparando el motor OCR local…" };
+}
+
+async function cancelCurrentOcr({ silent = false } = {}) {
+  if (!state.ocr.running && !state.ocr.renderTask) return;
+  state.ocr.serial += 1;
+  state.ocr.running = false;
+  try { state.ocr.renderTask?.cancel?.(); } catch { /* tarea ya finalizada */ }
+  state.ocr.renderTask = null;
+  await cancelOcrEngine();
+  setOcrProgress(false, 0);
+  if (!silent) setOcrStatus("OCR cancelado. No se ha modificado el documento.", "warning");
+  updateOcrControls();
+  diagEmit("ocr-cancelled", { page: normalizedOcrTargetPage() });
+  diagnosticContext();
+}
+
+async function recognizeCurrentPage() {
+  const pageNumber = normalizedOcrTargetPage();
+  const entry = pageNumber ? entryAt(pageNumber) : null;
+  if (!state.file || !entry || entry.kind !== "pdf" || state.ocr.running || state.search.running || state.saving) return;
+
+  state.ocr.targetPage = pageNumber;
+  const language = resolveOcrLanguage(ocrLanguage?.value || "spa");
+  if (ocrLanguage) ocrLanguage.value = language.code;
+  const entryId = entry.id;
+  const serial = ++state.ocr.serial;
+  const diagnosticToken = diagStart("ocr-page", { page: pageNumber, language: language.code });
+  state.ocr.running = true;
+  state.ocr.activeEntryId = entryId;
+  setOcrProgress(true, 2);
+  setOcrStatus(`Preparando la página ${pageNumber} para OCR en ${language.label}…`);
+  updateOcrControls();
+  diagnosticContext();
+
+  let page = null;
+  let rendered = null;
+  try {
+    page = await getPdfPage(entry);
+    rendered = await renderPageForOcr(page, entry, {
+      ...OCR_RENDER_LIMITS,
+      onRenderTask(task) {
+        state.ocr.renderTask = task;
+      },
+      isCancelled() {
+        return serial !== state.ocr.serial || !state.ocr.running;
+      },
+    });
+    state.ocr.renderTask = null;
+    if (serial !== state.ocr.serial || !state.ocr.running) return;
+
+    setOcrProgress(true, 25);
+    setOcrStatus(`Imagen temporal preparada a ${rendered.effectiveDpi} PPP. Iniciando OCR local…`);
+    const result = await recognizeOcrImage(rendered.canvas, language.code, {
+      onProgress(message) {
+        if (serial !== state.ocr.serial || !state.ocr.running) return;
+        const translated = translateOcrProgress(message);
+        setOcrProgress(true, translated.percent);
+        setOcrStatus(translated.text);
+      },
+    });
+
+    if (serial !== state.ocr.serial || !state.ocr.running || entryAt(pageNumber)?.id !== entryId) return;
+    const record = buildOcrRecord(result?.data, {
+      imageWidth: rendered.width,
+      imageHeight: rendered.height,
+      language: language.code,
+      languageLabel: language.label,
+      rotation: rendered.rotation,
+      effectiveDpi: rendered.effectiveDpi,
+    });
+    const key = ocrRecordKey(entry);
+    state.ocr.records.set(key, record);
+    state.search.cache.delete(searchCacheKey(entry));
+    state.ocr.panelKey = "";
+    setOcrProgress(false, 100);
+    refreshOcrPanel({ force: true });
+    setOcrStatus(
+      record.hasText
+        ? `OCR terminado: texto disponible para Buscar en la página ${pageNumber}.`
+        : `OCR terminado en la página ${pageNumber}, pero no se encontró texto utilizable.`,
+      record.hasText ? "success" : "warning"
+    );
+    if (state.search.query) {
+      scheduleSearchRefresh("El OCR cambió el índice local. Actualizando los resultados de búsqueda…");
+    }
+    diagEnd(diagnosticToken, {
+      page: pageNumber,
+      language: language.code,
+      hasText: record.hasText,
+      words: record.words.length,
+      confidence: Number.isFinite(record.confidence) ? Math.round(record.confidence) : null,
+      imagePixels: rendered.width * rendered.height,
+      effectiveDpi: rendered.effectiveDpi,
+    });
+  } catch (error) {
+    if (serial !== state.ocr.serial || isOcrCancelledError(error) || error?.name === "AbortError") {
+      diagEnd(diagnosticToken, { page: pageNumber, language: language.code }, "cancelled");
+      return;
+    }
+    setOcrProgress(false, 0);
+    setOcrStatus(`No se pudo completar el OCR: ${error?.message || error}.`, "error");
+    diagFail(diagnosticToken, error, { operation: "ocr-page", page: pageNumber, language: language.code });
+  } finally {
+    try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
+    if (serial === state.ocr.serial) {
+      state.ocr.running = false;
+      state.ocr.renderTask = null;
+      state.ocr.activeEntryId = "";
+      updateOcrControls();
+      diagnosticContext();
+    }
+    if (rendered?.canvas) {
+      rendered.canvas.width = 1;
+      rendered.canvas.height = 1;
+    }
+  }
+}
+
+function clearCurrentOcr() {
+  const entry = ocrTargetEntry();
+  const key = ocrRecordKey(entry);
+  if (!key || !state.ocr.records.has(key) || state.ocr.running) return;
+  state.ocr.records.delete(key);
+  state.search.cache.delete(searchCacheKey(entry));
+  state.ocr.panelKey = "";
+  refreshOcrPanel({ force: true });
+  setOcrStatus("Se eliminó el OCR de esta página de la memoria de la sesión.", "info");
+  if (state.search.query) scheduleSearchRefresh("Se eliminó texto OCR del índice. Actualizando Buscar…");
+  updateOcrControls();
 }
 
 function setLoading(visible, title = "Preparando documento", detail = "Todo se procesa localmente.") {
@@ -1813,6 +2212,8 @@ function disconnectObservers() {
 
 async function destroySources() {
   cancelSearchWork({ silent: true });
+  await cancelCurrentOcr({ silent: true });
+  await destroyOcrEngine();
   try {
     state.renderTask?.cancel?.();
   } catch {
@@ -1835,6 +2236,10 @@ async function destroySources() {
     }
   }
   state.sources.clear();
+  state.ocr.records.clear();
+  state.ocr.panelKey = "";
+  state.ocr.targetPage = 0;
+  clearReadingNavigationLock();
 }
 
 async function resetDocument() {
@@ -2019,8 +2424,11 @@ function resetDocumentPlan() {
 }
 
 function afterPlanChanged(options = {}) {
+  if (state.ocr.running || state.ocr.renderTask) void cancelCurrentOcr({ silent: true });
+  pruneOcrRecordsForPlan();
   state.pageCount = state.pagePlan.length;
   state.currentPage = Math.max(1, Math.min(state.currentPage, state.pageCount || 1));
+  state.ocr.targetPage = state.pageCount ? normalizedOcrTargetPage() : 0;
   const validIds = new Set(state.pagePlan.map((entry) => entry.id));
   state.selectedIds = new Set([...state.selectedIds].filter((id) => validIds.has(id)));
   state.lastSelectedId = validIds.has(state.lastSelectedId) ? state.lastSelectedId : null;
@@ -2097,7 +2505,7 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
     goToPage(1, { scroll: false });
     continuousStage.scrollTo({ top: 0, left: 0, behavior: "auto" });
     setFeedback(`${file.name} abierto desde ${sourceText}. El documento ya es el inicio de tu espacio de trabajo.`, "success");
-    setSearchStatus("Escribe una palabra o frase para buscar en la capa de texto del documento.");
+    setSearchStatus("Escribe una palabra o frase para buscar en el texto original y el OCR de esta sesión.");
     updateSearchNavigationControls();
     document.title = `${file.name} | PDFPrivado Pro`;
     diagEnd(openDiagnosticToken, { pages: state.pageCount });
@@ -2495,6 +2903,7 @@ function renderVirtualThumbnailWindow(forcePage = null) {
   }
   refreshSelectionVisuals();
   thumbnailList.querySelector(`[data-page="${state.currentPage}"]`)?.classList.add('is-current');
+  updateOcrTargetVisuals();
   diagEmit('virtual-thumbnail-window', { start: start + 1, end, total: state.pagePlan.length });
 }
 
@@ -2513,6 +2922,7 @@ function renderVirtualContinuousWindow(forcePage = null) {
   }
   if (virtual.start === start && virtual.end === end) return;
   state.continuousObserver?.disconnect();
+  state.readingVisibleNodes.clear();
   cancelScheduledChannel('continuous');
   cancelTaskMap(state.continuousTasks);
   const fragment = document.createDocumentFragment();
@@ -2525,18 +2935,14 @@ function renderVirtualContinuousWindow(forcePage = null) {
   let centerIndex = binarySearchOffset(offsets, viewportTop + continuousStage.clientHeight / 2);
   if (state.viewMode === "spread" && state.pagePlan.length) centerIndex = spreadRowStartIndex(centerIndex);
   const centerPage = Math.max(1, Math.min(state.pagePlan.length, centerIndex + 1));
-  if (centerPage !== state.currentPage && !searchNavigationLocked() && !state.search.targetPage) {
-    state.currentPage = centerPage;
-    pageInput.value = String(centerPage);
-    scrollVirtualThumbnailToPage(centerPage, false);
-  }
   for (const item of continuousList.querySelectorAll('.viewer-continuous-page')) {
     const page = Number(item.dataset.page) || 1;
     scheduleContinuousPage(item.dataset.entryId, 10000 - Math.abs(page - centerPage) * 20);
     item.classList.toggle('is-current', page === state.currentPage);
   }
+  updateOcrTargetVisuals();
   diagEmit('virtual-continuous-window', { start: start + 1, end, total: state.pagePlan.length, currentPage: state.currentPage });
-  updateControls();
+  scheduleReadingViewportSync();
 }
 
 function scrollVirtualThumbnailToPage(page, smooth = false) {
@@ -2737,7 +3143,10 @@ function createThumbnailCard(entry, position) {
   label.className = "viewer-thumbnail-label";
   label.innerHTML = `<strong>Página ${position}</strong><small>${sourceLabel(entry)}</small>`;
   pageButton.append(thumbWrap, label);
-  pageButton.addEventListener("click", () => goToPage(position));
+  pageButton.addEventListener("click", () => {
+    setOcrTargetFromExplicitPageChoice(position);
+    goToPage(position);
+  });
 
   item.append(selectButton, pageButton);
   return item;
@@ -2925,6 +3334,231 @@ function updateCurrentVisuals() {
   [spreadLeft, spreadRight].forEach((node) => {
     node?.classList.toggle("is-current", Number(node.dataset.page) === state.currentPage);
   });
+  updateOcrTargetVisuals();
+}
+
+function updateOcrTargetVisuals() {
+  const targetPage = state.activeTool === "ocr" && state.pageCount
+    ? normalizedOcrTargetPage()
+    : 0;
+  for (const item of thumbnailList?.querySelectorAll?.(".viewer-thumbnail-item") || []) {
+    item.classList.toggle("is-ocr-target", Number(item.dataset.page) === targetPage);
+  }
+  for (const page of continuousList?.querySelectorAll?.(".viewer-continuous-page") || []) {
+    page.classList.toggle("is-ocr-target", Number(page.dataset.page) === targetPage);
+  }
+  [spreadLeft, spreadRight].forEach((node) => {
+    node?.classList.toggle("is-ocr-target", Number(node.dataset.page) === targetPage);
+  });
+  canvasStage?.classList.toggle(
+    "is-ocr-target",
+    state.viewMode === "page" && targetPage === state.currentPage
+  );
+}
+
+function readingNavigationLocked() {
+  return Boolean(
+    state.readingNavigation.targetPage &&
+    performance.now() < state.readingNavigation.lockUntil
+  );
+}
+
+function clearReadingNavigationLock() {
+  state.readingNavigation.serial += 1;
+  state.readingNavigation.targetPage = 0;
+  state.readingNavigation.lockUntil = 0;
+  state.readingNavigation.attempts = 0;
+  if (state.readingNavigation.syncFrame) {
+    window.cancelAnimationFrame(state.readingNavigation.syncFrame);
+    state.readingNavigation.syncFrame = 0;
+  }
+  if (state.readingNavigation.settleTimer) {
+    window.clearTimeout(state.readingNavigation.settleTimer);
+    state.readingNavigation.settleTimer = 0;
+  }
+}
+
+function beginReadingNavigation(page, behavior) {
+  if (state.readingNavigation.settleTimer) {
+    window.clearTimeout(state.readingNavigation.settleTimer);
+    state.readingNavigation.settleTimer = 0;
+  }
+  const smooth = behavior === "smooth";
+  const serial = ++state.readingNavigation.serial;
+  state.readingNavigation.targetPage = page;
+  state.readingNavigation.attempts = 0;
+  state.readingNavigation.lockUntil = performance.now() + (smooth ? 2400 : 1600);
+  state.readingNavigation.settleTimer = window.setTimeout(
+    () => finalizeReadingNavigation(serial),
+    smooth ? 2500 : 1700
+  );
+  return serial;
+}
+
+function readingPageCandidates() {
+  if (!continuousStage || continuousStage.hidden || !state.pageCount) return [];
+  const rootRect = continuousStage.getBoundingClientRect();
+  const viewportTop = rootRect.top + 8;
+  const viewportBottom = rootRect.bottom - 8;
+  const anchorY = viewportTop + Math.max(1, viewportBottom - viewportTop) * 0.38;
+  const collect = (nodes) => [...nodes]
+    .filter((node) => node?.isConnected)
+    .map((node) => {
+      const rect = node.getBoundingClientRect();
+      const intersection = Math.max(0, Math.min(rect.bottom, viewportBottom) - Math.max(rect.top, viewportTop));
+      if (intersection <= 1) return null;
+      const containsAnchor = rect.top <= anchorY && rect.bottom >= anchorY;
+      const distance = containsAnchor
+        ? 0
+        : Math.min(Math.abs(anchorY - rect.top), Math.abs(anchorY - rect.bottom));
+      return {
+        node,
+        page: Number(node.dataset.page) || 0,
+        rect,
+        intersection,
+        containsAnchor,
+        distance,
+      };
+    })
+    .filter((item) => item?.page);
+
+  const observed = collect(state.readingVisibleNodes);
+  if (observed.length) return observed;
+  return collect(continuousList.querySelectorAll(".viewer-continuous-page[data-page]"));
+}
+
+function detectedVisibleReadingPage() {
+  if (!state.pageCount) return 0;
+  if (state.viewMode === "page" || state.viewMode === "organize") return state.currentPage;
+  if (!["continuous", "spread"].includes(state.viewMode)) return state.currentPage;
+
+  const candidates = readingPageCandidates();
+  if (!candidates.length) return state.currentPage;
+
+  const navigationTarget = Number(state.readingNavigation.targetPage) || 0;
+  if (readingNavigationLocked()) {
+    const locked = candidates.find((item) => item.page === navigationTarget);
+    if (locked) return locked.page;
+    return state.currentPage;
+  }
+
+  const ordered = [...candidates].sort((a, b) => {
+    if (a.containsAnchor !== b.containsAnchor) return a.containsAnchor ? -1 : 1;
+    if (a.distance !== b.distance) return a.distance - b.distance;
+    if (a.intersection !== b.intersection) return b.intersection - a.intersection;
+    return a.page - b.page;
+  });
+  const best = ordered[0];
+  if (!best) return state.currentPage;
+
+  if (state.viewMode === "spread") {
+    const row = candidates.filter((item) => Math.abs(item.rect.top - best.rect.top) <= 8);
+    const preferred = row.find((item) => item.page === state.currentPage);
+    if (preferred) return preferred.page;
+    return row.sort((a, b) => a.page - b.page)[0]?.page || best.page;
+  }
+
+  return best.page;
+}
+
+function syncCurrentPageFromReadingViewport({ force = false } = {}) {
+  if (!state.file || !["continuous", "spread"].includes(state.viewMode)) return;
+  if (!force && (state.readingNavigation.targetPage || searchNavigationLocked() || state.search.targetPage)) return;
+
+  const page = detectedVisibleReadingPage();
+  if (!page || page === state.currentPage) return;
+
+  state.currentPage = page;
+  pageInput.value = String(page);
+  const entry = entryAt(page);
+  pageInfo.textContent = entry ? `Página ${page} · ${sourceLabel(entry)}` : `Página ${page}`;
+  updateCurrentVisuals();
+  updateControls();
+}
+
+function finalizeReadingNavigation(expectedSerial = state.readingNavigation.serial) {
+  if (expectedSerial !== state.readingNavigation.serial) return;
+  state.readingNavigation.settleTimer = 0;
+  const target = state.readingNavigation.targetPage;
+  const visibleTarget = target
+    ? readingPageCandidates().some((item) => item.page === target && item.containsAnchor)
+    : false;
+
+  if (
+    target &&
+    !visibleTarget &&
+    ["continuous", "spread"].includes(state.viewMode) &&
+    state.readingNavigation.attempts < 4
+  ) {
+    state.readingNavigation.attempts += 1;
+    state.readingNavigation.lockUntil = performance.now() + 700;
+    scrollReadingPageIntoView(target, { behavior: "auto", block: "start" });
+    state.readingNavigation.settleTimer = window.setTimeout(
+      () => finalizeReadingNavigation(expectedSerial),
+      520
+    );
+    return;
+  }
+
+  state.readingNavigation.targetPage = 0;
+  state.readingNavigation.lockUntil = 0;
+  state.readingNavigation.attempts = 0;
+  if (target && visibleTarget) state.currentPage = target;
+
+  if (searchNavigationLocked() || state.search.targetPage) {
+    pageInput.value = String(state.currentPage);
+    updateCurrentVisuals();
+    updateControls();
+    return;
+  }
+  syncCurrentPageFromReadingViewport({ force: true });
+}
+
+function scheduleReadingViewportSync() {
+  if (!state.file || !["continuous", "spread"].includes(state.viewMode)) return;
+  if (!state.readingNavigation.syncFrame) {
+    state.readingNavigation.syncFrame = window.requestAnimationFrame(() => {
+      state.readingNavigation.syncFrame = 0;
+      syncCurrentPageFromReadingViewport();
+    });
+  }
+  if (state.readingNavigation.targetPage) return;
+  window.clearTimeout(state.readingNavigation.settleTimer);
+  const serial = state.readingNavigation.serial;
+  state.readingNavigation.settleTimer = window.setTimeout(
+    () => finalizeReadingNavigation(serial),
+    180
+  );
+}
+
+function renderedContinuousScrollTop(page, block = "start") {
+  const node = continuousList.querySelector(`[data-page="${page}"]`);
+  if (!node) return null;
+  const rootRect = continuousStage.getBoundingClientRect();
+  const pageRect = node.getBoundingClientRect();
+  let top = continuousStage.scrollTop + pageRect.top - rootRect.top - 10;
+  if (block === "center") {
+    top -= Math.max(0, (rootRect.height - pageRect.height) / 2);
+  }
+  return Math.max(0, Math.min(top, Math.max(0, continuousStage.scrollHeight - continuousStage.clientHeight)));
+}
+
+function scrollReadingPageIntoView(page, { behavior = "smooth", block = "start" } = {}) {
+  if (state.continuousVirtual) {
+    const estimatedTop = state.continuousVirtual.offsets[Math.max(0, page - 1)] || 0;
+    continuousStage.scrollTo({ top: estimatedTop, behavior: "auto" });
+    renderVirtualContinuousWindow(page);
+  }
+
+  const exactTop = renderedContinuousScrollTop(page, block);
+  if (exactTop !== null) {
+    continuousStage.scrollTo({ top: exactTop, behavior });
+    return true;
+  }
+
+  const target = continuousList.querySelector(`[data-page="${page}"]`);
+  target?.scrollIntoView({ behavior, block, inline: "center" });
+  return Boolean(target);
 }
 
 function goToPage(pageNumber, options = {}) {
@@ -2932,6 +3566,9 @@ function goToPage(pageNumber, options = {}) {
   const page = Math.max(1, Math.min(state.pageCount, Number(pageNumber) || 1));
   const behavior = options.behavior === "auto" ? "auto" : "smooth";
   const block = options.block || (options.searchNavigation ? "center" : "start");
+  if (["continuous", "spread"].includes(state.viewMode) && options.scroll !== false) {
+    beginReadingNavigation(page, behavior);
+  }
   state.currentPage = page;
   pageInput.value = String(page);
   const currentEntry = entryAt(page);
@@ -2939,9 +3576,7 @@ function goToPage(pageNumber, options = {}) {
   updateCurrentVisuals();
   const renderPromise = state.viewMode === "page" ? renderCurrentPage() : null;
   if (["continuous", "spread"].includes(state.viewMode) && options.scroll !== false) {
-    if (!scrollVirtualContinuousToPage(page, behavior === "smooth")) {
-      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior, block, inline: "center" });
-    }
+    scrollReadingPageIntoView(page, { behavior, block });
   }
   if (state.viewMode === "organize" && options.scroll !== false) {
     if (!scrollVirtualOrganizeToPage(page, behavior === "smooth")) {
@@ -3007,10 +3642,8 @@ function createContinuousItem(entry, position) {
   article.dataset.entryId = entry.id;
   article.dataset.page = String(position);
   article.tabIndex = 0;
-  if (state.search.query) {
-    article.style.minHeight = `${Math.round(estimateContinuousStride(entry))}px`;
-    article.dataset.searchReservedHeight = "true";
-  }
+  article.style.minHeight = `${Math.round(estimateContinuousStride(entry))}px`;
+  article.dataset.readingReservedHeight = "true";
   const label = document.createElement("span");
   label.className = "viewer-continuous-label";
   label.textContent = `Página ${position}`;
@@ -3021,11 +3654,13 @@ function createContinuousItem(entry, position) {
   article.append(label, target);
   article.addEventListener("click", () => {
     if (Date.now() < state.suppressContinuousClickUntil) return;
+    setOcrTargetFromExplicitPageChoice(position);
     goToPage(position, { scroll: false });
   });
   article.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
+      setOcrTargetFromExplicitPageChoice(position);
       goToPage(position, { scroll: false });
     }
   });
@@ -3035,6 +3670,7 @@ function createContinuousItem(entry, position) {
 function buildContinuousList() {
   const diagnosticToken = diagStart("build-continuous", { pages: state.pagePlan.length });
   state.continuousObserver?.disconnect();
+  state.readingVisibleNodes.clear();
   cancelScheduledChannel("continuous");
   cancelTaskMap(state.continuousTasks);
   continuousList.replaceChildren();
@@ -3054,14 +3690,15 @@ function buildContinuousList() {
         const visible = entries.filter((entry) => entry.isIntersecting);
         entries.forEach((observed) => {
           const entryId = observed.target.dataset.entryId;
-          if (observed.isIntersecting) scheduleContinuousPage(entryId, renderPriority(observed, continuousStage));
-          else cancelScheduledRender("continuous", entryId, observed.target);
+          if (observed.isIntersecting) {
+            state.readingVisibleNodes.add(observed.target);
+            scheduleContinuousPage(entryId, renderPriority(observed, continuousStage));
+          } else {
+            state.readingVisibleNodes.delete(observed.target);
+            cancelScheduledRender("continuous", entryId, observed.target);
+          }
         });
-        const main = visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (main?.intersectionRatio > 0.35 && !searchNavigationLocked() && !state.search.targetPage) {
-          const page = Number(main.target.dataset.page);
-          if (page && page !== state.currentPage) goToPage(page, { scroll: false });
-        }
+        if (visible.length) scheduleReadingViewportSync();
       },
       { root: continuousStage, rootMargin: "240px 0px", threshold: [0.01, 0.35, 0.65] }
     );
@@ -3129,6 +3766,22 @@ async function performRenderContinuousPage(entryId) {
       zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     }
     centerReadingStageHorizontal();
+    const renderedPage = Number(item.dataset.page) || positionOfId(entryId);
+    if (
+      renderedPage &&
+      state.readingNavigation.targetPage === renderedPage &&
+      ["continuous", "spread"].includes(state.viewMode)
+    ) {
+      const navigationSerial = state.readingNavigation.serial;
+      window.requestAnimationFrame(() => {
+        if (
+          navigationSerial === state.readingNavigation.serial &&
+          state.readingNavigation.targetPage === renderedPage
+        ) {
+          scrollReadingPageIntoView(renderedPage, { behavior: "auto", block: "start" });
+        }
+      });
+    }
     diagEnd(diagnosticToken, { width: target.width, height: target.height });
     if (activeSearchResult()?.page === Number(item.dataset.page)) refreshCurrentSearchHighlight();
   } catch (error) {
@@ -3596,6 +4249,7 @@ function switchReadingMode(mode) {
 
 function setViewMode(mode, rebuild = true) {
   clearSearchHighlight();
+  clearReadingNavigationLock();
   const before = {
     viewMode: state.viewMode,
     currentPage: state.currentPage,
@@ -3614,6 +4268,7 @@ function setViewMode(mode, rebuild = true) {
   }
   if (!["continuous", "spread"].includes(resolvedMode)) {
     state.continuousObserver?.disconnect();
+    state.readingVisibleNodes.clear();
     cancelScheduledChannel("continuous");
     cancelTaskMap(state.continuousTasks);
   }
@@ -3648,13 +4303,8 @@ function setViewMode(mode, rebuild = true) {
       const page = state.currentPage;
       buildContinuousList();
       requestAnimationFrame(() => {
-        if (!scrollVirtualContinuousToPage(page, false)) {
-          continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({
-            block: "start",
-            inline: "center",
-            behavior: "auto",
-          });
-        }
+        beginReadingNavigation(page, "auto");
+        scrollReadingPageIntoView(page, { behavior: "auto", block: "start" });
         centerReadingStageHorizontal(true);
       });
     } else if (resolvedMode === "page") {
@@ -3724,7 +4374,13 @@ function activateTool(name) {
   if (name === "search") {
     requestAnimationFrame(() => searchInput?.focus({ preventScroll: true }));
   }
+  if (name === "ocr") {
+    if (!state.ocr.targetPage && state.pageCount) state.ocr.targetPage = normalizedOcrTargetPage(state.currentPage);
+    refreshOcrPanel({ force: true });
+    requestAnimationFrame(() => ocrPageNumberInput?.focus({ preventScroll: true }));
+  }
   document.querySelector(`.viewer-tool-panel[data-viewer-tool-panel="${name}"]`)?.scrollTo?.({ top: 0 });
+  updateOcrTargetVisuals();
   const after = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
   const expectedView = enteringOrganize
     ? "organize"
@@ -3842,6 +4498,7 @@ function updateControls() {
   fitWidthButton.classList.toggle("is-active", state.zoomMode === "fit-width");
   fitPageButton.classList.toggle("is-active", state.zoomMode === "fit-page");
   updateSearchNavigationControls();
+  updateOcrControls();
   applyViewerPanelLayout();
   diagnosticContext();
 }
@@ -3852,9 +4509,8 @@ function refreshReadingView() {
     const page = state.currentPage;
     buildContinuousList();
     requestAnimationFrame(() => {
-      if (!scrollVirtualContinuousToPage(page, false)) {
-        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
-      }
+      beginReadingNavigation(page, "auto");
+      scrollReadingPageIntoView(page, { behavior: "auto", block: "start" });
       centerReadingStageHorizontal(true);
     });
   } else if (state.viewMode === "page") {
@@ -4325,8 +4981,13 @@ fileInput?.addEventListener("change", () => { const selected = fileInput.files?.
 insertFileInput?.addEventListener("change", () => insertPdfFiles(insertFileInput.files || [], state.insertionPlacement));
 previousButton?.addEventListener("click", () => goToPage(readingNavigationTarget(-1)));
 nextButton?.addEventListener("click", () => goToPage(readingNavigationTarget(1)));
-pageInput?.addEventListener("change", () => goToPage(pageInput.value));
-pageInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); goToPage(pageInput.value); } });
+pageInput?.addEventListener("change", () => goToPage(pageInput.value, { behavior: "auto" }));
+pageInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    goToPage(pageInput.value, { behavior: "auto" });
+  }
+});
 modeContinuousButton?.addEventListener("click", () => switchReadingMode("continuous"));
 modePageButton?.addEventListener("click", () => switchReadingMode("page"));
 modeSpreadButton?.addEventListener("click", () => switchReadingMode("spread"));
@@ -4338,9 +4999,8 @@ spreadCoverButton?.addEventListener("click", () => {
     const page = state.currentPage;
     buildContinuousList();
     requestAnimationFrame(() => {
-      if (!scrollVirtualContinuousToPage(page, false)) {
-        continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ block: "start", inline: "center", behavior: "auto" });
-      }
+      beginReadingNavigation(page, "auto");
+      scrollReadingPageIntoView(page, { behavior: "auto", block: "start" });
     });
   }
   updateControls();
@@ -4387,6 +5047,31 @@ searchClearButton?.addEventListener("click", () => clearSearch());
 searchPreviousButton?.addEventListener("click", () => navigateSearchResults(-1));
 searchNextButton?.addEventListener("click", () => navigateSearchResults(1));
 searchCancelButton?.addEventListener("click", () => cancelSearchWork());
+ocrStartButton?.addEventListener("click", recognizeCurrentPage);
+ocrCancelButton?.addEventListener("click", () => cancelCurrentOcr());
+ocrClearButton?.addEventListener("click", clearCurrentOcr);
+ocrPagePreviousButton?.addEventListener("click", () => {
+  const page = normalizedOcrTargetPage() - 1;
+  setOcrTargetPage(page, { navigate: true, announce: true });
+});
+ocrPageNextButton?.addEventListener("click", () => {
+  const page = normalizedOcrTargetPage() + 1;
+  setOcrTargetPage(page, { navigate: true, announce: true });
+});
+ocrUseVisibleButton?.addEventListener("click", () => chooseVisiblePageForOcr({ announce: true }));
+ocrPageNumberInput?.addEventListener("change", () => {
+  setOcrTargetPage(ocrPageNumberInput.value, { navigate: true, announce: true });
+});
+ocrPageNumberInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    setOcrTargetPage(ocrPageNumberInput.value, { navigate: true, announce: true });
+  }
+});
+ocrLanguage?.addEventListener("change", () => {
+  const language = resolveOcrLanguage(ocrLanguage.value);
+  ocrLanguage.value = language.code;
+});
 toolTabs.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.viewerTool)));
 toolLinks.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.activateTool)));
 openOrganizeButton?.addEventListener("click", () => {
@@ -4419,6 +5104,7 @@ canvasStage?.addEventListener("pointerup", handlePagePanEnd);
 canvasStage?.addEventListener("pointercancel", handlePagePanEnd);
 continuousStage?.addEventListener("pointerdown", (event) => {
   releasePinnedSearchNavigation();
+  clearReadingNavigationLock();
   handleContinuousPanStart(event);
 });
 continuousStage?.addEventListener("pointermove", handleContinuousPanMove);
@@ -4427,7 +5113,10 @@ continuousStage?.addEventListener("pointercancel", handleContinuousPanEnd);
 spreadStage?.addEventListener("click", (event) => {
   const pageNode = event.target.closest?.(".viewer-spread-page[data-page]");
   const page = Number(pageNode?.dataset.page);
-  if (Number.isInteger(page) && page >= 1 && page <= state.pageCount) goToPage(page, { scroll: false });
+  if (Number.isInteger(page) && page >= 1 && page <= state.pageCount) {
+    setOcrTargetFromExplicitPageChoice(page);
+    goToPage(page, { scroll: false });
+  }
 });
 organizeStage?.addEventListener("pointermove", moveOrganizeCardPointer);
 organizeStage?.addEventListener("pointerup", (event) => finishOrganizeCardPointer(event, false));
@@ -4450,6 +5139,7 @@ thumbnailList?.addEventListener("scroll", () => {
 }, { passive: true });
 continuousStage?.addEventListener("scroll", () => {
   if (state.continuousVirtual) renderVirtualContinuousWindow();
+  scheduleReadingViewportSync();
 }, { passive: true });
 continuousStage?.addEventListener("scroll", pauseQueuedRenderingDuringScroll, { passive: true });
 organizeGrid?.addEventListener("scroll", () => {
@@ -4482,6 +5172,7 @@ continuousStage?.addEventListener("wheel", (event) => {
   if (!state.file || !["continuous", "spread"].includes(state.viewMode)) return;
   if (!event.ctrlKey) {
     releasePinnedSearchNavigation();
+    clearReadingNavigationLock();
     return;
   }
   queueViewerZoomFromWheel(event);
@@ -4622,6 +5313,15 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
 
+if (ocrLanguage) {
+  ocrLanguage.replaceChildren(...OCR_LANGUAGES.map((language) => {
+    const option = document.createElement("option");
+    option.value = language.code;
+    option.textContent = language.label;
+    return option;
+  }));
+  ocrLanguage.value = "spa";
+}
 updateResponsiveViewerLayout();
 applyViewerPanelLayout();
 updateScopeControls();

@@ -5741,6 +5741,7 @@ body.viewer-tools-collapsed .viewer-tool-tabs button::before {
 
 body.viewer-tools-collapsed .viewer-tool-tabs button[data-viewer-tool="overview"]::before { content: "⌂"; }
 body.viewer-tools-collapsed .viewer-tool-tabs button[data-viewer-tool="search"]::before { content: "⌕"; }
+body.viewer-tools-collapsed .viewer-tool-tabs button[data-viewer-tool="ocr"]::before { content: "Aa"; font-size: 0.58rem; }
 body.viewer-tools-collapsed .viewer-tool-tabs button[data-viewer-tool="organize"]::before { content: "▦"; }
 body.viewer-tools-collapsed .viewer-tool-tabs button[data-viewer-tool="rotate"]::before { content: "↻"; }
 body.viewer-tools-collapsed .viewer-tool-tabs button[data-viewer-tool="split"]::before { content: "✂"; }
@@ -6787,4 +6788,276 @@ body.viewer-focus-mode .viewer-focus-exit-button {
   .viewer-search-controls-sticky {
     position: static;
   }
+}
+
+
+/* ================================================================
+   PRO V2.6 · OCR LOCAL PILOTO
+   ================================================================ */
+.viewer-ocr-tool {
+  display: grid;
+  gap: 12px;
+}
+
+.viewer-ocr-page-card,
+.viewer-ocr-privacy-note {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.viewer-ocr-page-card span,
+.viewer-ocr-privacy-note span {
+  color: #64748b;
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.viewer-ocr-page-card strong,
+.viewer-ocr-privacy-note strong {
+  color: #0f172a;
+  font-size: 0.74rem;
+}
+
+.viewer-ocr-page-picker {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 72px) auto 36px;
+  align-items: center;
+  justify-content: start;
+  gap: 7px;
+}
+
+.viewer-ocr-page-picker button,
+.viewer-ocr-use-visible {
+  min-height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.viewer-ocr-page-picker button:hover:not(:disabled),
+.viewer-ocr-use-visible:hover:not(:disabled) {
+  border-color: #38bdf8;
+  background: #f0f9ff;
+}
+
+.viewer-ocr-page-picker button:disabled,
+.viewer-ocr-use-visible:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.viewer-ocr-page-number {
+  display: block;
+}
+
+.viewer-ocr-page-number input {
+  width: 100%;
+  min-height: 34px;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.viewer-ocr-page-number input:focus {
+  outline: 2px solid rgba(14, 165, 233, 0.28);
+  border-color: #0ea5e9;
+}
+
+.viewer-ocr-page-picker > span {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.viewer-ocr-use-visible {
+  width: 100%;
+  padding: 7px 10px;
+}
+
+.viewer-ocr-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.viewer-ocr-actions button {
+  width: 100%;
+}
+
+.viewer-ocr-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.viewer-ocr-progress[hidden] {
+  display: none !important;
+}
+
+.viewer-ocr-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: #0284c7;
+}
+
+.viewer-ocr-progress span {
+  color: #475569;
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.viewer-ocr-status {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.viewer-ocr-status[data-kind="success"] {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.viewer-ocr-status[data-kind="warning"] {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.viewer-ocr-status[data-kind="error"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.viewer-ocr-preview-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.viewer-ocr-preview-heading strong {
+  color: #0f172a;
+  font-size: 0.76rem;
+}
+
+.viewer-ocr-preview-heading span {
+  color: #64748b;
+  font-size: 0.6rem;
+  text-align: right;
+}
+
+.viewer-ocr-preview {
+  min-height: 120px;
+  max-height: 250px;
+  overflow: auto;
+  margin: 0;
+  padding: 11px;
+  border: 1px solid #dbe3ec;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #334155;
+  font: 0.68rem/1.55 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.viewer-ocr-privacy-note {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+}
+
+.viewer-ocr-privacy-note strong {
+  color: #075985;
+}
+
+.viewer-ocr-privacy-note span {
+  color: #0c4a6e;
+}
+
+.viewer-search-page-heading strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.viewer-search-origin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.viewer-search-highlight.is-ocr {
+  border-color: rgba(2, 132, 199, 0.88);
+  background: rgba(125, 211, 252, 0.58);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  transform: none;
+}
+
+/* Pro v2.6 piloto 03: destino OCR visible y estable en todos los modos de lectura. */
+.viewer-thumbnail-item.is-ocr-target {
+  outline: 3px solid rgba(2, 132, 199, 0.72);
+  outline-offset: 1px;
+}
+
+.viewer-continuous-page.is-ocr-target,
+.viewer-spread-page.is-ocr-target {
+  outline: 3px solid rgba(2, 132, 199, 0.78);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.14);
+}
+
+.viewer-continuous-page.is-ocr-target::after,
+.viewer-spread-page.is-ocr-target::after {
+  content: "OCR";
+  position: absolute;
+  z-index: 5;
+  top: 6px;
+  right: 8px;
+  min-width: 30px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #0369a1;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
+}
+
+.viewer-canvas-stage.is-ocr-target > canvas {
+  outline: 3px solid rgba(2, 132, 199, 0.78);
+  outline-offset: 3px;
 }
