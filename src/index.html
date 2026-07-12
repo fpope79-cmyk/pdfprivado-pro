@@ -568,6 +568,22 @@
                   </div>
                   <p class="viewer-ocr-language-availability" id="viewer-ocr-language-availability">15 idiomas catalogados · 2 incluidos en esta compilación</p>
 
+                  <!-- PDFPRIVADO_OCR_STICKY_CONTROLS_V1_START -->
+                  <div class="viewer-ocr-operation-panel" id="viewer-ocr-operation-panel">
+<div class="viewer-ocr-actions">
+                    <button class="primary-button" id="viewer-ocr-start" type="button" disabled>Reconocer página elegida</button>
+                    <button class="secondary-button" id="viewer-ocr-cancel" type="button" hidden disabled>Cancelar OCR</button>
+                    <button class="secondary-button" id="viewer-ocr-clear" type="button" disabled>Eliminar OCR de la página</button>
+                  </div>
+
+                  <div class="viewer-ocr-progress" id="viewer-ocr-progress-wrap" hidden>
+                    <progress id="viewer-ocr-progress" max="100" value="0">0 %</progress>
+                    <span id="viewer-ocr-progress-value">0 %</span>
+                  </div>
+
+                  <p class="viewer-ocr-status" id="viewer-ocr-status" role="status" aria-live="polite">Abre un PDF para iniciar el OCR local.</p>
+                  </div>
+                  <!-- PDFPRIVADO_OCR_STICKY_CONTROLS_V1_END -->
                   <details class="viewer-ocr-language-admin">
                     <summary>
                       <span class="viewer-ocr-language-admin-heading">
@@ -620,22 +636,7 @@
 
                       <p class="viewer-ocr-language-admin-note">Los paquetes instalados permanecen en este equipo y pueden desinstalarse. La prueba aislada reconoce solo la página elegida, no guarda el resultado y todavía no añade el idioma a los selectores normales.</p>
                     </div>
-                  </details>
-
-                  <div class="viewer-ocr-actions">
-                    <button class="primary-button" id="viewer-ocr-start" type="button" disabled>Reconocer página elegida</button>
-                    <button class="secondary-button" id="viewer-ocr-cancel" type="button" hidden disabled>Cancelar OCR</button>
-                    <button class="secondary-button" id="viewer-ocr-clear" type="button" disabled>Eliminar OCR de la página</button>
-                  </div>
-
-                  <div class="viewer-ocr-progress" id="viewer-ocr-progress-wrap" hidden>
-                    <progress id="viewer-ocr-progress" max="100" value="0">0 %</progress>
-                    <span id="viewer-ocr-progress-value">0 %</span>
-                  </div>
-
-                  <p class="viewer-ocr-status" id="viewer-ocr-status" role="status" aria-live="polite">Abre un PDF para iniciar el OCR local.</p>
-
-                  <div class="viewer-ocr-preview-heading">
+                  </details><div class="viewer-ocr-preview-heading">
                     <strong>Texto reconocido</strong>
                     <span id="viewer-ocr-summary">Sin OCR</span>
                   </div>

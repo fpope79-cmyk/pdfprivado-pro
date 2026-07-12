@@ -7741,3 +7741,59 @@ body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
     --viewer-tools-column: min(330px, 44vw);
   }
 }
+
+/* PDFPRIVADO_OCR_STICKY_CONTROLS_V1_START
+   Mantiene fase, progreso y cancelación accesibles durante operaciones OCR. */
+.viewer-ocr-operation-panel {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  gap: 9px;
+  margin: 0 -8px 14px;
+  padding: 10px 8px 12px;
+  border-bottom: 1px solid #dbe3ec;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.viewer-ocr-operation-panel .viewer-ocr-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.viewer-ocr-operation-panel #viewer-ocr-cancel:not([hidden]) {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #9f1239;
+  font-weight: 850;
+}
+
+.viewer-ocr-operation-panel .viewer-ocr-progress {
+  padding: 9px 10px;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  background: #f0f9ff;
+}
+
+.viewer-ocr-operation-panel .viewer-ocr-status {
+  max-height: 5.2em;
+  overflow: auto;
+}
+
+.viewer-ocr-operation-panel:has(#viewer-ocr-cancel:not([hidden])) {
+  border-color: #7dd3fc;
+  box-shadow: 0 10px 24px rgba(2, 132, 199, 0.12);
+}
+
+@media (max-width: 1180px) {
+  .viewer-ocr-operation-panel {
+    margin-right: -6px;
+    margin-left: -6px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+}
+/* PDFPRIVADO_OCR_STICKY_CONTROLS_V1_END */
