@@ -10,6 +10,14 @@ import {
   buildSplitPlan,
   summarizePages,
 } from "./split-core.js";
+import {
+  buildSearchSnippet,
+  findSearchMatches,
+  foldSearchText,
+  locateSearchItemRanges,
+  normalizeExtractedText,
+  textItemsToString,
+} from "./search-core.js";
 import { RenderScheduler } from "./render-scheduler.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -58,6 +66,10 @@ function diagnosticContext() {
     pendingOrganizeTasks: state.organizeTasks.size,
     queuedRenderTasks: renderScheduler.snapshot().queued,
     activeRenderTasks: renderScheduler.snapshot().active,
+    searchRunning: Boolean(state.search?.running),
+    searchCachedPages: state.search?.cache?.size || 0,
+    searchStoredResults: state.search?.results?.length || 0,
+    searchMatchesFound: state.search?.totalMatches || 0,
   });
 }
 
@@ -171,9 +183,26 @@ const blankCount = $("#viewer-blank-count");
 const splitPattern = $("#viewer-split-pattern");
 const splitPreview = $("#viewer-split-preview");
 const splitSaveButton = $("#viewer-split-save-button");
+const searchForm = $("#viewer-search-form");
+const searchInput = $("#viewer-search-input");
+const searchButton = $("#viewer-search-button");
+const searchClearButton = $("#viewer-search-clear");
+const searchPreviousButton = $("#viewer-search-previous");
+const searchNextButton = $("#viewer-search-next");
+const searchCounter = $("#viewer-search-counter");
+const searchProgressWrap = $("#viewer-search-progress-wrap");
+const searchProgress = $("#viewer-search-progress");
+const searchProgressValue = $("#viewer-search-progress-value");
+const searchCancelButton = $("#viewer-search-cancel");
+const searchStatus = $("#viewer-search-status");
+const searchWarning = $("#viewer-search-warning");
+const searchWarningText = $("#viewer-search-warning-text");
+const searchResultSummary = $("#viewer-search-result-summary");
+const searchResults = $("#viewer-search-results");
 
 const A4 = { width: 595.28, height: 841.89 };
 const ORGANIZE_VIRTUALIZATION_VERSION = "organize-virtual-v1";
+const MAX_STORED_SEARCH_RESULTS = 1200;
 
 const state = {
   file: null,
@@ -223,6 +252,27 @@ const state = {
   thumbnailVirtual: null,
   continuousVirtual: null,
   organizeVirtual: null,
+  search: {
+    cache: new Map(),
+    results: [],
+    query: "",
+    foldedQuery: "",
+    currentIndex: -1,
+    serial: 0,
+    running: false,
+    processedPages: 0,
+    pagesWithoutText: 0,
+    failedPages: 0,
+    totalMatches: 0,
+    truncated: false,
+    refreshTimer: 0,
+    highlightSerial: 0,
+    navigationLockUntil: 0,
+    navigationSerial: 0,
+    positioning: false,
+    targetPage: 0,
+    fitApplied: false,
+  },
 };
 
 let schedulerDiagnosticTimer = 0;
@@ -753,6 +803,885 @@ function hideFeedback() {
   feedback.hidden = true;
 }
 
+function searchCacheKey(entry) {
+  if (!entry) return "";
+  if (entry.kind === "blank") return `blank:${entry.id}`;
+  return `pdf:${entry.sourceId}:${entry.sourcePage}`;
+}
+
+function setSearchStatus(message, kind = "info") {
+  if (!searchStatus) return;
+  searchStatus.textContent = message;
+  searchStatus.dataset.kind = kind;
+}
+
+function setSearchProgress(visible, percent = 0) {
+  if (!searchProgressWrap || !searchProgress || !searchProgressValue) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+  searchProgressWrap.hidden = !visible;
+  searchProgress.value = value;
+  searchProgress.textContent = `${value} %`;
+  searchProgressValue.textContent = `${value} %`;
+}
+
+function searchNavigationLocked() {
+  return Date.now() < state.search.navigationLockUntil;
+}
+
+function clearSearchHighlight() {
+  state.search.highlightSerial += 1;
+  document.querySelectorAll(".viewer-search-highlight-layer").forEach((node) => node.remove());
+}
+
+function activeSearchResult() {
+  return state.search.currentIndex >= 0 ? state.search.results[state.search.currentIndex] || null : null;
+}
+
+function continuousRenderSignature(entry) {
+  if (!entry) return "";
+  return `${entry.id}:${normalizeRotation(entry.rotation || 0)}:${state.zoomMode}:${state.zoom}:${continuousStage.clientWidth}:${continuousStage.clientHeight}`;
+}
+
+function pageRenderSignature(entry) {
+  if (!entry) return "";
+  return `${entry.id}:${normalizeRotation(entry.rotation || 0)}:${state.zoomMode}:${state.zoom}:${canvasStage.clientWidth}:${canvasStage.clientHeight}`;
+}
+
+function searchCanvasTarget(pageNumber) {
+  const page = Number(pageNumber) || 0;
+  if (!page) return null;
+  const entry = entryAt(page);
+  if (!entry) return null;
+
+  if (state.viewMode === "page") {
+    if (state.currentPage !== page || canvas.width <= 1) return null;
+    if (canvas.dataset.renderedSignature !== pageRenderSignature(entry)) return null;
+    return { host: canvasStage, canvas };
+  }
+
+  if (["continuous", "spread"].includes(state.viewMode)) {
+    const item = continuousList.querySelector(`.viewer-continuous-page[data-page="${page}"]`);
+    const target = item?.querySelector("canvas");
+    if (!item || !target || target.width <= 1) return null;
+    if (target.dataset.renderedSignature !== continuousRenderSignature(entry)) return null;
+    return { host: item, canvas: target };
+  }
+
+  return null;
+}
+
+function waitForAnimationFrame() {
+  return new Promise((resolve) => window.requestAnimationFrame(resolve));
+}
+
+async function waitForSearchCanvas(pageNumber, serial) {
+  const entry = entryAt(pageNumber);
+  if (["continuous", "spread"].includes(state.viewMode) && entry) {
+    scheduleContinuousPage(entry.id, 100000);
+  }
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    if (serial !== state.search.highlightSerial) return null;
+    const target = searchCanvasTarget(pageNumber);
+    if (target && target.canvas.clientWidth > 2 && target.canvas.clientHeight > 2) return target;
+    if (attempt % 18 === 0 && ["continuous", "spread"].includes(state.viewMode) && entry) {
+      scheduleContinuousPage(entry.id, 100000 - attempt);
+    }
+    await waitForAnimationFrame();
+  }
+  return null;
+}
+
+let searchMeasurementContext = null;
+
+function measuredSearchRatios(value, range, style, fontHeight) {
+  const text = String(value || "");
+  const characters = Math.max(1, text.length);
+  const fallbackStart = Math.max(0, Math.min(1, range.startChar / characters));
+  const fallbackEnd = Math.max(fallbackStart, Math.min(1, range.endChar / characters));
+  try {
+    if (!searchMeasurementContext) {
+      searchMeasurementContext = document.createElement("canvas").getContext("2d");
+    }
+    if (!searchMeasurementContext || !text) {
+      return { start: fallbackStart, end: fallbackEnd };
+    }
+    const family = String(style?.fontFamily || "sans-serif");
+    searchMeasurementContext.font = `${Math.max(1, fontHeight)}px ${family}`;
+    const total = searchMeasurementContext.measureText(text).width;
+    if (!Number.isFinite(total) || total <= 0) {
+      return { start: fallbackStart, end: fallbackEnd };
+    }
+    const prefix = searchMeasurementContext.measureText(text.slice(0, range.startChar)).width;
+    const through = searchMeasurementContext.measureText(text.slice(0, range.endChar)).width;
+    return {
+      start: Math.max(0, Math.min(1, prefix / total)),
+      end: Math.max(0, Math.min(1, through / total)),
+    };
+  } catch {
+    return { start: fallbackStart, end: fallbackEnd };
+  }
+}
+
+function searchTextGeometry(item, style, viewport, range) {
+  const transform = pdfjsLib.Util.transform(viewport.transform, item.transform);
+  let angle = Math.atan2(transform[1], transform[0]);
+  if (style?.vertical) angle += Math.PI / 2;
+
+  const fontHeight = Math.max(1, Math.hypot(transform[2], transform[3]));
+  let fontAscent = fontHeight;
+  if (Number.isFinite(style?.ascent)) fontAscent = style.ascent * fontHeight;
+  else if (Number.isFinite(style?.descent)) fontAscent = (1 + style.descent) * fontHeight;
+
+  let left;
+  let top;
+  if (Math.abs(angle) < 0.0001) {
+    left = transform[4];
+    top = transform[5] - fontAscent;
+  } else {
+    left = transform[4] + fontAscent * Math.sin(angle);
+    top = transform[5] - fontAscent * Math.cos(angle);
+  }
+
+  const value = String(item?.str ?? "");
+  const ratios = measuredSearchRatios(value, range, style, fontHeight);
+  let fullWidth = Math.abs((style?.vertical ? item.height : item.width) || 0) * viewport.scale;
+  if (!Number.isFinite(fullWidth) || fullWidth < 1) {
+    fullWidth = fontHeight * Math.max(1, value.length * 0.52);
+  }
+  const offset = fullWidth * ratios.start;
+  const segmentWidth = fullWidth * Math.max(0.02, ratios.end - ratios.start);
+  const padding = Math.min(fontHeight * 0.045, Math.max(0.6, segmentWidth * 0.025));
+
+  left += Math.cos(angle) * Math.max(0, offset - padding);
+  top += Math.sin(angle) * Math.max(0, offset - padding);
+
+  return {
+    left,
+    top,
+    width: Math.max(3, segmentWidth + padding * 2),
+    height: Math.max(3, fontHeight),
+    angle,
+  };
+}
+
+
+function searchRowPage(pageNumber) {
+  const page = Math.max(1, Math.min(state.pageCount || 1, Number(pageNumber) || 1));
+  if (state.viewMode !== "spread") return page;
+  return spreadRowStartIndex(page - 1) + 1;
+}
+
+function searchPageNode(pageNumber) {
+  return continuousList?.querySelector?.(`.viewer-continuous-page[data-page="${pageNumber}"]`) || null;
+}
+
+async function waitForSearchPageNode(pageNumber, serial) {
+  for (let attempt = 0; attempt < 140; attempt += 1) {
+    if (serial !== state.search.highlightSerial) return null;
+    const node = searchPageNode(pageNumber);
+    if (node) return node;
+    await waitForAnimationFrame();
+  }
+  return null;
+}
+
+async function positionSearchPage(pageNumber, serial) {
+  if (!["continuous", "spread"].includes(state.viewMode)) return;
+  const rowPage = searchRowPage(pageNumber);
+  if (state.continuousVirtual) {
+    scrollVirtualContinuousToPage(rowPage, false);
+  }
+  const node = await waitForSearchPageNode(pageNumber, serial);
+  if (!node || serial !== state.search.highlightSerial) return;
+
+  const stageRect = continuousStage.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
+  const rowTop = continuousStage.scrollTop + nodeRect.top - stageRect.top;
+  const centeredTop = rowTop - Math.max(0, (continuousStage.clientHeight - nodeRect.height) / 2);
+  continuousStage.scrollTo({
+    top: Math.max(0, centeredTop),
+    left: state.viewMode === "spread" ? 0 : continuousStage.scrollLeft,
+    behavior: "auto",
+  });
+  if (state.viewMode === "spread") centerReadingStageHorizontal(true);
+  await waitForAnimationFrame();
+}
+
+function activeSearchMarker(pageNumber = activeSearchResult()?.page) {
+  const page = Number(pageNumber) || 0;
+  if (!page) return null;
+  return document.querySelector(
+    `.viewer-search-highlight-layer[data-page="${page}"] .viewer-search-highlight`
+  );
+}
+
+function keepSearchMarkerVisible(marker, { force = false } = {}) {
+  if (!marker || !["continuous", "page", "spread"].includes(state.viewMode)) return;
+  const stage = state.viewMode === "page" ? canvasStage : continuousStage;
+  const stageRect = stage.getBoundingClientRect();
+  const markerRect = marker.getBoundingClientRect();
+  const margin = 24;
+  const alreadyVisible =
+    markerRect.top >= stageRect.top + margin &&
+    markerRect.bottom <= stageRect.bottom - margin &&
+    markerRect.left >= stageRect.left + 8 &&
+    markerRect.right <= stageRect.right - 8;
+  if (!force && alreadyVisible) return;
+
+  const desiredTop =
+    stage.scrollTop +
+    markerRect.top -
+    stageRect.top -
+    Math.max(margin, (stage.clientHeight - markerRect.height) / 2);
+
+  let desiredLeft = stage.scrollLeft;
+  if (stage.scrollWidth > stage.clientWidth + 6) {
+    desiredLeft =
+      stage.scrollLeft +
+      markerRect.left -
+      stageRect.left -
+      Math.max(12, (stage.clientWidth - markerRect.width) / 2);
+  }
+
+  stage.scrollTo({
+    top: Math.max(0, desiredTop),
+    left: Math.max(0, desiredLeft),
+    behavior: "auto",
+  });
+}
+
+
+function waitForSearchDelay(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, Math.max(0, milliseconds)));
+}
+
+async function stabilizeSearchResultPosition(result, expectedIndex, serial) {
+  if (!result || !["continuous", "page", "spread"].includes(state.viewMode)) return;
+  const passes = [0, 80, 220, 480, 850, 1350];
+
+  for (const delay of passes) {
+    if (delay) await waitForSearchDelay(delay);
+    if (
+      serial !== state.search.highlightSerial ||
+      expectedIndex !== state.search.currentIndex ||
+      activeSearchResult()?.page !== result.page
+    ) return;
+
+    const marker = activeSearchMarker(result.page);
+    if (marker) {
+      keepSearchMarkerVisible(marker, { force: state.zoomMode !== "fit-page" });
+    }
+  }
+}
+
+
+async function renderSearchHighlight(result, expectedIndex = state.search.currentIndex) {
+  clearSearchHighlight();
+  if (!result || !state.file || result.page !== state.currentPage) return;
+  if (!["continuous", "page", "spread"].includes(state.viewMode)) return;
+
+  const serial = state.search.highlightSerial;
+  const target = await waitForSearchCanvas(result.page, serial);
+  if (!target || serial !== state.search.highlightSerial || expectedIndex !== state.search.currentIndex) return;
+
+  const entry = entryAt(result.page);
+  if (!entry || entry.kind !== "pdf") return;
+
+  let page = null;
+  try {
+    page = await getPdfPage(entry);
+    const content = await page.getTextContent();
+    if (serial !== state.search.highlightSerial || expectedIndex !== state.search.currentIndex) return;
+
+    const located = locateSearchItemRanges(content?.items || [], result.start, state.search.query.length);
+    if (!located.ranges.length) return;
+
+    const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
+    const base = page.getViewport({ scale: 1, rotation });
+    const cssScale = Math.max(0.01, target.canvas.getBoundingClientRect().width / Math.max(1, base.width));
+    const viewport = page.getViewport({ scale: cssScale, rotation });
+
+    const layer = document.createElement("div");
+    layer.className = "viewer-search-highlight-layer";
+    layer.dataset.page = String(result.page);
+    Object.assign(layer.style, {
+      left: `${target.canvas.offsetLeft}px`,
+      top: `${target.canvas.offsetTop}px`,
+      width: `${target.canvas.clientWidth}px`,
+      height: `${target.canvas.clientHeight}px`,
+    });
+
+    for (const range of located.ranges) {
+      const item = content.items?.[range.itemIndex];
+      if (!item?.transform) continue;
+      const geometry = searchTextGeometry(item, content.styles?.[item.fontName], viewport, range);
+      const marker = document.createElement("span");
+      marker.className = "viewer-search-highlight";
+      Object.assign(marker.style, {
+        left: `${geometry.left}px`,
+        top: `${geometry.top}px`,
+        width: `${geometry.width}px`,
+        height: `${geometry.height}px`,
+        transform: `rotate(${geometry.angle}rad)`,
+      });
+      layer.append(marker);
+    }
+
+    if (!layer.childElementCount) return null;
+    target.host.append(layer);
+    await waitForAnimationFrame();
+    const marker = layer.querySelector(".viewer-search-highlight");
+    keepSearchMarkerVisible(marker, { force: state.zoomMode !== "fit-page" });
+    state.currentPage = result.page;
+    pageInput.value = String(result.page);
+    updateCurrentVisuals();
+    updateControls();
+    target.host.classList.add("has-search-highlight");
+    window.setTimeout(() => target.host.classList.remove("has-search-highlight"), 900);
+    diagEmit("search-highlight-shown", { page: result.page, mode: state.viewMode });
+    return { marker, serial };
+  } catch (error) {
+    diagFail(null, error, { operation: "search-highlight", page: result.page });
+  } finally {
+    try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
+  }
+}
+
+function refreshCurrentSearchHighlight(delay = 0) {
+  if (state.search.positioning) return;
+  const result = activeSearchResult();
+  if (!result || result.page !== state.currentPage) {
+    clearSearchHighlight();
+    return;
+  }
+  const expectedIndex = state.search.currentIndex;
+  window.setTimeout(async () => {
+    if (expectedIndex !== state.search.currentIndex) return;
+    const rendered = await renderSearchHighlight(result, expectedIndex);
+    if (!rendered || expectedIndex !== state.search.currentIndex) return;
+    await stabilizeSearchResultPosition(result, expectedIndex, rendered.serial);
+  }, Math.max(0, Number(delay) || 0));
+}
+
+function updateSearchWarning(totalPages = state.pageCount) {
+  if (!searchWarning || !searchWarningText) return;
+  const count = state.search.pagesWithoutText;
+  const failed = state.search.failedPages;
+  searchWarning.hidden = count === 0 && failed === 0;
+  if (searchWarning.hidden) return;
+
+  const parts = [];
+  if (count) {
+    parts.push(
+      `${count} de ${totalPages} ${count === 1 ? "página no contiene" : "páginas no contienen"} una capa de texto utilizable y pueden necesitar OCR.`
+    );
+  }
+  if (failed) {
+    parts.push(
+      `${failed} ${failed === 1 ? "página no pudo analizarse" : "páginas no pudieron analizarse"} completamente.`
+    );
+  }
+  searchWarningText.textContent = parts.join(" ");
+}
+
+function updateSearchNavigationControls() {
+  const ready = Boolean(state.file && state.pageCount);
+  const count = state.search.results.length;
+  const hasResults = count > 0;
+  const hasInput = Boolean(normalizeExtractedText(searchInput?.value || ""));
+
+  if (searchInput) searchInput.disabled = !ready || state.saving || state.search.running;
+  if (searchButton) searchButton.disabled = !ready || !hasInput || state.saving || state.search.running;
+  if (searchClearButton) {
+    searchClearButton.disabled =
+      !ready ||
+      state.saving ||
+      (!hasInput && !hasResults && !state.search.running && !state.search.query);
+  }
+  if (searchPreviousButton) searchPreviousButton.disabled = !hasResults || state.saving;
+  if (searchNextButton) searchNextButton.disabled = !hasResults || state.saving;
+
+  if (searchCounter) {
+    const current = hasResults && state.search.currentIndex >= 0 ? state.search.currentIndex + 1 : 0;
+    const suffix = state.search.truncated ? "+" : "";
+    searchCounter.textContent = `${current} de ${count}${suffix}`;
+  }
+}
+
+function resetSearchResultsView(message = "Escribe una palabra o frase y pulsa Buscar.") {
+  if (searchResults) {
+    const empty = document.createElement("p");
+    empty.className = "viewer-search-empty";
+    empty.textContent = message;
+    searchResults.replaceChildren(empty);
+  }
+  if (searchResultSummary) searchResultSummary.textContent = "Sin búsqueda";
+  if (searchCounter) searchCounter.textContent = "0 de 0";
+}
+
+function resetSearchSession() {
+  window.clearTimeout(state.search.refreshTimer);
+  state.search.serial += 1;
+  clearSearchHighlight();
+  state.search.running = false;
+  state.search.cache.clear();
+  state.search.results = [];
+  state.search.query = "";
+  state.search.foldedQuery = "";
+  state.search.currentIndex = -1;
+  state.search.processedPages = 0;
+  state.search.pagesWithoutText = 0;
+  state.search.failedPages = 0;
+  state.search.totalMatches = 0;
+  state.search.truncated = false;
+  state.search.navigationLockUntil = 0;
+  state.search.navigationSerial += 1;
+  state.search.positioning = false;
+  state.search.targetPage = 0;
+  state.search.fitApplied = false;
+  if (searchInput) searchInput.value = "";
+  setSearchProgress(false, 0);
+  if (searchWarning) searchWarning.hidden = true;
+  setSearchStatus(
+    state.file
+      ? "Escribe una palabra o frase para buscar en la capa de texto del documento."
+      : "Abre un PDF para buscar en su capa de texto."
+  );
+  resetSearchResultsView();
+  updateSearchNavigationControls();
+}
+
+function cancelSearchWork({ silent = false } = {}) {
+  if (!state.search.running) return;
+  state.search.serial += 1;
+  state.search.running = false;
+  setSearchProgress(false, 0);
+  if (!silent) {
+    const pages = state.search.processedPages;
+    const matches = state.search.totalMatches;
+    setSearchStatus(
+      `Análisis cancelado tras ${pages} ${pages === 1 ? "página" : "páginas"}. Se conservan ${matches} ${matches === 1 ? "coincidencia parcial" : "coincidencias parciales"}.`,
+      "warning"
+    );
+  }
+  updateSearchWarning();
+  renderSearchResults();
+  updateSearchNavigationControls();
+  diagEmit("search-cancelled", {
+    processedPages: state.search.processedPages,
+    matches: state.search.totalMatches,
+  });
+  diagnosticContext();
+}
+
+function clearSearch({ keepFocus = true } = {}) {
+  cancelSearchWork({ silent: true });
+  clearSearchHighlight();
+  state.search.results = [];
+  state.search.query = "";
+  state.search.foldedQuery = "";
+  state.search.currentIndex = -1;
+  state.search.processedPages = 0;
+  state.search.pagesWithoutText = 0;
+  state.search.failedPages = 0;
+  state.search.totalMatches = 0;
+  state.search.truncated = false;
+  state.search.navigationLockUntil = 0;
+  state.search.navigationSerial += 1;
+  state.search.positioning = false;
+  state.search.targetPage = 0;
+  state.search.fitApplied = false;
+  if (searchInput) searchInput.value = "";
+  if (searchWarning) searchWarning.hidden = true;
+  setSearchProgress(false, 0);
+  setSearchStatus(
+    state.file
+      ? "Escribe una palabra o frase para buscar en la capa de texto del documento."
+      : "Abre un PDF para buscar en su capa de texto."
+  );
+  resetSearchResultsView();
+  updateSearchNavigationControls();
+  if (keepFocus && state.file) searchInput?.focus({ preventScroll: true });
+}
+
+function nextSearchYield() {
+  return new Promise((resolve) => window.setTimeout(resolve, 0));
+}
+
+async function extractSearchRecord(entry, serial) {
+  const key = searchCacheKey(entry);
+  if (!key) return { text: "", folded: "", hasText: false, failed: true };
+  const cached = state.search.cache.get(key);
+  if (cached) return cached;
+
+  if (entry.kind === "blank") {
+    const record = { text: "", folded: "", hasText: false, failed: false };
+    state.search.cache.set(key, record);
+    return record;
+  }
+
+  let page = null;
+  try {
+    page = await getPdfPage(entry);
+    const rotation = normalizeRotation((page.rotate || 0) + (entry.rotation || 0));
+    const viewport = page.getViewport({ scale: 1, rotation });
+    entry.width = viewport.width;
+    entry.height = viewport.height;
+    const content = await page.getTextContent();
+    if (serial !== state.search.serial) return null;
+    const text = textItemsToString(content?.items || []);
+    const record = {
+      text,
+      folded: foldSearchText(text),
+      hasText: Boolean(text),
+      failed: false,
+    };
+    state.search.cache.set(key, record);
+    return record;
+  } catch (error) {
+    if (serial !== state.search.serial) return null;
+    const record = { text: "", folded: "", hasText: false, failed: true };
+    diagFail(null, error, { operation: "search-text-extraction" });
+    return record;
+  } finally {
+    try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
+  }
+}
+
+function appendMatchesFromRecord(record, pageNumber) {
+  if (!record?.hasText || !state.search.foldedQuery) return;
+  const remaining = Math.max(0, MAX_STORED_SEARCH_RESULTS - state.search.results.length);
+  const found = findSearchMatches(record.folded, state.search.foldedQuery, remaining);
+  state.search.totalMatches += found.total;
+  if (found.truncated || state.search.results.length >= MAX_STORED_SEARCH_RESULTS) {
+    state.search.truncated = state.search.totalMatches > state.search.results.length;
+  }
+
+  for (const start of found.indices) {
+    const snippet = buildSearchSnippet(record.text, start, state.search.query.length);
+    state.search.results.push({
+      page: pageNumber,
+      start,
+      snippet,
+    });
+  }
+}
+
+function renderSearchResults() {
+  if (!searchResults || !searchResultSummary) return;
+  const results = state.search.results;
+
+  if (!results.length) {
+    const empty = document.createElement("p");
+    empty.className = "viewer-search-empty";
+    if (state.search.running) {
+      empty.textContent = "Todavía no hay coincidencias en las páginas analizadas. El análisis continúa.";
+      searchResultSummary.textContent = `${state.search.processedPages} de ${state.pageCount} páginas`;
+    } else if (state.search.query) {
+      empty.textContent = state.search.pagesWithoutText
+        ? "No se encontraron coincidencias en las páginas con texto analizadas. Revisa el aviso sobre páginas que pueden necesitar OCR."
+        : "No se encontraron coincidencias en la capa de texto del documento.";
+      searchResultSummary.textContent = "0 coincidencias";
+    } else {
+      empty.textContent = "Escribe una palabra o frase y pulsa Buscar.";
+      searchResultSummary.textContent = "Sin búsqueda";
+    }
+    searchResults.replaceChildren(empty);
+    updateSearchNavigationControls();
+    return;
+  }
+
+  const pages = new Set(results.map((result) => result.page)).size;
+  const progressSuffix = state.search.running ? " · analizando" : "";
+  searchResultSummary.textContent =
+    `${state.search.totalMatches} ${state.search.totalMatches === 1 ? "coincidencia" : "coincidencias"} en ${pages} ${pages === 1 ? "página" : "páginas"}${progressSuffix}`;
+
+  if (state.search.currentIndex < 0) {
+    const waiting = document.createElement("p");
+    waiting.className = "viewer-search-empty";
+    waiting.textContent = state.search.running
+      ? "Se están reuniendo los resultados. Al terminar se abrirá la primera coincidencia."
+      : "Pulsa Siguiente para abrir la primera coincidencia.";
+    searchResults.replaceChildren(waiting);
+    updateSearchNavigationControls();
+    return;
+  }
+
+  const result = results[state.search.currentIndex];
+  if (!result) return;
+  const section = document.createElement("section");
+  section.className = "viewer-search-page-group viewer-search-current-card";
+
+  const heading = document.createElement("div");
+  heading.className = "viewer-search-page-heading";
+  const strong = document.createElement("strong");
+  strong.textContent = `Página ${result.page}`;
+  const count = document.createElement("span");
+  count.textContent = `Coincidencia ${state.search.currentIndex + 1} de ${results.length}${state.search.truncated ? "+" : ""}`;
+  heading.append(strong, count);
+
+  const text = document.createElement("p");
+  text.className = "viewer-search-result viewer-search-result-preview is-current";
+  text.setAttribute("aria-current", "true");
+  const before = document.createTextNode(result.snippet.before);
+  const mark = document.createElement("mark");
+  mark.textContent = result.snippet.match || state.search.query;
+  const after = document.createTextNode(result.snippet.after);
+  text.append(before, mark, after);
+
+  section.append(heading, text);
+  if (state.search.truncated) {
+    const more = document.createElement("p");
+    more.className = "viewer-search-more";
+    more.textContent = `Se guardan las primeras ${results.length} coincidencias para proteger el rendimiento.`;
+    section.append(more);
+  }
+  searchResults.replaceChildren(section);
+  updateSearchNavigationControls();
+}
+
+function updateSearchCurrentVisual() {
+  renderSearchResults();
+}
+
+async function activateSearchResult(index, { focus = false } = {}) {
+  const count = state.search.results.length;
+  if (!count) return;
+  const resolved = ((Number(index) || 0) % count + count) % count;
+  const navigationSerial = ++state.search.navigationSerial;
+  state.search.positioning = true;
+  state.search.currentIndex = resolved;
+  const result = state.search.results[resolved];
+  state.search.targetPage = result.page;
+  state.search.navigationLockUntil = Date.now() + 7000;
+
+  const applyFitPage = !state.search.fitApplied;
+  if (applyFitPage) {
+    state.search.fitApplied = true;
+    state.zoomMode = "fit-page";
+  }
+
+  updateSearchCurrentVisual();
+  updateSearchNavigationControls();
+  setSearchStatus(
+    `Coincidencia ${resolved + 1} de ${count} · página ${result.page}.`,
+    "success"
+  );
+
+  try {
+    const renderPromise = goToPage(result.page, {
+      scroll: false,
+      searchNavigation: true,
+    });
+    if (applyFitPage && ["continuous", "spread"].includes(state.viewMode)) {
+      refreshReadingView();
+    }
+    if (renderPromise && typeof renderPromise.then === "function") {
+      await renderPromise;
+    }
+    if (navigationSerial !== state.search.navigationSerial || resolved !== state.search.currentIndex) return;
+
+    const positionSerial = state.search.highlightSerial;
+    await positionSearchPage(result.page, positionSerial);
+    if (navigationSerial !== state.search.navigationSerial || resolved !== state.search.currentIndex) return;
+
+    const rendered = await renderSearchHighlight(result, resolved);
+    if (
+      rendered &&
+      navigationSerial === state.search.navigationSerial &&
+      resolved === state.search.currentIndex
+    ) {
+      await stabilizeSearchResultPosition(result, resolved, rendered.serial);
+    }
+    if (navigationSerial === state.search.navigationSerial) {
+      state.search.navigationLockUntil = Date.now() + 3600;
+    }
+  } finally {
+    if (navigationSerial === state.search.navigationSerial) {
+      state.search.positioning = false;
+    }
+  }
+  if (focus) searchNextButton?.focus({ preventScroll: true });
+}
+
+
+function navigateSearchResults(delta) {
+  const count = state.search.results.length;
+  if (!count) return;
+  if (state.search.currentIndex < 0) {
+    activateSearchResult(delta < 0 ? count - 1 : 0, { focus: false });
+    return;
+  }
+  activateSearchResult(state.search.currentIndex + delta, { focus: false });
+}
+
+async function runDocumentSearch() {
+  if (!state.file || !state.pageCount || state.saving) return;
+  const query = normalizeExtractedText(searchInput?.value || "");
+  if (!query) {
+    setSearchStatus("Escribe una palabra o frase antes de buscar.", "warning");
+    updateSearchNavigationControls();
+    return;
+  }
+
+  const serial = ++state.search.serial;
+  clearSearchHighlight();
+  state.search.navigationLockUntil = 0;
+  state.search.navigationSerial += 1;
+  state.search.positioning = false;
+  state.search.targetPage = 0;
+  state.search.fitApplied = false;
+  const diagnosticToken = diagStart("search-index", { pages: state.pageCount });
+  state.search.running = true;
+  state.search.query = query;
+  state.search.foldedQuery = foldSearchText(query);
+  state.search.results = [];
+  state.search.currentIndex = -1;
+  state.search.processedPages = 0;
+  state.search.pagesWithoutText = 0;
+  state.search.failedPages = 0;
+  state.search.totalMatches = 0;
+  state.search.truncated = false;
+  if (searchWarning) searchWarning.hidden = true;
+  setSearchProgress(true, 0);
+  setSearchStatus(
+    `Analizando 0 de ${state.pageCount} páginas. Los resultados aparecerán progresivamente.`
+  );
+  resetSearchResultsView("Todavía no hay coincidencias en las páginas analizadas. El análisis continúa.");
+  updateSearchNavigationControls();
+  diagnosticContext();
+
+  let lastRenderAt = performance.now();
+  let lastRenderedResultCount = -1;
+  let lastRenderedWarningCount = -1;
+  try {
+    for (let index = 0; index < state.pagePlan.length; index += 1) {
+      if (serial !== state.search.serial) {
+        diagEnd(
+          diagnosticToken,
+          {
+            processedPages: state.search.processedPages,
+            matches: state.search.totalMatches,
+          },
+          "cancelled"
+        );
+        return;
+      }
+
+      const entry = state.pagePlan[index];
+      const cachedBefore = state.search.cache.has(searchCacheKey(entry));
+      const record = await extractSearchRecord(entry, serial);
+      if (serial !== state.search.serial || !record) {
+        diagEnd(
+          diagnosticToken,
+          {
+            processedPages: state.search.processedPages,
+            matches: state.search.totalMatches,
+          },
+          "cancelled"
+        );
+        return;
+      }
+
+      state.search.processedPages = index + 1;
+      if (record.failed) state.search.failedPages += 1;
+      else if (!record.hasText) state.search.pagesWithoutText += 1;
+      else appendMatchesFromRecord(record, index + 1);
+
+      const percent = (state.search.processedPages / state.pageCount) * 100;
+      setSearchProgress(true, percent);
+      setSearchStatus(
+        `Analizando ${state.search.processedPages} de ${state.pageCount} páginas · ${state.search.totalMatches} ${state.search.totalMatches === 1 ? "coincidencia encontrada" : "coincidencias encontradas"}.`
+      );
+
+      const now = performance.now();
+      const renderInterval = state.pageCount >= 1000 ? 900 : state.pageCount >= 200 ? 500 : 220;
+      const resultChanged = state.search.results.length !== lastRenderedResultCount;
+      const warningChanged =
+        state.search.pagesWithoutText + state.search.failedPages !== lastRenderedWarningCount;
+      if (
+        index === state.pagePlan.length - 1 ||
+        (now - lastRenderAt > renderInterval && (resultChanged || warningChanged))
+      ) {
+        updateSearchWarning();
+        renderSearchResults();
+        lastRenderedResultCount = state.search.results.length;
+        lastRenderedWarningCount = state.search.pagesWithoutText + state.search.failedPages;
+        lastRenderAt = now;
+      }
+
+      const yieldEvery = cachedBefore
+        ? (state.pageCount >= 1000 ? 80 : 30)
+        : (state.pageCount >= 1000 ? 1 : state.pageCount >= 200 ? 2 : 5);
+      if ((index + 1) % yieldEvery === 0) await nextSearchYield();
+    }
+
+    if (serial !== state.search.serial) return;
+    state.search.running = false;
+    setSearchProgress(false, 100);
+    updateSearchWarning();
+    renderSearchResults();
+
+    const matches = state.search.totalMatches;
+    const pagesWithoutText = state.search.pagesWithoutText;
+    if (matches) {
+      setSearchStatus(
+        `Búsqueda terminada: ${matches} ${matches === 1 ? "coincidencia encontrada" : "coincidencias encontradas"}.`,
+        pagesWithoutText ? "warning" : "success"
+      );
+      await activateSearchResult(0, { focus: false });
+    } else if (pagesWithoutText) {
+      setSearchStatus(
+        `Búsqueda terminada sin coincidencias en las páginas con texto. ${pagesWithoutText} ${pagesWithoutText === 1 ? "página puede necesitar" : "páginas pueden necesitar"} OCR.`,
+        "warning"
+      );
+    } else {
+      setSearchStatus("Búsqueda terminada: no se encontraron coincidencias.", "info");
+    }
+
+    diagEnd(diagnosticToken, {
+      pages: state.pageCount,
+      processedPages: state.search.processedPages,
+      pagesWithoutText,
+      failedPages: state.search.failedPages,
+      matches,
+      storedResults: state.search.results.length,
+      truncated: state.search.truncated,
+    });
+  } catch (error) {
+    if (serial !== state.search.serial) return;
+    state.search.running = false;
+    setSearchProgress(false, 0);
+    setSearchStatus(`No se pudo completar la búsqueda: ${error?.message || error}.`, "error");
+    diagFail(diagnosticToken, error, { operation: "search-index" });
+  } finally {
+    if (serial === state.search.serial) {
+      state.search.running = false;
+      setSearchProgress(false, 0);
+      updateSearchNavigationControls();
+      diagnosticContext();
+    }
+  }
+}
+
+function scheduleSearchRefreshAfterPlanChange() {
+  window.clearTimeout(state.search.refreshTimer);
+  if (!state.search.query || !state.file) return;
+  state.search.serial += 1;
+  state.search.running = false;
+  setSearchProgress(false, 0);
+  setSearchStatus("El documento cambió. Actualizando los resultados de búsqueda…");
+  state.search.refreshTimer = window.setTimeout(() => {
+    if (!state.file || !state.search.query) return;
+    if (state.loading || state.saving) {
+      scheduleSearchRefreshAfterPlanChange();
+      return;
+    }
+    if (searchInput) searchInput.value = state.search.query;
+    runDocumentSearch();
+  }, 180);
+}
+
 function setLoading(visible, title = "Preparando documento", detail = "Todo se procesa localmente.") {
   loadingOverlay.hidden = !visible;
   loadingTitle.textContent = title;
@@ -883,6 +1812,7 @@ function disconnectObservers() {
 }
 
 async function destroySources() {
+  cancelSearchWork({ silent: true });
   try {
     state.renderTask?.cancel?.();
   } catch {
@@ -910,6 +1840,7 @@ async function destroySources() {
 async function resetDocument() {
   await destroySources();
   state.file = null;
+  resetSearchSession();
   state.sourceSequence = 0;
   state.pageSequence = 0;
   state.pagePlan = [];
@@ -1103,6 +2034,7 @@ function afterPlanChanged(options = {}) {
   updateDocumentIdentity();
   updateControls();
   updateSplitPlan();
+  scheduleSearchRefreshAfterPlanChange();
 }
 
 function updateDocumentIdentity() {
@@ -1165,6 +2097,8 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
     goToPage(1, { scroll: false });
     continuousStage.scrollTo({ top: 0, left: 0, behavior: "auto" });
     setFeedback(`${file.name} abierto desde ${sourceText}. El documento ya es el inicio de tu espacio de trabajo.`, "success");
+    setSearchStatus("Escribe una palabra o frase para buscar en la capa de texto del documento.");
+    updateSearchNavigationControls();
     document.title = `${file.name} | PDFPrivado Pro`;
     diagEnd(openDiagnosticToken, { pages: state.pageCount });
     diagEmit("document-open-ready", { pages: state.pageCount, fileSizeBytes: Number(file.size) || null });
@@ -1591,7 +2525,7 @@ function renderVirtualContinuousWindow(forcePage = null) {
   let centerIndex = binarySearchOffset(offsets, viewportTop + continuousStage.clientHeight / 2);
   if (state.viewMode === "spread" && state.pagePlan.length) centerIndex = spreadRowStartIndex(centerIndex);
   const centerPage = Math.max(1, Math.min(state.pagePlan.length, centerIndex + 1));
-  if (centerPage !== state.currentPage) {
+  if (centerPage !== state.currentPage && !searchNavigationLocked() && !state.search.targetPage) {
     state.currentPage = centerPage;
     pageInput.value = String(centerPage);
     scrollVirtualThumbnailToPage(centerPage, false);
@@ -1922,6 +2856,8 @@ async function renderCurrentPage() {
   const entry = entryAt(state.currentPage);
   if (!entry) return;
   const serial = ++state.renderSerial;
+  const renderSignature = pageRenderSignature(entry);
+  canvas.dataset.renderedSignature = "";
   try {
     state.renderTask?.cancel?.();
   } catch {
@@ -1954,12 +2890,14 @@ async function renderCurrentPage() {
       },
     });
     if (serial !== state.renderSerial) return;
+    canvas.dataset.renderedSignature = renderSignature;
     pageInput.value = String(state.currentPage);
     pageInfo.textContent = `Página ${state.currentPage} · ${Math.round(result.width)} × ${Math.round(result.height)} pt · ${sourceLabel(entry)}`;
     zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     setLoading(false);
     centerReadingStageHorizontal();
     diagEnd(diagnosticToken, { width: canvas.width, height: canvas.height });
+    refreshCurrentSearchHighlight();
   } catch (error) {
     diagFail(diagnosticToken, error, { page: state.currentPage });
     if (error?.name === "RenderingCancelledException") return;
@@ -1992,23 +2930,31 @@ function updateCurrentVisuals() {
 function goToPage(pageNumber, options = {}) {
   if (!state.pageCount) return;
   const page = Math.max(1, Math.min(state.pageCount, Number(pageNumber) || 1));
+  const behavior = options.behavior === "auto" ? "auto" : "smooth";
+  const block = options.block || (options.searchNavigation ? "center" : "start");
   state.currentPage = page;
   pageInput.value = String(page);
   const currentEntry = entryAt(page);
   pageInfo.textContent = currentEntry ? `Página ${page} · ${sourceLabel(currentEntry)}` : `Página ${page}`;
   updateCurrentVisuals();
-  if (state.viewMode === "page") renderCurrentPage();
+  const renderPromise = state.viewMode === "page" ? renderCurrentPage() : null;
   if (["continuous", "spread"].includes(state.viewMode) && options.scroll !== false) {
-    if (!scrollVirtualContinuousToPage(page, true)) {
-      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!scrollVirtualContinuousToPage(page, behavior === "smooth")) {
+      continuousList.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior, block, inline: "center" });
     }
   }
   if (state.viewMode === "organize" && options.scroll !== false) {
-    if (!scrollVirtualOrganizeToPage(page, true)) {
-      organizeGrid.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (!scrollVirtualOrganizeToPage(page, behavior === "smooth")) {
+      organizeGrid.querySelector(`[data-page="${page}"]`)?.scrollIntoView({ behavior, block: "nearest" });
     }
   }
+  if (!options.searchNavigation) {
+    state.search.targetPage = 0;
+    state.search.navigationLockUntil = 0;
+    if (activeSearchResult()?.page !== page) clearSearchHighlight();
+  }
   updateControls();
+  return renderPromise;
 }
 
 function togglePageSelection(entryId, range = false) {
@@ -2061,6 +3007,10 @@ function createContinuousItem(entry, position) {
   article.dataset.entryId = entry.id;
   article.dataset.page = String(position);
   article.tabIndex = 0;
+  if (state.search.query) {
+    article.style.minHeight = `${Math.round(estimateContinuousStride(entry))}px`;
+    article.dataset.searchReservedHeight = "true";
+  }
   const label = document.createElement("span");
   label.className = "viewer-continuous-label";
   label.textContent = `Página ${position}`;
@@ -2108,7 +3058,7 @@ function buildContinuousList() {
           else cancelScheduledRender("continuous", entryId, observed.target);
         });
         const main = visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (main?.intersectionRatio > 0.35) {
+        if (main?.intersectionRatio > 0.35 && !searchNavigationLocked() && !state.search.targetPage) {
           const page = Number(main.target.dataset.page);
           if (page && page !== state.currentPage) goToPage(page, { scroll: false });
         }
@@ -2152,7 +3102,7 @@ async function performRenderContinuousPage(entryId) {
   const target = item?.querySelector("canvas");
   const entry = state.pagePlan.find((candidate) => candidate.id === entryId);
   if (!item || !target || !entry) return;
-  const signature = `${entry.id}:${normalizeRotation(entry.rotation || 0)}:${state.zoomMode}:${state.zoom}:${continuousStage.clientWidth}:${continuousStage.clientHeight}`;
+  const signature = continuousRenderSignature(entry);
   if (target.dataset.renderedSignature === signature && target.width > 1) return;
 
   const { width: availableWidth, height: availableHeight } = continuousRenderBounds();
@@ -2180,6 +3130,7 @@ async function performRenderContinuousPage(entryId) {
     }
     centerReadingStageHorizontal();
     diagEnd(diagnosticToken, { width: target.width, height: target.height });
+    if (activeSearchResult()?.page === Number(item.dataset.page)) refreshCurrentSearchHighlight();
   } catch (error) {
     diagFail(diagnosticToken, error, { page: Number(item.dataset.page) || positionOfId(entryId) });
     if (error?.name !== "RenderingCancelledException") throw error;
@@ -2644,6 +3595,7 @@ function switchReadingMode(mode) {
 }
 
 function setViewMode(mode, rebuild = true) {
+  clearSearchHighlight();
   const before = {
     viewMode: state.viewMode,
     currentPage: state.currentPage,
@@ -2769,6 +3721,9 @@ function activateTool(name) {
   scheduleViewerLayoutRefresh();
 
   if (name === "split") updateSplitPlan();
+  if (name === "search") {
+    requestAnimationFrame(() => searchInput?.focus({ preventScroll: true }));
+  }
   document.querySelector(`.viewer-tool-panel[data-viewer-tool-panel="${name}"]`)?.scrollTo?.({ top: 0 });
   const after = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
   const expectedView = enteringOrganize
@@ -2886,6 +3841,7 @@ function updateControls() {
   if (rotateScope.value === "selected" && !selected) rotationSummary.textContent = "Selecciona páginas en las miniaturas para girarlas juntas.";
   fitWidthButton.classList.toggle("is-active", state.zoomMode === "fit-width");
   fitPageButton.classList.toggle("is-active", state.zoomMode === "fit-page");
+  updateSearchNavigationControls();
   applyViewerPanelLayout();
   diagnosticContext();
 }
@@ -3416,6 +4372,21 @@ saveButton?.addEventListener("click", saveCopy);
 panelSaveButton?.addEventListener("click", saveCopy);
 revealButton?.addEventListener("click", revealSavedFile);
 progressCloseButton?.addEventListener("click", resetProgress);
+searchForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  runDocumentSearch();
+});
+searchInput?.addEventListener("input", updateSearchNavigationControls);
+searchInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    clearSearch();
+  }
+});
+searchClearButton?.addEventListener("click", () => clearSearch());
+searchPreviousButton?.addEventListener("click", () => navigateSearchResults(-1));
+searchNextButton?.addEventListener("click", () => navigateSearchResults(1));
+searchCancelButton?.addEventListener("click", () => cancelSearchWork());
 toolTabs.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.viewerTool)));
 toolLinks.forEach((button) => button.addEventListener("click", () => activateTool(button.dataset.activateTool)));
 openOrganizeButton?.addEventListener("click", () => {
@@ -3446,7 +4417,10 @@ canvasStage?.addEventListener("pointerdown", handlePagePanStart);
 canvasStage?.addEventListener("pointermove", handlePagePanMove);
 canvasStage?.addEventListener("pointerup", handlePagePanEnd);
 canvasStage?.addEventListener("pointercancel", handlePagePanEnd);
-continuousStage?.addEventListener("pointerdown", handleContinuousPanStart);
+continuousStage?.addEventListener("pointerdown", (event) => {
+  releasePinnedSearchNavigation();
+  handleContinuousPanStart(event);
+});
 continuousStage?.addEventListener("pointermove", handleContinuousPanMove);
 continuousStage?.addEventListener("pointerup", handleContinuousPanEnd);
 continuousStage?.addEventListener("pointercancel", handleContinuousPanEnd);
@@ -3463,6 +4437,13 @@ organizeGrid?.addEventListener("pointermove", moveOrganizeMarquee);
 organizeGrid?.addEventListener("pointerup", (event) => finishOrganizeMarquee(event, false));
 organizeGrid?.addEventListener("pointercancel", (event) => finishOrganizeMarquee(event, true));
 const pauseQueuedRenderingDuringScroll = () => renderScheduler.pauseFor(115);
+const releasePinnedSearchNavigation = () => {
+  if (!state.search.targetPage && !state.search.positioning) return;
+  state.search.navigationSerial += 1;
+  state.search.positioning = false;
+  state.search.targetPage = 0;
+  state.search.navigationLockUntil = 0;
+};
 thumbnailList?.addEventListener("scroll", pauseQueuedRenderingDuringScroll, { passive: true });
 thumbnailList?.addEventListener("scroll", () => {
   if (state.thumbnailVirtual) renderVirtualThumbnailWindow();
@@ -3479,11 +4460,31 @@ window.addEventListener("resize", () => {
   if (state.organizeVirtual && state.viewMode === "organize") renderVirtualOrganizeWindow(state.currentPage);
 });
 
-continuousStage?.addEventListener("wheel", (event) => {
-  if (!state.file || !["continuous", "spread"].includes(state.viewMode) || !event.ctrlKey) return;
+let viewerWheelZoomDelta = 0;
+let viewerWheelZoomTimer = 0;
+
+function queueViewerZoomFromWheel(event) {
   event.preventDefault();
-  const current = state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100;
-  setCustomZoom(current + (event.deltaY < 0 ? 0.12 : -0.12));
+  viewerWheelZoomDelta += Math.max(-160, Math.min(160, Number(event.deltaY) || 0));
+  window.clearTimeout(viewerWheelZoomTimer);
+  viewerWheelZoomTimer = window.setTimeout(() => {
+    const current = state.zoomMode === "custom"
+      ? state.zoom
+      : (Number.parseInt(zoomValue.textContent, 10) || 100) / 100;
+    const delta = Math.max(-260, Math.min(260, viewerWheelZoomDelta));
+    viewerWheelZoomDelta = 0;
+    const factor = Math.exp(-delta * 0.0016);
+    setCustomZoom(current * factor);
+  }, 48);
+}
+
+continuousStage?.addEventListener("wheel", (event) => {
+  if (!state.file || !["continuous", "spread"].includes(state.viewMode)) return;
+  if (!event.ctrlKey) {
+    releasePinnedSearchNavigation();
+    return;
+  }
+  queueViewerZoomFromWheel(event);
 }, { passive: false });
 continuousStage?.addEventListener("dblclick", (event) => {
   if (!state.file || event.target.closest?.(".viewer-continuous-label")) return;
@@ -3502,9 +4503,7 @@ canvasStage?.addEventListener("dblclick", () => {
 canvasStage?.addEventListener("wheel", (event) => {
   if (!state.file || state.viewMode !== "page") return;
   if (event.ctrlKey) {
-    event.preventDefault();
-    const current = state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100;
-    setCustomZoom(current + (event.deltaY < 0 ? 0.12 : -0.12));
+    queueViewerZoomFromWheel(event);
     return;
   }
   const now = Date.now();
@@ -3531,9 +4530,7 @@ spreadStage?.addEventListener("dblclick", (event) => {
 spreadStage?.addEventListener("wheel", (event) => {
   if (!state.file || state.viewMode !== "spread") return;
   if (event.ctrlKey) {
-    event.preventDefault();
-    const current = state.zoomMode === "custom" ? state.zoom : parseInt(zoomValue.textContent, 10) / 100;
-    setCustomZoom(current + (event.deltaY < 0 ? 0.12 : -0.12));
+    queueViewerZoomFromWheel(event);
     return;
   }
   const now = Date.now();
@@ -3571,6 +4568,15 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     showWorkspace(false);
     openFilePicker();
+    return;
+  }
+  if (event.ctrlKey && event.key.toLowerCase() === "f" && !viewerView.hidden) {
+    event.preventDefault();
+    activateTool("search");
+    requestAnimationFrame(() => {
+      searchInput?.focus({ preventScroll: true });
+      searchInput?.select?.();
+    });
     return;
   }
   if (viewerView.hidden || !state.file) return;
@@ -3621,6 +4627,7 @@ applyViewerPanelLayout();
 updateScopeControls();
 activateTool("overview");
 setViewMode("continuous", false);
+resetSearchSession();
 updateControls();
 updateSplitPlan();
 initializeNativeOpenHandling();

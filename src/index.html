@@ -371,6 +371,7 @@
               </div>
               <nav class="viewer-tool-tabs" id="viewer-tools-content" aria-label="Elegir herramienta">
                 <button type="button" data-viewer-tool="overview" class="is-active">Inicio</button>
+                <button type="button" data-viewer-tool="search">Buscar</button>
                 <button type="button" data-viewer-tool="organize">Organizar</button>
                 <button type="button" data-viewer-tool="rotate">Rotar</button>
                 <button type="button" data-viewer-tool="split">Dividir</button>
@@ -382,6 +383,9 @@
                 <section class="viewer-tool-section viewer-quick-tools">
                   <p class="eyebrow">Herramientas del documento</p>
                   <h2>Elige qué quieres hacer</h2>
+                  <button class="viewer-tool-link" type="button" data-activate-tool="search">
+                    <span><strong>Buscar en el PDF</strong><small>Encuentra texto, revisa resultados y salta a cada página.</small></span><b>→</b>
+                  </button>
                   <button class="viewer-tool-link" type="button" data-activate-tool="organize">
                     <span><strong>Organizar páginas</strong><small>Mover, eliminar, duplicar o insertar.</small></span><b>→</b>
                   </button>
@@ -399,6 +403,65 @@
                   <p class="eyebrow">Navegación rápida</p>
                   <h2>Atajos disponibles</h2>
                   <p><kbd>←</kbd> <kbd>→</kbd> cambiar página · <kbd>Ctrl</kbd> + rueda para zoom · arrastra la página para desplazarte.</p>
+                </section>
+              </div>
+
+              <div class="viewer-tool-panel" data-viewer-tool-panel="search" hidden>
+                <section class="viewer-tool-section viewer-search-tool">
+                  <p class="eyebrow">Búsqueda local</p>
+                  <h2>Buscar en el documento</h2>
+                  <p class="viewer-tool-help">El texto se analiza únicamente en este equipo. Las páginas escaneadas sin capa de texto se señalarán para un futuro OCR.</p>
+
+                  <div class="viewer-search-controls-sticky">
+                    <form class="viewer-search-form" id="viewer-search-form" role="search">
+                      <label class="viewer-field" for="viewer-search-input">
+                        <span>Palabra o frase</span>
+                        <input
+                          id="viewer-search-input"
+                          type="search"
+                          placeholder="Ejemplo: número de expediente"
+                          autocomplete="off"
+                          spellcheck="false"
+                          disabled
+                        />
+                      </label>
+                      <div class="viewer-search-submit-row">
+                        <button class="primary-button" id="viewer-search-button" type="submit" disabled>Buscar</button>
+                        <button class="secondary-button" id="viewer-search-clear" type="button" disabled>Limpiar</button>
+                      </div>
+                    </form>
+
+                    <div class="viewer-search-navigation" aria-label="Navegar por resultados">
+                      <button id="viewer-search-previous" type="button" disabled aria-label="Coincidencia anterior">← Anterior</button>
+                      <strong id="viewer-search-counter">0 de 0</strong>
+                      <button id="viewer-search-next" type="button" disabled aria-label="Coincidencia siguiente">Siguiente →</button>
+                    </div>
+
+                    <div class="viewer-search-progress" id="viewer-search-progress-wrap" hidden>
+                      <progress id="viewer-search-progress" max="100" value="0">0 %</progress>
+                      <div>
+                        <span id="viewer-search-progress-value">0 %</span>
+                        <button class="viewer-search-cancel" id="viewer-search-cancel" type="button">Cancelar análisis</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p class="viewer-search-status" id="viewer-search-status" role="status" aria-live="polite">
+                    Abre un PDF para buscar en su capa de texto.
+                  </p>
+
+                  <div class="viewer-search-warning" id="viewer-search-warning" hidden>
+                    <strong>Páginas sin texto</strong>
+                    <span id="viewer-search-warning-text"></span>
+                  </div>
+
+                  <div class="viewer-search-results-heading">
+                    <strong>Resultados</strong>
+                    <span id="viewer-search-result-summary">Sin búsqueda</span>
+                  </div>
+                  <div class="viewer-search-results" id="viewer-search-results" aria-live="polite">
+                    <p class="viewer-search-empty">Escribe una palabra o frase y pulsa Buscar.</p>
+                  </div>
                 </section>
               </div>
 
