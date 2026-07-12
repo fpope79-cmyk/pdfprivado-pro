@@ -38,6 +38,11 @@ import {
   recognizeOcrImage,
 } from "./ocr-worker.js";
 import {
+  cancelExternalOcrRuntime,
+  isExternalOcrCancelledError,
+  recognizeExternalOcrImage,
+} from "./ocr-external-runtime.js";
+import {
   formatOcrPackageSize,
   inspectOcrLanguagePackage,
   ocrLanguagePackageFileName,
@@ -242,6 +247,7 @@ const ocrLanguagePackageFile = $("#viewer-ocr-language-package-file");
 const ocrLanguagePackageSize = $("#viewer-ocr-language-package-size");
 const ocrLanguagePackageHash = $("#viewer-ocr-language-package-hash");
 const ocrLanguagePackageMessage = $("#viewer-ocr-language-package-message");
+const ocrLanguageRuntimeText = $("#viewer-ocr-language-runtime-text");
 const ocrLanguageInstallButton = $("#viewer-ocr-language-install");
 const ocrPageLabel = $("#viewer-ocr-page-label");
 const ocrPagePreviousButton = $("#viewer-ocr-page-previous");
@@ -268,6 +274,7 @@ const ocrLanguagePackages = {
   installed: [],
   pending: null,
   busy: false,
+  runtimeCode: "",
 };
 
 const state = {
@@ -1907,6 +1914,16 @@ function showOcrLanguagePackagePreview({
   if (ocrLanguagePackageSize) ocrLanguagePackageSize.textContent = size;
   if (ocrLanguagePackageHash) ocrLanguagePackageHash.textContent = hash;
   if (ocrLanguagePackageMessage) ocrLanguagePackageMessage.textContent = message;
+  if (ocrLanguageRuntimeText) {
+    ocrLanguageRuntimeText.hidden = true;
+    ocrLanguageRuntimeText.textContent = "";
+  }
+}
+
+function showOcrLanguageRuntimeText(text) {
+  if (!ocrLanguageRuntimeText) return;
+  ocrLanguageRuntimeText.textContent = String(text || "").trim() || "No se reconoció texto utilizable.";
+  ocrLanguageRuntimeText.hidden = false;
 }
 
 function setOcrLanguagePackageBusy(busy, message = "") {
@@ -1916,7 +1933,9 @@ function setOcrLanguagePackageBusy(busy, message = "") {
     if (message) ocrLanguageImportPreviewButton.textContent = message;
   }
   if (ocrLanguageInstallButton) ocrLanguageInstallButton.disabled = ocrLanguagePackages.busy;
-  for (const button of ocrLanguageInstalledList?.querySelectorAll(".viewer-ocr-language-remove") || []) {
+  for (const button of ocrLanguageInstalledList?.querySelectorAll(
+    ".viewer-ocr-language-remove, .viewer-ocr-language-test"
+  ) || []) {
     button.disabled = ocrLanguagePackages.busy;
   }
 }
@@ -1946,13 +1965,22 @@ function createOcrLanguageAdminRow(language, metadata = null) {
   actions.append(badge);
 
   if (locallyInstalled) {
+    const test = document.createElement("button");
+    test.className = "viewer-ocr-language-test";
+    test.type = "button";
+    test.dataset.testOcrLanguage = language.code;
+    test.textContent = ocrLanguagePackages.runtimeCode === language.code
+      ? "Probando…"
+      : "Probar OCR";
+    test.disabled = ocrLanguagePackages.busy;
+
     const remove = document.createElement("button");
     remove.className = "viewer-ocr-language-remove";
     remove.type = "button";
     remove.dataset.removeOcrLanguage = language.code;
     remove.textContent = "Desinstalar";
     remove.disabled = ocrLanguagePackages.busy;
-    actions.append(remove);
+    actions.append(test, remove);
   }
 
   row.append(identity, actions);
@@ -2147,6 +2175,165 @@ async function installPendingOcrLanguagePackage() {
     if (ocrLanguageInstallButton && !ocrLanguageInstallButton.hidden) {
       ocrLanguageInstallButton.disabled = !ocrLanguagePackages.storage;
       ocrLanguageInstallButton.textContent = `Instalar ${pending.inspection.language.label} localmente`;
+    }
+  }
+}
+
+function translateExternalOcrProgress(message, languageLabel) {
+  const translated = translateOcrProgress(message);
+  const status = String(message?.status || "").toLowerCase();
+  if (status.includes("loading language")) {
+    return {
+      percent: translated.percent,
+      text: `Cargando el modelo local de ${languageLabel} en el motor aislado…`,
+    };
+  }
+  return translated;
+}
+
+async function testInstalledOcrLanguagePackage(code) {
+  const language = OCR_LANGUAGES.find((entry) => entry.code === code);
+  const pageNumber = normalizedOcrTargetPage();
+  const entry = pageNumber ? entryAt(pageNumber) : null;
+
+  if (!language || language.installed || !ocrLanguagePackages.storage) return;
+  if (!state.file || !entry || entry.kind !== "pdf") {
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: `${language.label} · prueba no iniciada`,
+      code: language.code,
+      message: "Abre un PDF y elige una página antes de probar este modelo.",
+    });
+    return;
+  }
+  if (state.ocr.running || state.search.running || state.saving || ocrLanguagePackages.busy) return;
+
+  const entryId = entry.id;
+  const serial = ++state.ocr.serial;
+  const diagnosticToken = diagStart("ocr-external-runtime-test", {
+    page: pageNumber,
+    language: language.code,
+  });
+  let page = null;
+  let rendered = null;
+
+  state.ocr.running = true;
+  state.ocr.activeEntryId = entryId;
+  ocrLanguagePackages.runtimeCode = language.code;
+  setOcrLanguagePackageBusy(true, "Prueba OCR en curso…");
+  renderOcrLanguageAdmin();
+  setOcrProgress(true, 2);
+  setOcrStatus(`Preparando una prueba aislada de la página ${pageNumber} en ${language.label}…`);
+  updateOcrControls();
+  diagnosticContext();
+
+  try {
+    const stored = await ocrLanguagePackages.storage.readVerified(language.code);
+    if (!stored) {
+      throw new Error(`El modelo local de ${language.label} ya no está instalado.`);
+    }
+
+    page = await getPdfPage(entry);
+    rendered = await renderPageForOcr(page, entry, {
+      ...OCR_RENDER_LIMITS,
+      onRenderTask(task) {
+        state.ocr.renderTask = task;
+      },
+      isCancelled() {
+        return serial !== state.ocr.serial || !state.ocr.running;
+      },
+    });
+    state.ocr.renderTask = null;
+    if (serial !== state.ocr.serial || !state.ocr.running) return;
+
+    setOcrProgress(true, 25);
+    setOcrStatus(`Modelo verificado. Iniciando la prueba aislada en ${language.label}…`);
+    const result = await recognizeExternalOcrImage(
+      rendered.canvas,
+      language.code,
+      stored.bytes,
+      {
+        onProgress(message) {
+          if (serial !== state.ocr.serial || !state.ocr.running) return;
+          const translated = translateExternalOcrProgress(message, language.label);
+          setOcrProgress(true, translated.percent);
+          setOcrStatus(translated.text);
+        },
+      }
+    );
+
+    if (serial !== state.ocr.serial || !state.ocr.running || entryAt(pageNumber)?.id !== entryId) return;
+
+    const text = normalizeExtractedText(result?.data?.text || "");
+    showOcrLanguagePackagePreview({
+      kind: text ? "success" : "neutral",
+      title: `${language.label} · prueba aislada completada`,
+      code: language.code,
+      fileName: stored.metadata.fileName,
+      size: formatOcrPackageSize(stored.metadata.bytes),
+      hash: stored.metadata.sha256,
+      message: text
+        ? "El motor cargó el paquete local y reconoció la página. El texto no se ha guardado ni añadido a Buscar."
+        : "El motor cargó el paquete local, pero no encontró texto utilizable. El resultado no se ha guardado.",
+    });
+    showOcrLanguageRuntimeText(text);
+    setOcrProgress(false, 100);
+    setOcrStatus(
+      text
+        ? `Prueba aislada terminada en ${language.label}. El resultado no se ha guardado.`
+        : `Prueba aislada terminada en ${language.label}, sin texto utilizable.`,
+      text ? "success" : "warning"
+    );
+    diagEnd(diagnosticToken, {
+      page: pageNumber,
+      language: language.code,
+      hasText: Boolean(text),
+      characters: text.length,
+      imagePixels: rendered.width * rendered.height,
+      effectiveDpi: rendered.effectiveDpi,
+    });
+  } catch (error) {
+    if (
+      serial !== state.ocr.serial ||
+      isExternalOcrCancelledError(error) ||
+      isOcrCancelledError(error) ||
+      error?.name === "AbortError"
+    ) {
+      diagEnd(diagnosticToken, { page: pageNumber, language: language.code }, "cancelled");
+      return;
+    }
+    setOcrProgress(false, 0);
+    setOcrStatus(`No se pudo completar la prueba OCR: ${error?.message || error}.`, "error");
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: `${language.label} · prueba fallida`,
+      code: language.code,
+      message: String(error?.message || error),
+    });
+    diagFail(diagnosticToken, error, {
+      operation: "ocr-external-runtime-test",
+      page: pageNumber,
+      language: language.code,
+    });
+  } finally {
+    try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
+    if (rendered?.canvas) {
+      rendered.canvas.width = 1;
+      rendered.canvas.height = 1;
+    }
+    if (serial === state.ocr.serial) {
+      state.ocr.running = false;
+      state.ocr.renderTask = null;
+      state.ocr.activeEntryId = "";
+      ocrLanguagePackages.runtimeCode = "";
+      setOcrLanguagePackageBusy(false);
+      if (ocrLanguageImportPreviewButton) {
+        ocrLanguageImportPreviewButton.disabled = false;
+        ocrLanguageImportPreviewButton.textContent = "Seleccionar y validar paquete offline";
+      }
+      renderOcrLanguageAdmin();
+      updateOcrControls();
+      diagnosticContext();
     }
   }
 }
@@ -2353,7 +2540,13 @@ async function cancelCurrentOcr({ silent = false } = {}) {
   state.ocr.running = false;
   try { state.ocr.renderTask?.cancel?.(); } catch { /* tarea ya finalizada */ }
   state.ocr.renderTask = null;
-  await cancelOcrEngine();
+  await Promise.allSettled([
+    cancelOcrEngine(),
+    cancelExternalOcrRuntime(),
+  ]);
+  ocrLanguagePackages.runtimeCode = "";
+  setOcrLanguagePackageBusy(false);
+  renderOcrLanguageAdmin();
   setOcrProgress(false, 0);
   if (!silent) setOcrStatus("OCR cancelado. No se ha modificado el documento.", "warning");
   updateOcrControls();
@@ -5711,9 +5904,15 @@ window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticCont
 ocrLanguageImportPreviewButton?.addEventListener("click", selectAndValidateOcrLanguagePackage);
 ocrLanguageInstallButton?.addEventListener("click", installPendingOcrLanguagePackage);
 ocrLanguageInstalledList?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-remove-ocr-language]");
-  if (!button) return;
-  removeInstalledOcrLanguagePackage(button.dataset.removeOcrLanguage);
+  const testButton = event.target.closest("[data-test-ocr-language]");
+  if (testButton) {
+    testInstalledOcrLanguagePackage(testButton.dataset.testOcrLanguage);
+    return;
+  }
+
+  const removeButton = event.target.closest("[data-remove-ocr-language]");
+  if (!removeButton) return;
+  removeInstalledOcrLanguagePackage(removeButton.dataset.removeOcrLanguage);
 });
 
 function createOcrLanguageOption(language) {
