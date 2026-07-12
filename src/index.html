@@ -16,6 +16,65 @@
   </head>
   <body>
     <div class="app-shell">
+      <nav class="app-menu-bar" id="app-menu-bar" aria-label="Menú principal de PDFPrivado Pro">
+        <div class="app-menu" data-app-menu>
+          <button class="app-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">Archivo</button>
+          <div class="app-menu-dropdown" role="menu" hidden>
+            <button type="button" role="menuitem" data-app-command="open"><span>Abrir PDF…</span><kbd>Ctrl+O</kbd></button>
+            <button type="button" role="menuitem" data-app-command="save"><span>Guardar copia…</span><kbd>Ctrl+Mayús+S</kbd></button>
+            <button type="button" role="menuitem" data-app-command="close"><span>Cerrar documento</span><kbd>Ctrl+W</kbd></button>
+            <span class="app-menu-separator" role="separator"></span>
+            <button type="button" role="menuitem" disabled><span>Imprimir</span><small>Próximamente</small></button>
+          </div>
+        </div>
+        <div class="app-menu" data-app-menu>
+          <button class="app-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">Edición</button>
+          <div class="app-menu-dropdown" role="menu" hidden>
+            <button type="button" role="menuitem" data-app-command="undo"><span>Deshacer</span><kbd>Ctrl+Z</kbd></button>
+            <button type="button" role="menuitem" data-app-command="redo"><span>Rehacer</span><kbd>Ctrl+Y</kbd></button>
+            <span class="app-menu-separator" role="separator"></span>
+            <button type="button" role="menuitem" data-app-tool="search"><span>Buscar texto</span><kbd>Ctrl+F</kbd></button>
+            <button type="button" role="menuitem" data-app-tool="organize"><span>Organizar páginas</span></button>
+            <button type="button" role="menuitem" data-app-tool="rotate"><span>Rotar páginas</span></button>
+          </div>
+        </div>
+        <div class="app-menu" data-app-menu>
+          <button class="app-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">Ver</button>
+          <div class="app-menu-dropdown" role="menu" hidden>
+            <button type="button" role="menuitem" data-app-command="view-continuous"><span>Vista continua</span></button>
+            <button type="button" role="menuitem" data-app-command="view-page"><span>Una página</span></button>
+            <button type="button" role="menuitem" data-app-command="view-spread"><span>Dos páginas</span></button>
+            <span class="app-menu-separator" role="separator"></span>
+            <button type="button" role="menuitem" data-app-command="fit-width"><span>Ajustar ancho</span></button>
+            <button type="button" role="menuitem" data-app-command="fit-page"><span>Ajustar página</span></button>
+            <span class="app-menu-separator" role="separator"></span>
+            <button type="button" role="menuitem" data-app-command="toggle-thumbnails"><span>Mostrar u ocultar miniaturas</span></button>
+            <button type="button" role="menuitem" data-app-command="toggle-tools"><span>Mostrar u ocultar herramientas</span></button>
+          </div>
+        </div>
+        <div class="app-menu" data-app-menu>
+          <button class="app-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">Herramientas</button>
+          <div class="app-menu-dropdown" role="menu" hidden>
+            <button type="button" role="menuitem" data-app-tool="search"><span>Buscar texto</span></button>
+            <button type="button" role="menuitem" data-app-tool="ocr"><span>OCR local</span></button>
+            <button type="button" role="menuitem" data-app-tool="organize"><span>Organizar páginas</span></button>
+            <button type="button" role="menuitem" data-app-tool="rotate"><span>Rotar páginas</span></button>
+            <button type="button" role="menuitem" data-app-tool="split"><span>Dividir PDF</span></button>
+            <button type="button" role="menuitem" data-app-tool="merge"><span>Añadir otro PDF</span></button>
+            <button type="button" role="menuitem" data-app-tool="save"><span>Opciones de guardado</span></button>
+          </div>
+        </div>
+        <div class="app-menu" data-app-menu>
+          <button class="app-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false">Ayuda</button>
+          <div class="app-menu-dropdown app-menu-dropdown-right" role="menu" hidden>
+            <button type="button" role="menuitem" data-app-command="privacy"><span>Privacidad y funcionamiento local</span></button>
+            <button type="button" role="menuitem" data-app-command="shortcuts"><span>Atajos de teclado</span></button>
+            <span class="app-menu-separator" role="separator"></span>
+            <button type="button" role="menuitem" disabled><span>PDFPrivado Pro</span><small>Prototipo interno</small></button>
+          </div>
+        </div>
+        <span class="app-menu-document" id="app-menu-document" aria-live="polite">Ningún PDF abierto</span>
+      </nav>
       <header class="topbar">
         <div class="brand" aria-label="PDFPrivado Pro">
           <span class="brand-mark" aria-hidden="true">PDF</span>
@@ -359,7 +418,7 @@
 
             <aside class="viewer-tools-panel" aria-label="Herramientas del documento">
               <div class="viewer-tools-heading">
-                <strong>Herramientas</strong>
+                <strong id="viewer-tools-heading-title">Herramientas</strong>
                 <button
                   class="viewer-panel-collapse-button"
                   id="viewer-toggle-tools-button"
@@ -370,14 +429,14 @@
                 >›</button>
               </div>
               <nav class="viewer-tool-tabs" id="viewer-tools-content" aria-label="Elegir herramienta">
-                <button type="button" data-viewer-tool="overview" class="is-active">Inicio</button>
-                <button type="button" data-viewer-tool="search">Buscar</button>
-                <button type="button" data-viewer-tool="ocr">OCR</button>
-                <button type="button" data-viewer-tool="organize">Organizar</button>
-                <button type="button" data-viewer-tool="rotate">Rotar</button>
-                <button type="button" data-viewer-tool="split">Dividir</button>
-                <button type="button" data-viewer-tool="merge">Añadir</button>
-                <button type="button" data-viewer-tool="save">Guardar</button>
+                <button type="button" data-viewer-tool="overview" class="is-active" title="Inicio" aria-label="Inicio">Inicio</button>
+                <button type="button" data-viewer-tool="search" title="Buscar texto" aria-label="Buscar texto">Buscar</button>
+                <button type="button" data-viewer-tool="ocr" title="OCR local" aria-label="OCR local">OCR</button>
+                <button type="button" data-viewer-tool="organize" title="Organizar páginas" aria-label="Organizar páginas">Organizar</button>
+                <button type="button" data-viewer-tool="rotate" title="Rotar páginas" aria-label="Rotar páginas">Rotar</button>
+                <button type="button" data-viewer-tool="split" title="Dividir PDF" aria-label="Dividir PDF">Dividir</button>
+                <button type="button" data-viewer-tool="merge" title="Añadir otro PDF" aria-label="Añadir otro PDF">Añadir</button>
+                <button type="button" data-viewer-tool="save" title="Opciones de guardado" aria-label="Opciones de guardado">Guardar</button>
               </nav>
 
               <div class="viewer-tool-panel is-active" data-viewer-tool-panel="overview">

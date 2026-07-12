@@ -185,8 +185,14 @@ const progressDetail = $("#viewer-progress-detail");
 const revealButton = $("#viewer-reveal-button");
 const progressCloseButton = $("#viewer-progress-close");
 const toolTabs = $$("[data-viewer-tool]");
+const toolsHeadingTitle = $("#viewer-tools-heading-title");
 const toolPanels = $$("[data-viewer-tool-panel]");
 const toolLinks = $$("[data-activate-tool]");
+const appMenuBar = $("#app-menu-bar");
+const appMenus = $$('[data-app-menu]');
+const appMenuDocument = $("#app-menu-document");
+const appMenuCommands = $$('[data-app-command]');
+const appMenuTools = $$('[data-app-tool]');
 const openOrganizeButton = $("#viewer-open-organize-button");
 const insertPosition = $("#viewer-insert-position");
 const panelInsertPdfButton = $("#viewer-panel-insert-pdf-button");
@@ -4916,6 +4922,137 @@ function setViewMode(mode, rebuild = true) {
   diagnosticContext();
 }
 
+
+const APP_TOOL_REGISTRY = Object.freeze({
+  overview: { label: "Inicio" },
+  search: { label: "Buscar texto" },
+  ocr: { label: "OCR local" },
+  organize: { label: "Organizar páginas" },
+  rotate: { label: "Rotar páginas" },
+  split: { label: "Dividir PDF" },
+  merge: { label: "Añadir otro PDF" },
+  save: { label: "Opciones de guardado" },
+});
+
+function closeAppMenus(except = null) {
+  appMenus.forEach((menu) => {
+    if (menu === except) return;
+    menu.classList.remove("is-open");
+    const trigger = menu.querySelector(".app-menu-trigger");
+    const dropdown = menu.querySelector(".app-menu-dropdown");
+    trigger?.setAttribute("aria-expanded", "false");
+    if (dropdown) dropdown.hidden = true;
+  });
+}
+
+function toggleAppMenu(menu) {
+  const opening = !menu.classList.contains("is-open");
+  closeAppMenus(menu);
+  menu.classList.toggle("is-open", opening);
+  const trigger = menu.querySelector(".app-menu-trigger");
+  const dropdown = menu.querySelector(".app-menu-dropdown");
+  trigger?.setAttribute("aria-expanded", String(opening));
+  if (dropdown) dropdown.hidden = !opening;
+}
+
+function updateAppMenuState() {
+  const hasDocument = Boolean(state.file && state.pageCount);
+  if (appMenuDocument) {
+    appMenuDocument.textContent = hasDocument
+      ? `${state.file?.name || "Documento PDF"} · ${state.pageCount} ${state.pageCount === 1 ? "página" : "páginas"}`
+      : "Ningún PDF abierto";
+  }
+
+  const targetMap = {
+    save: saveButton,
+    close: closeFileButton,
+    undo: undoButton,
+    redo: redoButton,
+    "view-continuous": modeContinuousButton,
+    "view-page": modePageButton,
+    "view-spread": modeSpreadButton,
+    "fit-width": fitWidthButton,
+    "fit-page": fitPageButton,
+    "toggle-thumbnails": toggleThumbnailsButton,
+    "toggle-tools": toggleToolsButton,
+  };
+  appMenuCommands.forEach((item) => {
+    const target = targetMap[item.dataset.appCommand];
+    if (target) item.disabled = Boolean(target.disabled || target.hidden);
+  });
+  appMenuTools.forEach((item) => {
+    item.disabled = !hasDocument || !APP_TOOL_REGISTRY[item.dataset.appTool];
+    item.classList.toggle("is-active", item.dataset.appTool === state.activeTool);
+  });
+}
+
+function runAppMenuCommand(command) {
+  const click = (element) => {
+    if (!element || element.disabled || element.hidden) return;
+    element.click();
+  };
+  const commands = {
+    open: () => click(openFileButton),
+    save: () => click(saveButton),
+    close: () => click(closeFileButton),
+    undo: () => click(undoButton),
+    redo: () => click(redoButton),
+    "view-continuous": () => click(modeContinuousButton),
+    "view-page": () => click(modePageButton),
+    "view-spread": () => click(modeSpreadButton),
+    "fit-width": () => click(fitWidthButton),
+    "fit-page": () => click(fitPageButton),
+    "toggle-thumbnails": () => click(toggleThumbnailsButton),
+    "toggle-tools": () => click(toggleToolsButton),
+    privacy: () => {
+      showFeedback("Privacidad real: los documentos se procesan en este equipo, sin CDN, telemetría ni servidores ocultos.", "success");
+    },
+    shortcuts: () => {
+      showFeedback("Atajos: Ctrl+O abrir · Ctrl+F buscar · Ctrl+Z deshacer · Ctrl+Y rehacer · Ctrl+Mayús+S guardar copia.", "success");
+    },
+  };
+  commands[command]?.();
+  updateAppMenuState();
+}
+
+function initializeAppMenu() {
+  if (!appMenuBar) return;
+  appMenus.forEach((menu) => {
+    const trigger = menu.querySelector(".app-menu-trigger");
+    trigger?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleAppMenu(menu);
+    });
+    trigger?.addEventListener("pointerenter", () => {
+      if (appMenus.some((candidate) => candidate.classList.contains("is-open"))) toggleAppMenu(menu);
+    });
+  });
+  appMenuCommands.forEach((item) => item.addEventListener("click", () => {
+    if (!item.disabled) runAppMenuCommand(item.dataset.appCommand);
+    closeAppMenus();
+  }));
+  appMenuTools.forEach((item) => item.addEventListener("click", () => {
+    const tool = item.dataset.appTool;
+    if (!item.disabled && APP_TOOL_REGISTRY[tool]) activateTool(tool);
+    closeAppMenus();
+  }));
+  document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest("#app-menu-bar")) closeAppMenus();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeAppMenus();
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      runAppMenuCommand("save");
+    }
+    if (event.ctrlKey && event.key.toLowerCase() === "w") {
+      event.preventDefault();
+      runAppMenuCommand("close");
+    }
+  });
+  updateAppMenuState();
+}
+
 function activateTool(name) {
   const before = { activeTool: state.activeTool, viewMode: state.viewMode, currentPage: state.currentPage, selectedPages: state.selectedIds.size };
   const enteringOrganize = Boolean(state.file && name === "organize" && state.viewMode !== "organize");
@@ -4934,6 +5071,10 @@ function activateTool(name) {
   }
 
   state.activeTool = name;
+  updateAppMenuState();
+  if (toolsHeadingTitle) {
+    toolsHeadingTitle.textContent = APP_TOOL_REGISTRY[name]?.label || "Herramientas";
+  }
   toolTabs.forEach((button) => button.classList.toggle("is-active", button.dataset.viewerTool === name));
   toolPanels.forEach((panel) => {
     const active = panel.dataset.viewerToolPanel === name;
@@ -5943,6 +6084,10 @@ if (ocrLanguageAvailability) {
 }
 initializeOcrLanguagePackageManager();
 syncOcrLanguageSelectors();
+initializeAppMenu();
+if (fileName) {
+  new MutationObserver(updateAppMenuState).observe(fileName, { childList: true, characterData: true, subtree: true });
+}
 updateResponsiveViewerLayout();
 applyViewerPanelLayout();
 updateScopeControls();

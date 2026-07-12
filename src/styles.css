@@ -1915,7 +1915,7 @@ body.is-reordering-pages {
 
 .toolbar-button {
   min-height: 36px;
-  padding: 0 11px;
+  padding: 0 9px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background: #ffffff;
@@ -7463,4 +7463,281 @@ body.viewer-focus-mode .viewer-focus-exit-button {
   color: var(--text);
   padding: 0.7rem;
   font: 0.78rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+
+/* Pro v2.6.1 · estructura visual extensible y menú clásico de escritorio. */
+.app-menu-bar {
+  position: relative;
+  z-index: 120;
+  min-height: 34px;
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  margin-inline: calc((100vw - 100%) / -2);
+  padding-inline: 8px 14px;
+  border-bottom: 1px solid #cbd5e1;
+  background: rgba(248, 250, 252, 0.98);
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.06);
+  color: #1e293b;
+  user-select: none;
+}
+
+.app-menu { position: relative; display: flex; align-items: stretch; }
+.app-menu-trigger {
+  min-width: 0;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: default;
+}
+.app-menu-trigger:hover,
+.app-menu.is-open > .app-menu-trigger {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.app-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 150;
+  width: max-content;
+  min-width: 238px;
+  padding: 5px;
+  border: 1px solid #bfcbd8;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+}
+.app-menu-dropdown-right { left: auto; right: 0; }
+.app-menu-dropdown button {
+  width: 100%;
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #1e293b;
+  font-size: 0.76rem;
+  text-align: left;
+  cursor: default;
+}
+.app-menu-dropdown button:hover:not(:disabled),
+.app-menu-dropdown button:focus-visible:not(:disabled) {
+  outline: none;
+  background: #e0f2fe;
+  color: #075985;
+}
+.app-menu-dropdown button:disabled { color: #94a3b8; }
+.app-menu-dropdown kbd,
+.app-menu-dropdown small {
+  color: #64748b;
+  font: inherit;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+.app-menu-separator { display: block; height: 1px; margin: 5px 4px; background: #e2e8f0; }
+.app-menu-document {
+  min-width: 0;
+  margin-left: auto;
+  align-self: center;
+  max-width: 42vw;
+  padding-inline: 10px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Con un documento abierto, desaparece la tarjeta de confirmación superior:
+   el nombre pasa al menú y el visor recupera toda esa altura. */
+body.viewer-active:has(#viewer-shell:not([hidden])) .topbar,
+body.viewer-active:has(#viewer-shell:not([hidden])) .viewer-home-hero,
+body.viewer-active:has(#viewer-shell:not([hidden])) .viewer-feedback {
+  display: none !important;
+}
+body.viewer-active:has(#viewer-shell:not([hidden])) .viewer-workspace { padding-top: 8px; }
+body.viewer-active:has(#viewer-shell:not([hidden])) .viewer-shell {
+  min-height: calc(100vh - 50px);
+  height: calc(100vh - 50px);
+}
+
+/* Herramienta activa: el raíl permanece compacto y el panel contextual aparece
+   solo cuando hay una función elegida. */
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tools-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-panel.is-active {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 760px) {
+  .app-menu-bar { overflow-x: auto; padding-inline: 4px; }
+  .app-menu-trigger { padding-inline: 8px; }
+  .app-menu-document { display: none; }
+}
+
+/* Pro v2.6.1 · panel contextual con raíl de herramientas permanente.
+   El raíl ocupa siempre la columna estrecha; solo la herramienta activa abre
+   sus opciones, sin acumular paneles. */
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-shell {
+  --viewer-tools-column: min(410px, 34vw);
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tools-panel {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: 50px minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tools-heading {
+  grid-column: 2;
+  grid-row: 1;
+  position: static;
+  min-width: 0;
+  min-height: 50px;
+  height: 50px;
+  padding: 7px 9px 7px 14px;
+  border-bottom: 1px solid #dbe3ec;
+  border-left: 1px solid #dbe3ec;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tools-heading strong {
+  font-size: 0.72rem;
+  letter-spacing: 0.065em;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  position: static;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 6px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid #dbe3ec;
+  border-bottom: 0;
+  background: #f1f5f9;
+  scrollbar-width: thin;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button {
+  position: relative;
+  width: 46px;
+  min-width: 46px;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #64748b;
+  font-size: 0;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button::before {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="overview"]::before { content: "⌂"; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="search"]::before { content: "⌕"; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="ocr"]::before { content: "Aa"; font-size: 0.58rem; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="organize"]::before { content: "▦"; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="rotate"]::before { content: "↻"; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="split"]::before { content: "✂"; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="merge"]::before { content: "+"; }
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button[data-viewer-tool="save"]::before { content: "↓"; }
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button:hover,
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button.is-active {
+  border-color: #bae6fd;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-panel {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-left: 1px solid #dbe3ec;
+  background: #ffffff;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-panel[hidden] {
+  display: none !important;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section {
+  padding: 16px 15px 20px;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section > .eyebrow {
+  margin-bottom: 7px;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section > h2 {
+  margin-bottom: 10px;
+  font-size: 1.08rem;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-help {
+  margin-bottom: 13px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+body.viewer-active.viewer-tools-collapsed .viewer-tools-heading {
+  display: none !important;
+}
+
+body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
+  padding-top: 7px;
+}
+
+@media (max-width: 1160px) {
+  body.viewer-active:not(.viewer-tools-collapsed) .viewer-shell {
+    --viewer-tools-column: min(360px, 38vw);
+  }
+}
+
+@media (max-width: 900px) {
+  body.viewer-active:not(.viewer-tools-collapsed) .viewer-shell {
+    --viewer-tools-column: min(330px, 44vw);
+  }
 }
