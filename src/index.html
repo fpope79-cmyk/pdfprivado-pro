@@ -563,8 +563,22 @@
                         </div>
                       </div>
 
-                      <button class="secondary-button viewer-ocr-language-import-preview" type="button" disabled>Importar paquete offline</button>
-                      <p class="viewer-ocr-language-admin-note">La importación se activará después de validar por separado el almacenamiento y la carga del modelo.</p>
+                      <button class="secondary-button viewer-ocr-language-import-preview" id="viewer-ocr-language-import-preview" type="button" disabled>Seleccionar y validar paquete offline</button>
+
+                      <section class="viewer-ocr-language-package-preview" id="viewer-ocr-language-package-preview" data-kind="neutral" hidden aria-live="polite">
+                        <div class="viewer-ocr-language-package-preview-heading">
+                          <strong id="viewer-ocr-language-package-title">Paquete sin seleccionar</strong>
+                          <span id="viewer-ocr-language-package-code">—</span>
+                        </div>
+                        <dl>
+                          <div><dt>Archivo</dt><dd id="viewer-ocr-language-package-file">—</dd></div>
+                          <div><dt>Tamaño</dt><dd id="viewer-ocr-language-package-size">—</dd></div>
+                          <div><dt>SHA-256</dt><dd id="viewer-ocr-language-package-hash">—</dd></div>
+                        </dl>
+                        <p id="viewer-ocr-language-package-message">Selecciona un paquete para comprobar su idioma, tamaño e integridad.</p>
+                      </section>
+
+                      <p class="viewer-ocr-language-admin-note">Esta prueba solo inspecciona el paquete seleccionado. No lo copia, no lo instala y no modifica el motor OCR.</p>
                     </div>
                   </details>
 

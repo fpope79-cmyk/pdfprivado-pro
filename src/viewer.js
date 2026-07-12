@@ -37,6 +37,10 @@ import {
   isOcrCancelledError,
   recognizeOcrImage,
 } from "./ocr-worker.js";
+import {
+  inspectOcrLanguagePackage,
+  ocrLanguagePackageFileName,
+} from "./ocr-language-package.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -222,6 +226,14 @@ const searchResults = $("#viewer-search-results");
 const ocrLanguage = $("#viewer-ocr-language");
 const ocrLanguageSecondary = $("#viewer-ocr-language-secondary");
 const ocrLanguageAvailability = $("#viewer-ocr-language-availability");
+const ocrLanguageImportPreviewButton = $("#viewer-ocr-language-import-preview");
+const ocrLanguagePackagePreview = $("#viewer-ocr-language-package-preview");
+const ocrLanguagePackageTitle = $("#viewer-ocr-language-package-title");
+const ocrLanguagePackageCode = $("#viewer-ocr-language-package-code");
+const ocrLanguagePackageFile = $("#viewer-ocr-language-package-file");
+const ocrLanguagePackageSize = $("#viewer-ocr-language-package-size");
+const ocrLanguagePackageHash = $("#viewer-ocr-language-package-hash");
+const ocrLanguagePackageMessage = $("#viewer-ocr-language-package-message");
 const ocrPageLabel = $("#viewer-ocr-page-label");
 const ocrPagePreviousButton = $("#viewer-ocr-page-previous");
 const ocrPageNumberInput = $("#viewer-ocr-page-number");
@@ -1859,6 +1871,112 @@ function setOcrStatus(message, kind = "info") {
   if (!ocrStatus) return;
   ocrStatus.textContent = message;
   ocrStatus.dataset.kind = kind;
+}
+
+function showOcrLanguagePackagePreview({
+  kind = "neutral",
+  title = "Paquete sin seleccionar",
+  code = "—",
+  fileName = "—",
+  size = "—",
+  hash = "—",
+  message = "Selecciona un paquete para comprobar su idioma, tamaño e integridad.",
+} = {}) {
+  if (!ocrLanguagePackagePreview) return;
+  ocrLanguagePackagePreview.hidden = false;
+  ocrLanguagePackagePreview.dataset.kind = kind;
+  if (ocrLanguagePackageTitle) ocrLanguagePackageTitle.textContent = title;
+  if (ocrLanguagePackageCode) ocrLanguagePackageCode.textContent = code;
+  if (ocrLanguagePackageFile) ocrLanguagePackageFile.textContent = fileName;
+  if (ocrLanguagePackageSize) ocrLanguagePackageSize.textContent = size;
+  if (ocrLanguagePackageHash) ocrLanguagePackageHash.textContent = hash;
+  if (ocrLanguagePackageMessage) ocrLanguagePackageMessage.textContent = message;
+}
+
+async function selectAndValidateOcrLanguagePackage() {
+  const dialog = window.__TAURI__?.dialog;
+  const fs = window.__TAURI__?.fs;
+  if (typeof dialog?.open !== "function" || typeof fs?.readFile !== "function") {
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: "Validación no disponible",
+      message: "Esta comprobación necesita ejecutarse dentro de PDFPrivado Pro para escritorio.",
+    });
+    return;
+  }
+
+  const originalText = ocrLanguageImportPreviewButton?.textContent || "Seleccionar y validar paquete offline";
+  if (ocrLanguageImportPreviewButton) {
+    ocrLanguageImportPreviewButton.disabled = true;
+    ocrLanguageImportPreviewButton.textContent = "Comprobando paquete…";
+  }
+
+  try {
+    const selected = await dialog.open({
+      directory: false,
+      multiple: false,
+      title: "Seleccionar paquete offline de idioma OCR",
+      filters: [
+        {
+          name: "Paquete de idioma PDFPrivado Pro",
+          extensions: ["pdfprivado-ocr"],
+        },
+      ],
+    });
+
+    const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+    if (!selectedPath) return;
+
+    const fileName = ocrLanguagePackageFileName(selectedPath);
+    showOcrLanguagePackagePreview({
+      kind: "neutral",
+      title: "Verificando integridad…",
+      fileName,
+      message: "Se están comprobando el código, el tamaño y la huella SHA-256. El archivo no se instalará.",
+    });
+
+    const bytes = await fs.readFile(selectedPath);
+    const result = await inspectOcrLanguagePackage({ fileName, bytes });
+
+    showOcrLanguagePackagePreview({
+      kind: "success",
+      title: `${result.language.label} · paquete válido`,
+      code: result.code,
+      fileName: result.fileName,
+      size: result.sizeLabel,
+      hash: result.sha256,
+      message: "Paquete oficial íntegro. Esta prueba no lo ha copiado ni instalado.",
+    });
+    diagEmit("ocr-language-package-validated", {
+      language: result.code,
+      bytes: result.bytes,
+    });
+  } catch (error) {
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: "Paquete rechazado",
+      fileName: ocrLanguagePackageFile?.textContent || "—",
+      message: String(error?.message || error),
+    });
+    diagnostics()?.error?.(error, "validar-paquete-ocr", { operation: "inspect-only" });
+  } finally {
+    if (ocrLanguageImportPreviewButton) {
+      ocrLanguageImportPreviewButton.disabled = false;
+      ocrLanguageImportPreviewButton.textContent = originalText;
+    }
+  }
+}
+
+function initializeOcrLanguagePackagePreview() {
+  if (!ocrLanguageImportPreviewButton) return;
+  const available = Boolean(
+    typeof window.__TAURI__?.dialog?.open === "function" &&
+    typeof window.__TAURI__?.fs?.readFile === "function"
+  );
+  ocrLanguageImportPreviewButton.disabled = !available;
+  if (!available) {
+    ocrLanguageImportPreviewButton.textContent = "Validación disponible en escritorio";
+  }
 }
 
 function formatOcrConfidence(value) {
@@ -5341,6 +5459,7 @@ window.addEventListener("keydown", (event) => {
 });
 
 window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
+ocrLanguageImportPreviewButton?.addEventListener("click", selectAndValidateOcrLanguagePackage);
 
 function createOcrLanguageOption(language) {
   const option = document.createElement("option");
@@ -5368,6 +5487,7 @@ if (ocrLanguageAvailability) {
   const catalog = summarizeOcrLanguageCatalog();
   ocrLanguageAvailability.textContent = `${catalog.catalogued} idiomas catalogados · ${catalog.installed} incluidos en esta compilación`;
 }
+initializeOcrLanguagePackagePreview();
 syncOcrLanguageSelectors();
 updateResponsiveViewerLayout();
 applyViewerPanelLayout();

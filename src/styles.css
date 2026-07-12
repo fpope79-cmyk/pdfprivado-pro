@@ -7091,6 +7091,112 @@ body.viewer-focus-mode .viewer-focus-exit-button {
   opacity: 0.62;
 }
 
+.viewer-ocr-language-package-preview {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.viewer-ocr-language-package-preview[hidden] {
+  display: none !important;
+}
+
+.viewer-ocr-language-package-preview[data-kind="success"] {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.viewer-ocr-language-package-preview[data-kind="error"] {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.viewer-ocr-language-package-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.viewer-ocr-language-package-preview-heading strong {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-ocr-language-package-preview-heading span {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.viewer-ocr-language-package-preview[data-kind="success"] .viewer-ocr-language-package-preview-heading span {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.viewer-ocr-language-package-preview[data-kind="error"] .viewer-ocr-language-package-preview-heading span {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.viewer-ocr-language-package-preview dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.viewer-ocr-language-package-preview dl div {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.viewer-ocr-language-package-preview dt,
+.viewer-ocr-language-package-preview dd {
+  margin: 0;
+  font-size: 0.56rem;
+  line-height: 1.35;
+}
+
+.viewer-ocr-language-package-preview dt {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.viewer-ocr-language-package-preview dd {
+  overflow: hidden;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-ocr-language-package-preview p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.58rem;
+  line-height: 1.45;
+}
+
+.viewer-ocr-language-package-preview[data-kind="success"] p {
+  color: #166534;
+}
+
+.viewer-ocr-language-package-preview[data-kind="error"] p {
+  color: #991b1b;
+}
+
 .viewer-ocr-language-admin-note {
   color: #64748b;
   text-align: center;
