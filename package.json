@@ -8,6 +8,7 @@
     "prepare:release": "node scripts/prepare-frontend.mjs release",
     "verify:ocr-languages": "node scripts/verify-ocr-language-architecture.mjs",
     "verify:ocr-package": "node scripts/verify-ocr-language-package.mjs",
+    "verify:ocr-storage": "node scripts/verify-ocr-language-storage.mjs",
     "tauri": "tauri"
   },
   "devDependencies": {

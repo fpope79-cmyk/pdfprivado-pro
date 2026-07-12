@@ -38,9 +38,14 @@ import {
   recognizeOcrImage,
 } from "./ocr-worker.js";
 import {
+  formatOcrPackageSize,
   inspectOcrLanguagePackage,
   ocrLanguagePackageFileName,
 } from "./ocr-language-package.js";
+import {
+  createIndexedDbOcrLanguageDriver,
+  createOcrLanguageStorage,
+} from "./ocr-language-storage.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -226,6 +231,9 @@ const searchResults = $("#viewer-search-results");
 const ocrLanguage = $("#viewer-ocr-language");
 const ocrLanguageSecondary = $("#viewer-ocr-language-secondary");
 const ocrLanguageAvailability = $("#viewer-ocr-language-availability");
+const ocrLanguageAdminSummary = $("#viewer-ocr-language-admin-summary");
+const ocrLanguageInstalledList = $("#viewer-ocr-language-installed-list");
+const ocrLanguageAvailableList = $("#viewer-ocr-language-available-list");
 const ocrLanguageImportPreviewButton = $("#viewer-ocr-language-import-preview");
 const ocrLanguagePackagePreview = $("#viewer-ocr-language-package-preview");
 const ocrLanguagePackageTitle = $("#viewer-ocr-language-package-title");
@@ -234,6 +242,7 @@ const ocrLanguagePackageFile = $("#viewer-ocr-language-package-file");
 const ocrLanguagePackageSize = $("#viewer-ocr-language-package-size");
 const ocrLanguagePackageHash = $("#viewer-ocr-language-package-hash");
 const ocrLanguagePackageMessage = $("#viewer-ocr-language-package-message");
+const ocrLanguageInstallButton = $("#viewer-ocr-language-install");
 const ocrPageLabel = $("#viewer-ocr-page-label");
 const ocrPagePreviousButton = $("#viewer-ocr-page-previous");
 const ocrPageNumberInput = $("#viewer-ocr-page-number");
@@ -253,6 +262,13 @@ const ocrPreview = $("#viewer-ocr-preview");
 const A4 = { width: 595.28, height: 841.89 };
 const ORGANIZE_VIRTUALIZATION_VERSION = "organize-virtual-v1";
 const MAX_STORED_SEARCH_RESULTS = 1200;
+
+const ocrLanguagePackages = {
+  storage: null,
+  installed: [],
+  pending: null,
+  busy: false,
+};
 
 const state = {
   file: null,
@@ -1893,6 +1909,95 @@ function showOcrLanguagePackagePreview({
   if (ocrLanguagePackageMessage) ocrLanguagePackageMessage.textContent = message;
 }
 
+function setOcrLanguagePackageBusy(busy, message = "") {
+  ocrLanguagePackages.busy = Boolean(busy);
+  if (ocrLanguageImportPreviewButton) {
+    ocrLanguageImportPreviewButton.disabled = ocrLanguagePackages.busy;
+    if (message) ocrLanguageImportPreviewButton.textContent = message;
+  }
+  if (ocrLanguageInstallButton) ocrLanguageInstallButton.disabled = ocrLanguagePackages.busy;
+  for (const button of ocrLanguageInstalledList?.querySelectorAll(".viewer-ocr-language-remove") || []) {
+    button.disabled = ocrLanguagePackages.busy;
+  }
+}
+
+function createOcrLanguageAdminRow(language, metadata = null) {
+  const base = Boolean(language.installed);
+  const locallyInstalled = Boolean(metadata);
+  const installed = base || locallyInstalled;
+  const row = document.createElement("div");
+  row.className = `viewer-ocr-language-row${installed ? " is-installed" : ""}`;
+  row.dataset.ocrLanguageCode = language.code;
+
+  const identity = document.createElement("span");
+  const name = document.createElement("strong");
+  const detail = document.createElement("small");
+  name.textContent = language.label;
+  detail.dir = "auto";
+  detail.textContent = `${language.nativeName} · ${language.code}${
+    locallyInstalled ? ` · ${formatOcrPackageSize(metadata.bytes)}` : ""
+  }`;
+  identity.append(name, detail);
+
+  const actions = document.createElement("div");
+  actions.className = "viewer-ocr-language-row-actions";
+  const badge = document.createElement("b");
+  badge.textContent = base ? "Base" : locallyInstalled ? "Local" : "No instalado";
+  actions.append(badge);
+
+  if (locallyInstalled) {
+    const remove = document.createElement("button");
+    remove.className = "viewer-ocr-language-remove";
+    remove.type = "button";
+    remove.dataset.removeOcrLanguage = language.code;
+    remove.textContent = "Desinstalar";
+    remove.disabled = ocrLanguagePackages.busy;
+    actions.append(remove);
+  }
+
+  row.append(identity, actions);
+  return row;
+}
+
+function renderOcrLanguageAdmin() {
+  if (!ocrLanguageInstalledList || !ocrLanguageAvailableList) return;
+  const installedMetadata = new Map(
+    ocrLanguagePackages.installed.map((record) => [record.code, record])
+  );
+  const installedRows = [];
+  const availableRows = [];
+
+  for (const language of OCR_LANGUAGES) {
+    const metadata = installedMetadata.get(language.code) || null;
+    const row = createOcrLanguageAdminRow(language, metadata);
+    if (language.installed || metadata) installedRows.push(row);
+    else availableRows.push(row);
+  }
+
+  ocrLanguageInstalledList.replaceChildren(...installedRows);
+  if (availableRows.length) {
+    ocrLanguageAvailableList.replaceChildren(...availableRows);
+  } else {
+    const empty = document.createElement("p");
+    empty.className = "viewer-ocr-language-list-empty";
+    empty.textContent = "Todos los idiomas catalogados están instalados.";
+    ocrLanguageAvailableList.replaceChildren(empty);
+  }
+
+  if (ocrLanguageAdminSummary) {
+    const installedCount = installedRows.length;
+    const availableCount = OCR_LANGUAGES.length - installedCount;
+    ocrLanguageAdminSummary.textContent = `${installedCount} instalados · ${availableCount} disponibles como paquetes offline`;
+  }
+}
+
+async function refreshInstalledOcrLanguagePackages() {
+  ocrLanguagePackages.installed = ocrLanguagePackages.storage
+    ? [...(await ocrLanguagePackages.storage.list())]
+    : [];
+  renderOcrLanguageAdmin();
+}
+
 async function selectAndValidateOcrLanguagePackage() {
   const dialog = window.__TAURI__?.dialog;
   const fs = window.__TAURI__?.fs;
@@ -1905,10 +2010,12 @@ async function selectAndValidateOcrLanguagePackage() {
     return;
   }
 
-  const originalText = ocrLanguageImportPreviewButton?.textContent || "Seleccionar y validar paquete offline";
-  if (ocrLanguageImportPreviewButton) {
-    ocrLanguageImportPreviewButton.disabled = true;
-    ocrLanguageImportPreviewButton.textContent = "Comprobando paquete…";
+  const originalText = "Seleccionar y validar paquete offline";
+  setOcrLanguagePackageBusy(true, "Comprobando paquete…");
+  ocrLanguagePackages.pending = null;
+  if (ocrLanguageInstallButton) {
+    ocrLanguageInstallButton.hidden = true;
+    ocrLanguageInstallButton.disabled = true;
   }
 
   try {
@@ -1932,11 +2039,18 @@ async function selectAndValidateOcrLanguagePackage() {
       kind: "neutral",
       title: "Verificando integridad…",
       fileName,
-      message: "Se están comprobando el código, el tamaño y la huella SHA-256. El archivo no se instalará.",
+      message: "Se están comprobando el código, el tamaño y la huella SHA-256 antes de permitir la instalación local.",
     });
 
     const bytes = await fs.readFile(selectedPath);
     const result = await inspectOcrLanguagePackage({ fileName, bytes });
+    const alreadyInstalled = ocrLanguagePackages.installed.some(
+      (record) => record.code === result.code
+    );
+    ocrLanguagePackages.pending = Object.freeze({
+      inspection: result,
+      bytes: new Uint8Array(bytes).slice(),
+    });
 
     showOcrLanguagePackagePreview({
       kind: "success",
@@ -1945,8 +2059,17 @@ async function selectAndValidateOcrLanguagePackage() {
       fileName: result.fileName,
       size: result.sizeLabel,
       hash: result.sha256,
-      message: "Paquete oficial íntegro. Esta prueba no lo ha copiado ni instalado.",
+      message: alreadyInstalled
+        ? "Paquete oficial íntegro. Puedes reinstalarlo para sustituir la copia local existente."
+        : "Paquete oficial íntegro. Puedes instalarlo localmente en este equipo.",
     });
+    if (ocrLanguageInstallButton) {
+      ocrLanguageInstallButton.hidden = false;
+      ocrLanguageInstallButton.disabled = !ocrLanguagePackages.storage;
+      ocrLanguageInstallButton.textContent = alreadyInstalled
+        ? `Reinstalar ${result.language.label}`
+        : `Instalar ${result.language.label} localmente`;
+    }
     diagEmit("ocr-language-package-validated", {
       language: result.code,
       bytes: result.bytes,
@@ -1960,22 +2083,148 @@ async function selectAndValidateOcrLanguagePackage() {
     });
     diagnostics()?.error?.(error, "validar-paquete-ocr", { operation: "inspect-only" });
   } finally {
+    setOcrLanguagePackageBusy(false);
     if (ocrLanguageImportPreviewButton) {
       ocrLanguageImportPreviewButton.disabled = false;
       ocrLanguageImportPreviewButton.textContent = originalText;
     }
+    if (ocrLanguageInstallButton && !ocrLanguageInstallButton.hidden) {
+      ocrLanguageInstallButton.disabled = !ocrLanguagePackages.storage;
+    }
   }
 }
 
-function initializeOcrLanguagePackagePreview() {
-  if (!ocrLanguageImportPreviewButton) return;
-  const available = Boolean(
+async function installPendingOcrLanguagePackage() {
+  const pending = ocrLanguagePackages.pending;
+  if (!pending || !ocrLanguagePackages.storage || ocrLanguagePackages.busy) return;
+
+  setOcrLanguagePackageBusy(true, "Instalando paquete…");
+  if (ocrLanguageInstallButton) {
+    ocrLanguageInstallButton.disabled = true;
+    ocrLanguageInstallButton.textContent = "Instalando localmente…";
+  }
+
+  try {
+    const installed = await ocrLanguagePackages.storage.install(pending);
+    await refreshInstalledOcrLanguagePackages();
+    showOcrLanguagePackagePreview({
+      kind: "success",
+      title: `${installed.label} · instalado localmente`,
+      code: installed.code,
+      fileName: installed.fileName,
+      size: formatOcrPackageSize(installed.bytes),
+      hash: installed.sha256,
+      message: "El modelo permanece en este equipo. En esta etapa todavía no está conectado al motor OCR.",
+    });
+    ocrLanguagePackages.pending = null;
+    if (ocrLanguageInstallButton) {
+      ocrLanguageInstallButton.hidden = true;
+      ocrLanguageInstallButton.disabled = true;
+    }
+    diagEmit("ocr-language-package-installed", {
+      language: installed.code,
+      bytes: installed.bytes,
+    });
+  } catch (error) {
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: "No se pudo instalar el paquete",
+      code: pending.inspection.code,
+      fileName: pending.inspection.fileName,
+      size: pending.inspection.sizeLabel,
+      hash: pending.inspection.sha256,
+      message: String(error?.message || error),
+    });
+    diagnostics()?.error?.(error, "instalar-paquete-ocr", {
+      language: pending.inspection.code,
+    });
+  } finally {
+    setOcrLanguagePackageBusy(false);
+    if (ocrLanguageImportPreviewButton) {
+      ocrLanguageImportPreviewButton.disabled = false;
+      ocrLanguageImportPreviewButton.textContent = "Seleccionar y validar paquete offline";
+    }
+    if (ocrLanguageInstallButton && !ocrLanguageInstallButton.hidden) {
+      ocrLanguageInstallButton.disabled = !ocrLanguagePackages.storage;
+      ocrLanguageInstallButton.textContent = `Instalar ${pending.inspection.language.label} localmente`;
+    }
+  }
+}
+
+async function removeInstalledOcrLanguagePackage(code) {
+  if (!ocrLanguagePackages.storage || ocrLanguagePackages.busy) return;
+  const language = OCR_LANGUAGES.find((entry) => entry.code === code);
+  if (!language || language.installed) return;
+  if (!window.confirm(`¿Desinstalar el modelo OCR de ${language.label} de este equipo?`)) return;
+
+  setOcrLanguagePackageBusy(true, "Procesando…");
+  try {
+    const removed = await ocrLanguagePackages.storage.remove(code);
+    await refreshInstalledOcrLanguagePackages();
+    if (ocrLanguagePackages.pending?.inspection?.code === code) {
+      ocrLanguagePackages.pending = null;
+      if (ocrLanguageInstallButton) {
+        ocrLanguageInstallButton.hidden = true;
+        ocrLanguageInstallButton.disabled = true;
+      }
+    }
+    showOcrLanguagePackagePreview({
+      kind: "neutral",
+      title: removed ? `${language.label} · desinstalado` : `${language.label} · no estaba instalado`,
+      code: language.code,
+      message: removed
+        ? "El modelo opcional se ha eliminado del almacenamiento local."
+        : "No había ningún modelo local que eliminar.",
+    });
+    diagEmit("ocr-language-package-removed", { language: code, removed });
+  } catch (error) {
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: "No se pudo desinstalar el idioma",
+      code: language.code,
+      message: String(error?.message || error),
+    });
+    diagnostics()?.error?.(error, "desinstalar-paquete-ocr", { language: code });
+  } finally {
+    setOcrLanguagePackageBusy(false);
+    if (ocrLanguageImportPreviewButton) {
+      ocrLanguageImportPreviewButton.disabled = false;
+      ocrLanguageImportPreviewButton.textContent = "Seleccionar y validar paquete offline";
+    }
+  }
+}
+
+async function initializeOcrLanguagePackageManager() {
+  renderOcrLanguageAdmin();
+
+  const desktopAvailable = Boolean(
     typeof window.__TAURI__?.dialog?.open === "function" &&
     typeof window.__TAURI__?.fs?.readFile === "function"
   );
-  ocrLanguageImportPreviewButton.disabled = !available;
-  if (!available) {
-    ocrLanguageImportPreviewButton.textContent = "Validación disponible en escritorio";
+  if (ocrLanguageImportPreviewButton) {
+    ocrLanguageImportPreviewButton.disabled = !desktopAvailable;
+    if (!desktopAvailable) {
+      ocrLanguageImportPreviewButton.textContent = "Validación disponible en escritorio";
+    }
+  }
+
+  try {
+    ocrLanguagePackages.storage = createOcrLanguageStorage({
+      driver: createIndexedDbOcrLanguageDriver(),
+    });
+    await refreshInstalledOcrLanguagePackages();
+  } catch (error) {
+    ocrLanguagePackages.storage = null;
+    ocrLanguagePackages.installed = [];
+    renderOcrLanguageAdmin();
+    showOcrLanguagePackagePreview({
+      kind: "error",
+      title: "Almacenamiento local no disponible",
+      message: String(error?.message || error),
+    });
+    diagnostics()?.error?.(error, "inicializar-almacen-idiomas-ocr", {
+      operation: "metadata-only",
+    });
   }
 }
 
@@ -5460,6 +5709,12 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
 ocrLanguageImportPreviewButton?.addEventListener("click", selectAndValidateOcrLanguagePackage);
+ocrLanguageInstallButton?.addEventListener("click", installPendingOcrLanguagePackage);
+ocrLanguageInstalledList?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remove-ocr-language]");
+  if (!button) return;
+  removeInstalledOcrLanguagePackage(button.dataset.removeOcrLanguage);
+});
 
 function createOcrLanguageOption(language) {
   const option = document.createElement("option");
@@ -5487,7 +5742,7 @@ if (ocrLanguageAvailability) {
   const catalog = summarizeOcrLanguageCatalog();
   ocrLanguageAvailability.textContent = `${catalog.catalogued} idiomas catalogados · ${catalog.installed} incluidos en esta compilación`;
 }
-initializeOcrLanguagePackagePreview();
+initializeOcrLanguagePackageManager();
 syncOcrLanguageSelectors();
 updateResponsiveViewerLayout();
 applyViewerPanelLayout();

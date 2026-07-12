@@ -7082,6 +7082,45 @@ body.viewer-focus-mode .viewer-focus-exit-button {
   color: #166534;
 }
 
+.viewer-ocr-language-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
+.viewer-ocr-language-remove {
+  min-height: 24px;
+  padding: 3px 7px;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #b91c1c;
+  font-size: 0.52rem;
+  font-weight: 800;
+}
+
+.viewer-ocr-language-remove:not(:disabled):hover {
+  border-color: #f87171;
+  background: #fef2f2;
+}
+
+.viewer-ocr-language-remove:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.viewer-ocr-language-list-empty {
+  margin: 0;
+  padding: 9px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 9px;
+  color: #64748b;
+  font-size: 0.58rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .viewer-ocr-language-import-preview {
   width: 100%;
 }
@@ -7195,6 +7234,21 @@ body.viewer-focus-mode .viewer-focus-exit-button {
 
 .viewer-ocr-language-package-preview[data-kind="error"] p {
   color: #991b1b;
+}
+
+.viewer-ocr-language-package-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.viewer-ocr-language-package-actions button {
+  width: 100%;
+  min-height: 34px;
+  font-size: 0.62rem;
+}
+
+.viewer-ocr-language-package-actions button[hidden] {
+  display: none !important;
 }
 
 .viewer-ocr-language-admin-note {
