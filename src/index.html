@@ -578,6 +578,18 @@
                       </label>
                     </div>
 
+                    <div class="viewer-ocr-profile-card">
+                      <label class="viewer-field" for="viewer-ocr-profile">
+                        <span>Perfil de reconocimiento</span>
+                        <select id="viewer-ocr-profile" disabled>
+                          <option value="fast">Rápido</option>
+                          <option value="balanced" selected>Equilibrado</option>
+                          <option value="precise">Preciso</option>
+                        </select>
+                      </label>
+                      <p id="viewer-ocr-profile-help">Calidad y velocidad equilibradas. Recomendado para la mayoría de documentos.</p>
+                    </div>
+
                     <div class="viewer-ocr-language-grid">
                     <label class="viewer-field" for="viewer-ocr-language">
                       <span>Idioma principal</span>
@@ -604,6 +616,7 @@
                       <button class="secondary-button" id="viewer-ocr-resume" type="button" hidden disabled>Reanudar OCR</button>
                       <button class="secondary-button" id="viewer-ocr-cancel" type="button" hidden disabled>Cancelar OCR</button>
                       <button class="secondary-button" id="viewer-ocr-clear" type="button" disabled>Eliminar OCR de la página</button>
+                      <button class="secondary-button" id="viewer-ocr-clear-all" type="button" disabled>Eliminar todo el OCR</button>
                     </div>
 
 <div class="viewer-ocr-progress" id="viewer-ocr-progress-wrap" hidden>

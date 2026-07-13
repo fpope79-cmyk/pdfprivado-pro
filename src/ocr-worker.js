@@ -109,7 +109,12 @@ async function ensureWorker(languages, onProgress, operationEpoch) {
   return worker;
 }
 
-export async function recognizeOcrImage(image, languages, { onProgress } = {}) {
+function resolvePageSegMode(value) {
+  const key = String(value || "AUTO").trim().toUpperCase();
+  return PSM[key] ?? PSM.AUTO;
+}
+
+export async function recognizeOcrImage(image, languages, { onProgress, parameters = {} } = {}) {
   const operationEpoch = epoch;
   const operation = createCancellationSignal();
   activeOperation = operation;
@@ -119,6 +124,13 @@ export async function recognizeOcrImage(image, languages, { onProgress } = {}) {
       ensureWorker(languages, onProgress, operationEpoch),
       operation.promise,
     ]);
+
+    if (operationEpoch !== epoch) throw new OcrCancelledError();
+
+    await activeWorker.setParameters({
+      tessedit_pageseg_mode: resolvePageSegMode(parameters.pageSegMode),
+      preserve_interword_spaces: String(parameters.preserveInterwordSpaces ?? "1"),
+    });
 
     if (operationEpoch !== epoch) throw new OcrCancelledError();
 

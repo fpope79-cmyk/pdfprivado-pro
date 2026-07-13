@@ -169,6 +169,7 @@ export async function recognizeExternalOcrImage(
   modelsValue,
   {
     onProgress,
+    parameters = {},
     cacheDriver = createIndexedDbTesseractCacheDriver(),
   } = {}
 ) {
@@ -258,8 +259,9 @@ export async function recognizeExternalOcrImage(
 
     await Promise.race([
       candidate.setParameters({
-        tessedit_pageseg_mode: PSM.AUTO,
-        preserve_interword_spaces: "1",
+        tessedit_pageseg_mode:
+          PSM[String(parameters.pageSegMode || "AUTO").trim().toUpperCase()] ?? PSM.AUTO,
+        preserve_interword_spaces: String(parameters.preserveInterwordSpaces ?? "1"),
       }),
       operation.cancellation,
     ]);
