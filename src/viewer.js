@@ -280,6 +280,12 @@ const ocrStartButton = $("#viewer-ocr-start");
 const ocrCancelButton = $("#viewer-ocr-cancel");
 const ocrClearButton = $("#viewer-ocr-clear");
 const ocrClearAllButton = $("#viewer-ocr-clear-all");
+const ocrBenchmarkPanel = $("#viewer-ocr-benchmark");
+const ocrBenchmarkRunButton = $("#viewer-ocr-benchmark-run");
+const ocrBenchmarkExportJsonButton = $("#viewer-ocr-benchmark-export-json");
+const ocrBenchmarkExportCsvButton = $("#viewer-ocr-benchmark-export-csv");
+const ocrBenchmarkSummary = $("#viewer-ocr-benchmark-summary");
+const ocrBenchmarkResults = $("#viewer-ocr-benchmark-results");
 const ocrProgressWrap = $("#viewer-ocr-progress-wrap");
 const ocrProgress = $("#viewer-ocr-progress");
 const ocrProgressValue = $("#viewer-ocr-progress-value");
@@ -404,6 +410,11 @@ const state = {
     batchLanguageCodes: [],
     batchLanguageKey: "",
     batchLanguageLabel: "",
+    benchmark: {
+      running: false,
+      results: [],
+      lastRun: null,
+    },
   },
 };
 
@@ -2276,6 +2287,7 @@ async function testInstalledOcrLanguagePackage(code) {
     }
 
     page = await getPdfPage(entry);
+    renderStartedAt = performance.now();
     rendered = await renderPageForOcr(page, entry, {
       ...OCR_RENDER_LIMITS,
       ...profile.render,
@@ -2336,6 +2348,8 @@ async function testInstalledOcrLanguagePackage(code) {
       effectiveDpi: rendered.effectiveDpi,
     });
   } catch (error) {
+    recognitionFinishedAt = performance.now();
+
     if (
       serial !== state.ocr.serial ||
       isExternalOcrCancelledError(error) ||
@@ -2805,6 +2819,7 @@ function updateOcrControls() {
       ? `Eliminar todo el OCR (${state.ocr.records.size})`
       : "Eliminar todo el OCR";
   }
+  renderOcrBenchmarkResults();
   refreshOcrPanel();
 }
 
@@ -3112,7 +3127,8 @@ async function recognizeOcrPageInBatch(
   profile,
   serial,
   pageIndex,
-  pageTotal
+  pageTotal,
+  { storeRecord = true } = {}
 ) {
   const entry = entryAt(pageNumber);
 
@@ -3126,6 +3142,11 @@ async function recognizeOcrPageInBatch(
   const entryId = entry.id;
   let page = null;
   let rendered = null;
+  const pageStartedAt = performance.now();
+  let renderStartedAt = 0;
+  let renderFinishedAt = 0;
+  let recognitionStartedAt = 0;
+  let recognitionFinishedAt = 0;
 
   try {
     state.ocr.targetPage = pageNumber;
@@ -3153,6 +3174,7 @@ async function recognizeOcrPageInBatch(
       },
     });
 
+    renderFinishedAt = performance.now();
     state.ocr.renderTask = null;
 
     if (serial !== state.ocr.serial || !state.ocr.running) {
@@ -3162,6 +3184,7 @@ async function recognizeOcrPageInBatch(
     }
 
     let result;
+    recognitionStartedAt = performance.now();
 
     if (languageSelection.usesOptionalModels) {
       const runtimeModels = await prepareOcrRuntimeModels(
@@ -3257,15 +3280,24 @@ async function recognizeOcrPageInBatch(
       effectiveDpi: rendered.effectiveDpi,
     });
 
-    state.ocr.records.set(ocrRecordKey(entry), record);
-    state.search.cache.delete(searchCacheKey(entry));
-    state.ocr.panelKey = "";
+    if (storeRecord) {
+      state.ocr.records.set(ocrRecordKey(entry), record);
+      state.search.cache.delete(searchCacheKey(entry));
+      state.ocr.panelKey = "";
+    }
 
     return {
       status: "success",
       hasText: record.hasText,
       words: record.words.length,
       confidence: record.confidence,
+      width: rendered.width,
+      height: rendered.height,
+      pixels: rendered.width * rendered.height,
+      effectiveDpi: rendered.effectiveDpi,
+      renderMs: Math.max(0, renderFinishedAt - renderStartedAt),
+      recognitionMs: Math.max(0, recognitionFinishedAt - recognitionStartedAt),
+      totalMs: Math.max(0, performance.now() - pageStartedAt),
     };
   } finally {
     try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
@@ -3280,6 +3312,134 @@ async function recognizeOcrPageInBatch(
     ocrLanguagePackages.runtimeCode = "";
     setOcrLanguagePackageBusy(false);
     renderOcrLanguageAdmin();
+  }
+}
+
+
+function formatBenchmarkNumber(value, digits = 0) {
+  const number = Number(value);
+  return Number.isFinite(number)
+    ? number.toLocaleString("es-ES", { maximumFractionDigits: digits, minimumFractionDigits: digits })
+    : "—";
+}
+
+function renderOcrBenchmarkResults() {
+  const results = state.ocr.benchmark.results || [];
+  const run = state.ocr.benchmark.lastRun;
+  const available = Boolean(diagnostics());
+  if (ocrBenchmarkPanel) ocrBenchmarkPanel.hidden = !available;
+  if (!available) return;
+
+  const busy = state.ocr.running || state.search.running || state.saving;
+  if (ocrBenchmarkRunButton) ocrBenchmarkRunButton.disabled = !state.file || !state.pageCount || busy;
+  if (ocrBenchmarkExportJsonButton) ocrBenchmarkExportJsonButton.disabled = !results.length || busy;
+  if (ocrBenchmarkExportCsvButton) ocrBenchmarkExportCsvButton.disabled = !results.length || busy;
+
+  if (ocrBenchmarkSummary) {
+    if (!run) {
+      ocrBenchmarkSummary.textContent = "Sin mediciones. Usa el alcance, idiomas y perfil seleccionados arriba.";
+    } else {
+      const successes = results.filter((item) => item.status === "success");
+      const average = successes.length
+        ? successes.reduce((sum, item) => sum + item.totalMs, 0) / successes.length
+        : 0;
+      ocrBenchmarkSummary.textContent = `${run.profileLabel} · ${results.length} páginas · ${formatOcrBatchDuration(run.totalMs)} · media ${formatOcrBatchDuration(average)}`;
+    }
+  }
+
+  if (ocrBenchmarkResults) {
+    ocrBenchmarkResults.innerHTML = results.length
+      ? results.map((item) => `<tr><td>${item.page}</td><td>${item.status === "success" ? formatOcrBatchDuration(item.totalMs) : "Error"}</td><td>${item.effectiveDpi || "—"}</td><td>${item.words ?? "—"}</td><td>${Number.isFinite(item.confidence) ? `${Math.round(item.confidence)} %` : "—"}</td></tr>`).join("")
+      : '<tr><td colspan="5">Todavía no hay resultados.</td></tr>';
+  }
+}
+
+function downloadOcrBenchmark(content, mimeType, extension) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  link.href = url;
+  link.download = `pdfprivado-banco-ocr-${stamp}.${extension}`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportOcrBenchmarkJson() {
+  if (!state.ocr.benchmark.lastRun) return;
+  downloadOcrBenchmark(JSON.stringify({ run: state.ocr.benchmark.lastRun, pages: state.ocr.benchmark.results }, null, 2), "application/json;charset=utf-8", "json");
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[;"\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportOcrBenchmarkCsv() {
+  const rows = [["page","status","profile","languages","effective_dpi","width","height","pixels","render_ms","recognition_ms","total_ms","words","confidence","error"]];
+  for (const item of state.ocr.benchmark.results) {
+    rows.push([item.page,item.status,item.profileKey,item.languageKey,item.effectiveDpi,item.width,item.height,item.pixels,Math.round(item.renderMs || 0),Math.round(item.recognitionMs || 0),Math.round(item.totalMs || 0),item.words,item.confidence,item.error || ""]);
+  }
+  downloadOcrBenchmark(rows.map((row) => row.map(csvCell).join(";")).join("\r\n"), "text/csv;charset=utf-8", "csv");
+}
+
+async function runOcrBenchmark() {
+  const scope = selectedOcrBatchScope();
+  const pages = ocrBatchPages(scope);
+  if (!diagnostics() || !state.file || !pages.length || state.ocr.running || state.search.running || state.saving) return;
+  if (scope === "ranges") {
+    const parsed = parseOcrPageRanges(ocrRange?.value);
+    if (parsed.errors.length) {
+      setOcrStatus(parsed.errors.join(" "), "error");
+      return;
+    }
+  }
+
+  const languageSelection = syncOcrLanguageSelectors();
+  const profile = selectedOcrProfile();
+  const serial = ++state.ocr.serial;
+  const startedAt = performance.now();
+  const results = [];
+  state.ocr.running = true;
+  state.ocr.benchmark.running = true;
+  state.ocr.benchmark.results = [];
+  state.ocr.benchmark.lastRun = null;
+  updateOcrControls();
+  renderOcrBenchmarkResults();
+  setOcrStatus(`Banco de pruebas: ${pages.length} páginas en perfil ${profile.label}. No se guardará el OCR.`);
+
+  const token = diagStart("ocr-benchmark", { pages: pages.length, scope, profileKey: profile.key, language: languageSelection.key });
+  try {
+    for (let index = 0; index < pages.length; index += 1) {
+      if (serial !== state.ocr.serial || !state.ocr.running) return;
+      const page = pages[index];
+      setOcrBatchProgress(page, index, pages.length, 1, "Medición interna");
+      try {
+        const result = await recognizeOcrPageInBatch(page, languageSelection, profile, serial, index, pages.length, { storeRecord: false });
+        results.push({ page, ...result, profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label });
+      } catch (error) {
+        if (serial !== state.ocr.serial || isOcrCancelledError(error) || isExternalOcrCancelledError(error) || error?.name === "AbortError") return;
+        results.push({ page, status: "error", profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label, error: String(error?.message || error) });
+      }
+      state.ocr.benchmark.results = [...results];
+      renderOcrBenchmarkResults();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+
+    const totalMs = performance.now() - startedAt;
+    state.ocr.benchmark.lastRun = { createdAt: new Date().toISOString(), scope, pages: pages.length, profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label, totalMs, sequential: true };
+    setOcrProgress(false, 100);
+    setOcrStatus(`Banco de pruebas completado en ${formatOcrBatchDuration(totalMs)}. El OCR normal no se ha modificado.`, "success");
+    diagEnd(token, { pages: pages.length, totalMs, errors: results.filter((item) => item.status === "error").length, profileKey: profile.key });
+  } finally {
+    state.ocr.running = false;
+    state.ocr.benchmark.running = false;
+    state.ocr.renderTask = null;
+    updateOcrControls();
+    renderOcrBenchmarkResults();
+    diagnosticContext();
   }
 }
 
@@ -6786,6 +6946,9 @@ ocrStartButton?.addEventListener("click", recognizeCurrentPage);
 ocrCancelButton?.addEventListener("click", () => cancelCurrentOcr());
 ocrClearButton?.addEventListener("click", clearCurrentOcr);
 ocrClearAllButton?.addEventListener("click", clearAllOcr);
+ocrBenchmarkRunButton?.addEventListener("click", runOcrBenchmark);
+ocrBenchmarkExportJsonButton?.addEventListener("click", exportOcrBenchmarkJson);
+ocrBenchmarkExportCsvButton?.addEventListener("click", exportOcrBenchmarkCsv);
 ocrPagePreviousButton?.addEventListener("click", () => {
   const page = normalizedOcrTargetPage() - 1;
   setOcrTargetPage(page, { navigate: true, announce: true });
@@ -7130,3 +7293,5 @@ resetSearchSession();
 updateControls();
 updateSplitPlan();
 initializeNativeOpenHandling();
+
+renderOcrBenchmarkResults();

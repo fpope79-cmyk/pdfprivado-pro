@@ -7859,3 +7859,28 @@ body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
 #viewer-ocr-range {
   width: 100%;
 }
+
+/* PDFPRIVADO_OCR_BENCHMARK_V1 */
+.viewer-ocr-benchmark {
+  border: 1px dashed #94a3b8;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.viewer-ocr-benchmark[hidden] { display: none !important; }
+.viewer-ocr-benchmark summary {
+  padding: 10px 12px;
+  color: #334155;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.viewer-ocr-benchmark-body { display: grid; gap: 10px; padding: 0 12px 12px; }
+.viewer-ocr-benchmark-body > p { margin: 0; color: #64748b; font-size: 0.61rem; line-height: 1.45; }
+.viewer-ocr-benchmark-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.viewer-ocr-benchmark-actions button:first-child { grid-column: 1 / -1; }
+.viewer-ocr-benchmark-summary { padding: 8px; border-radius: 8px; background: #e2e8f0; color: #334155 !important; font-weight: 800; }
+.viewer-ocr-benchmark-table-wrap { overflow: auto; max-height: 220px; border: 1px solid #dbe3ec; border-radius: 9px; background: white; }
+.viewer-ocr-benchmark-table { width: 100%; border-collapse: collapse; font-size: 0.58rem; }
+.viewer-ocr-benchmark-table th, .viewer-ocr-benchmark-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
+.viewer-ocr-benchmark-table th:first-child, .viewer-ocr-benchmark-table td:first-child { text-align: left; }
+.viewer-ocr-benchmark-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; }

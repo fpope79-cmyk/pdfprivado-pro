@@ -628,6 +628,25 @@
                     <p class="viewer-ocr-batch-summary" id="viewer-ocr-batch-summary" hidden aria-live="polite"></p>
                   </div>
                   <!-- PDFPRIVADO_OCR_STICKY_CONTROLS_V1_END -->
+
+                  <details class="viewer-ocr-benchmark" id="viewer-ocr-benchmark" hidden>
+                    <summary>Banco de pruebas OCR interno</summary>
+                    <div class="viewer-ocr-benchmark-body">
+                      <p>Herramienta de desarrollo. Ejecuta secuencialmente el alcance, idiomas y perfil seleccionados sin guardar ni sustituir el OCR de la sesión.</p>
+                      <div class="viewer-ocr-benchmark-actions">
+                        <button class="secondary-button" id="viewer-ocr-benchmark-run" type="button" disabled>Ejecutar medición</button>
+                        <button class="secondary-button" id="viewer-ocr-benchmark-export-json" type="button" disabled>Exportar JSON</button>
+                        <button class="secondary-button" id="viewer-ocr-benchmark-export-csv" type="button" disabled>Exportar CSV</button>
+                      </div>
+                      <p class="viewer-ocr-benchmark-summary" id="viewer-ocr-benchmark-summary">Sin mediciones.</p>
+                      <div class="viewer-ocr-benchmark-table-wrap">
+                        <table class="viewer-ocr-benchmark-table">
+                          <thead><tr><th>Página</th><th>Total</th><th>PPP</th><th>Palabras</th><th>Confianza</th></tr></thead>
+                          <tbody id="viewer-ocr-benchmark-results"><tr><td colspan="5">Todavía no hay resultados.</td></tr></tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </details>
                   <details class="viewer-ocr-language-admin">
                     <summary>
                       <span class="viewer-ocr-language-admin-heading">
