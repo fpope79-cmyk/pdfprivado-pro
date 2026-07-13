@@ -32,6 +32,9 @@ import {
   renderPageForOcr,
 } from "./ocr-core.js";
 import {
+  addInvisibleOcrTextToPdfPage,
+} from "./ocr-searchable-pdf.js";
+import {
   DEFAULT_OCR_PROFILE_KEY,
   resolveOcrProfile,
 } from "./ocr-profiles.js";
@@ -6762,6 +6765,183 @@ async function writeSaveTarget(target, bytes) {
 function outputBaseName() {
   return state.file?.name?.replace(/\.pdf$/i, "") || "documento";
 }
+
+function searchableOcrSummary() {
+  const pages = [];
+  let words = 0;
+  let rotated = 0;
+
+  for (let pageNumber = 1; pageNumber <= state.pageCount; pageNumber += 1) {
+    const entry = entryAt(pageNumber);
+    const key = ocrRecordKey(entry);
+    const record = key ? state.ocr.records.get(key) : null;
+    if (!entry || entry.kind !== "pdf" || !record?.words?.length) continue;
+
+    const pageRotation = normalizeRotation(entry.rotation || 0);
+    const recordRotation = normalizeRotation(record.rotation || 0);
+    const isRotated = pageRotation !== 0 || recordRotation !== 0;
+    if (isRotated) rotated += 1;
+
+    pages.push({
+      pageNumber,
+      key,
+      words: record.words.length,
+      rotated: isRotated,
+      language: record.languageLabel || record.language || "",
+    });
+    words += record.words.length;
+  }
+
+  return {
+    pages,
+    pageCount: pages.length,
+    words,
+    rotated,
+    usablePages: pages.length - rotated,
+  };
+}
+
+async function buildSearchablePdfBytesForEntries(entries, outputName = null) {
+  if (!window.PDFLib?.PDFDocument) throw new Error("El motor PDF local no esta disponible.");
+
+  const { PDFDocument, StandardFonts, degrees } = window.PDFLib;
+  const output = await PDFDocument.create();
+  const font = await output.embedFont(StandardFonts.Helvetica);
+  const loaded = new Map();
+  const report = {
+    pagesWithLayer: 0,
+    wordsInserted: 0,
+    wordsSkipped: 0,
+    pagesWithoutOcr: 0,
+    pagesRotatedSkipped: 0,
+  };
+
+  for (const entry of entries) {
+    if (entry.kind === "blank") {
+      const rotated = normalizeRotation(entry.rotation || 0) % 180 !== 0;
+      const width = rotated ? entry.height || A4.height : entry.width || A4.width;
+      const height = rotated ? entry.width || A4.width : entry.height || A4.height;
+      output.addPage([width, height]);
+      report.pagesWithoutOcr += 1;
+      continue;
+    }
+
+    const source = state.sources.get(entry.sourceId);
+    if (!source) throw new Error("Falta un PDF de origen necesario para guardar.");
+
+    let sourceDocument = loaded.get(source.id);
+    if (!sourceDocument) {
+      sourceDocument = await PDFDocument.load(source.bytes.slice(), { updateMetadata: false });
+      loaded.set(source.id, sourceDocument);
+    }
+
+    const [copied] = await output.copyPages(sourceDocument, [entry.sourcePage - 1]);
+    const original = copied.getRotation()?.angle || 0;
+    copied.setRotation(degrees(normalizeRotation(original + (entry.rotation || 0))));
+    output.addPage(copied);
+
+    const key = ocrRecordKey(entry);
+    const record = key ? state.ocr.records.get(key) : null;
+    if (!record) {
+      report.pagesWithoutOcr += 1;
+      continue;
+    }
+
+    const layer = addInvisibleOcrTextToPdfPage({
+      page: copied,
+      font,
+      record,
+      degrees,
+      allowRotated: false,
+    });
+
+    report.wordsSkipped += layer.skipped || 0;
+    if (layer.applied) {
+      report.pagesWithLayer += 1;
+      report.wordsInserted += layer.words;
+    } else if (/girad/i.test(layer.reason || "")) {
+      report.pagesRotatedSkipped += 1;
+    } else {
+      report.pagesWithoutOcr += 1;
+    }
+  }
+
+  if (cleanMetadataOption.checked) {
+    output.setTitle(titleNameOption.checked && outputName ? outputName.replace(/\.pdf$/i, "") : "");
+    output.setAuthor("");
+    output.setSubject("");
+    output.setKeywords([]);
+  } else if (titleNameOption.checked && outputName) {
+    output.setTitle(outputName.replace(/\.pdf$/i, ""));
+  }
+
+  const bytes = await output.save({ useObjectStreams: true });
+  return { bytes, report };
+}
+
+async function saveSearchableCopyInternal() {
+  if (!state.file || state.saving) return null;
+
+  const summary = searchableOcrSummary();
+  if (!summary.usablePages) {
+    throw new Error(
+      summary.rotated
+        ? "Solo hay OCR en paginas giradas, que esta primera prueba interna todavia omite."
+        : "No hay paginas con OCR posicionado disponible en esta sesion."
+    );
+  }
+
+  state.saving = true;
+  updateControls();
+  hideFeedback();
+  resetProgress();
+
+  try {
+    const suggested = sanitizePdfName(state.file.name, "buscable");
+    const target = await chooseSaveTarget(suggested);
+    if (!target) {
+      setFeedback("Guardado cancelado. No se creo ningun archivo.", "info");
+      return null;
+    }
+
+    setProgress(10, "Preparando PDF buscable", "Copiando paginas y preparando la capa OCR invisible.");
+    const result = await buildSearchablePdfBytesForEntries(state.pagePlan, target.name);
+    setProgress(82, "Guardando PDF buscable", target.name);
+
+    const savedPath = await writeSaveTarget(target, result.bytes);
+    state.lastSavedPath = savedPath;
+    revealButton.hidden =
+      !savedPath ||
+      typeof window.__TAURI__?.opener?.revealItemInDir !== "function";
+
+    const report = result.report;
+    const detail =
+      report.pagesWithLayer + " paginas con capa OCR · " +
+      report.wordsInserted + " palabras insertadas" +
+      (report.pagesRotatedSkipped ? " · " + report.pagesRotatedSkipped + " giradas omitidas" : "");
+
+    setProgress(100, "PDF buscable guardado", detail, "success");
+    setFeedback(
+      target.name + " guardado como copia nueva. " + detail + ".",
+      "success"
+    );
+
+    return { target, savedPath, report };
+  } catch (error) {
+    const message = "No se pudo crear el PDF buscable: " + (error?.message || error) + ".";
+    setProgress(0, "No se pudo crear el PDF buscable", message, "error");
+    setFeedback(message, "error");
+    throw error;
+  } finally {
+    state.saving = false;
+    updateControls();
+  }
+}
+
+window.PDFPrivadoSearchablePdfTest = Object.freeze({
+  inspect: searchableOcrSummary,
+  save: saveSearchableCopyInternal,
+});
 
 async function saveCopy() {
   if (!state.file || state.saving) return;

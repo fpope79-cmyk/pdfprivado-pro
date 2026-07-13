@@ -219,3 +219,103 @@ export function summarizeSearchableTextPlacements(result) {
     reason: result.placements.length ? "" : "No quedaron palabras utilizables.",
   };
 }
+
+function normalizePdfText(text) {
+  return String(text || "")
+    .normalize("NFC")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .trim();
+}
+
+function fitFontSize(font, text, placement) {
+  const byHeight = positive(placement.fontSize, 1);
+  let widthAtHeight = 0;
+  try {
+    widthAtHeight = font.widthOfTextAtSize(text, byHeight);
+  } catch {
+    return 0;
+  }
+  if (!(widthAtHeight > 0)) return byHeight;
+  return Math.max(0.5, Math.min(byHeight, byHeight * (placement.width / widthAtHeight)));
+}
+
+export function addInvisibleOcrTextToPdfPage({
+  page,
+  font,
+  record,
+  degrees,
+  minimumConfidence = null,
+  allowRotated = false,
+} = {}) {
+  if (!page || !font || typeof page.drawText !== "function") {
+    throw new Error("Faltan la página PDF o la fuente para crear la capa OCR.");
+  }
+
+  const pageRotation = normalizeRotation(page.getRotation?.()?.angle || 0);
+  const recordRotation = normalizeRotation(record?.rotation || 0);
+  if (!allowRotated && (pageRotation !== 0 || recordRotation !== 0)) {
+    return {
+      applied: false,
+      words: 0,
+      skipped: 0,
+      reason: "La primera prueba interna omite páginas giradas.",
+    };
+  }
+
+  const { width, height } = page.getSize();
+  const result = buildSearchableTextPlacements(record, {
+    pdfWidth: width,
+    pdfHeight: height,
+    minimumConfidence,
+  });
+
+  if (!result.valid) {
+    return {
+      applied: false,
+      words: 0,
+      skipped: result.skipped,
+      reason: result.reason,
+    };
+  }
+
+  let words = 0;
+  let skipped = result.skipped;
+
+  for (const placement of result.placements) {
+    const text = normalizePdfText(placement.text);
+    if (!text) {
+      skipped += 1;
+      continue;
+    }
+
+    const size = fitFontSize(font, text, placement);
+    if (!(size > 0)) {
+      skipped += 1;
+      continue;
+    }
+
+    try {
+      page.drawText(text, {
+        x: placement.x,
+        y: placement.y,
+        size,
+        font,
+        opacity: 0,
+        rotate:
+          allowRotated && placement.rotation && typeof degrees === "function"
+            ? degrees(placement.rotation)
+            : undefined,
+      });
+      words += 1;
+    } catch {
+      skipped += 1;
+    }
+  }
+
+  return {
+    applied: words > 0,
+    words,
+    skipped,
+    reason: words ? "" : "No se pudo insertar ninguna palabra con la fuente de prueba.",
+  };
+}
