@@ -3163,6 +3163,7 @@ async function recognizeOcrPageInBatch(
     );
 
     page = await getPdfPage(entry);
+    renderStartedAt = performance.now();
     rendered = await renderPageForOcr(page, entry, {
       ...OCR_RENDER_LIMITS,
       ...profile.render,
@@ -3261,6 +3262,8 @@ async function recognizeOcrPageInBatch(
       );
     }
 
+    recognitionFinishedAt = performance.now();
+
     if (
       serial !== state.ocr.serial ||
       !state.ocr.running ||
@@ -3298,6 +3301,12 @@ async function recognizeOcrPageInBatch(
       renderMs: Math.max(0, renderFinishedAt - renderStartedAt),
       recognitionMs: Math.max(0, recognitionFinishedAt - recognitionStartedAt),
       totalMs: Math.max(0, performance.now() - pageStartedAt),
+      timingOverheadMs: Math.max(
+        0,
+        performance.now() - pageStartedAt -
+          Math.max(0, renderFinishedAt - renderStartedAt) -
+          Math.max(0, recognitionFinishedAt - recognitionStartedAt)
+      ),
     };
   } finally {
     try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
