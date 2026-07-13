@@ -588,6 +588,15 @@
                         </select>
                       </label>
                       <p id="viewer-ocr-profile-help">Calidad y velocidad equilibradas. Recomendado para la mayoría de documentos.</p>
+                      <label class="viewer-field viewer-ocr-concurrency-field" for="viewer-ocr-concurrency">
+                        <span>Procesamiento multipágina</span>
+                        <select id="viewer-ocr-concurrency" disabled>
+                          <option value="auto" selected>Automático recomendado</option>
+                          <option value="1">Seguro · 1 tarea</option>
+                          <option value="2">Rápido · hasta 2 tareas</option>
+                        </select>
+                      </label>
+                      <p id="viewer-ocr-concurrency-help">Se elegirá automáticamente el modo seguro según perfil, idiomas y memoria disponible.</p>
                     </div>
 
                     <div class="viewer-ocr-language-grid">

@@ -7897,3 +7897,7 @@ body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
 .viewer-ocr-benchmark-concurrency span { font-size: 0.62rem; font-weight: 900; color: #334155; }
 .viewer-ocr-benchmark-concurrency select { width: 100%; min-height: 34px; }
 .viewer-ocr-benchmark-concurrency small { color: #64748b; font-size: 0.56rem; line-height: 1.4; }
+
+/* PDFPRIVADO_OCR_CONCURRENCIA_NORMAL_V1 */
+.viewer-ocr-concurrency-field { margin-top: 0.8rem; }
+#viewer-ocr-concurrency-help { margin: 0.45rem 0 0; color: var(--text-muted); font-size: 0.86rem; line-height: 1.45; }
