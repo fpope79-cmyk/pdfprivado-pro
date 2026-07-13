@@ -2348,8 +2348,6 @@ async function testInstalledOcrLanguagePackage(code) {
       effectiveDpi: rendered.effectiveDpi,
     });
   } catch (error) {
-    recognitionFinishedAt = performance.now();
-
     if (
       serial !== state.ocr.serial ||
       isExternalOcrCancelledError(error) ||
@@ -3121,6 +3119,32 @@ function setOcrBatchProgress(
   );
 }
 
+function readOcrMemorySnapshot() {
+  const memory = globalThis.performance?.memory;
+  if (!memory) {
+    return {
+      supported: false,
+      usedJsHeapBytes: null,
+      totalJsHeapBytes: null,
+      jsHeapLimitBytes: null,
+    };
+  }
+
+  return {
+    supported: true,
+    usedJsHeapBytes: Number(memory.usedJSHeapSize) || 0,
+    totalJsHeapBytes: Number(memory.totalJSHeapSize) || 0,
+    jsHeapLimitBytes: Number(memory.jsHeapSizeLimit) || 0,
+  };
+}
+
+function benchmarkMemoryPeak(...snapshots) {
+  const values = snapshots
+    .map((snapshot) => Number(snapshot?.usedJsHeapBytes))
+    .filter((value) => Number.isFinite(value));
+  return values.length ? Math.max(...values) : null;
+}
+
 async function recognizeOcrPageInBatch(
   pageNumber,
   languageSelection,
@@ -3143,6 +3167,9 @@ async function recognizeOcrPageInBatch(
   let page = null;
   let rendered = null;
   const pageStartedAt = performance.now();
+  const memoryBefore = readOcrMemorySnapshot();
+  let memoryAfterRender = null;
+  let memoryAfterRecognition = null;
   let renderStartedAt = 0;
   let renderFinishedAt = 0;
   let recognitionStartedAt = 0;
@@ -3176,6 +3203,7 @@ async function recognizeOcrPageInBatch(
     });
 
     renderFinishedAt = performance.now();
+    memoryAfterRender = readOcrMemorySnapshot();
     state.ocr.renderTask = null;
 
     if (serial !== state.ocr.serial || !state.ocr.running) {
@@ -3263,6 +3291,7 @@ async function recognizeOcrPageInBatch(
     }
 
     recognitionFinishedAt = performance.now();
+    memoryAfterRecognition = readOcrMemorySnapshot();
 
     if (
       serial !== state.ocr.serial ||
@@ -3307,6 +3336,22 @@ async function recognizeOcrPageInBatch(
           Math.max(0, renderFinishedAt - renderStartedAt) -
           Math.max(0, recognitionFinishedAt - recognitionStartedAt)
       ),
+      memorySupported: Boolean(memoryBefore.supported),
+      heapBeforeBytes: memoryBefore.usedJsHeapBytes,
+      heapAfterRenderBytes: memoryAfterRender?.usedJsHeapBytes ?? null,
+      heapAfterRecognitionBytes: memoryAfterRecognition?.usedJsHeapBytes ?? null,
+      heapPeakBytes: benchmarkMemoryPeak(
+        memoryBefore,
+        memoryAfterRender,
+        memoryAfterRecognition
+      ),
+      heapDeltaBytes:
+        memoryAfterRecognition?.usedJsHeapBytes != null &&
+        memoryBefore.usedJsHeapBytes != null
+          ? memoryAfterRecognition.usedJsHeapBytes - memoryBefore.usedJsHeapBytes
+          : null,
+      jsHeapLimitBytes: memoryBefore.jsHeapLimitBytes,
+      canvasBytesEstimate: rendered.width * rendered.height * 4,
     };
   } finally {
     try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
@@ -3352,7 +3397,14 @@ function renderOcrBenchmarkResults() {
       const average = successes.length
         ? successes.reduce((sum, item) => sum + item.totalMs, 0) / successes.length
         : 0;
-      ocrBenchmarkSummary.textContent = `${run.profileLabel} · ${results.length} páginas · ${formatOcrBatchDuration(run.totalMs)} · media ${formatOcrBatchDuration(average)}`;
+      const peakHeap = Math.max(
+        0,
+        ...successes.map((item) => Number(item.heapPeakBytes) || 0)
+      );
+      const memoryText = run.memorySupported
+        ? ` · pico JS ${formatBenchmarkNumber(peakHeap / 1048576, 1)} MB`
+        : " · memoria JS no disponible";
+      ocrBenchmarkSummary.textContent = `${run.profileLabel} · ${results.length} páginas · ${formatOcrBatchDuration(run.totalMs)} · media ${formatOcrBatchDuration(average)}${memoryText}`;
     }
   }
 
@@ -3387,9 +3439,9 @@ function csvCell(value) {
 }
 
 function exportOcrBenchmarkCsv() {
-  const rows = [["page","status","profile","languages","effective_dpi","width","height","pixels","render_ms","recognition_ms","total_ms","words","confidence","error"]];
+  const rows = [["page","status","profile","languages","effective_dpi","width","height","pixels","canvas_bytes_estimate","render_ms","recognition_ms","timing_overhead_ms","total_ms","memory_supported","heap_before_bytes","heap_after_render_bytes","heap_after_recognition_bytes","heap_peak_bytes","heap_delta_bytes","js_heap_limit_bytes","words","confidence","error"]];
   for (const item of state.ocr.benchmark.results) {
-    rows.push([item.page,item.status,item.profileKey,item.languageKey,item.effectiveDpi,item.width,item.height,item.pixels,Math.round(item.renderMs || 0),Math.round(item.recognitionMs || 0),Math.round(item.totalMs || 0),item.words,item.confidence,item.error || ""]);
+    rows.push([item.page,item.status,item.profileKey,item.languageKey,item.effectiveDpi,item.width,item.height,item.pixels,item.canvasBytesEstimate,Math.round(item.renderMs || 0),Math.round(item.recognitionMs || 0),Math.round(item.timingOverheadMs || 0),Math.round(item.totalMs || 0),item.memorySupported,item.heapBeforeBytes,item.heapAfterRenderBytes,item.heapAfterRecognitionBytes,item.heapPeakBytes,item.heapDeltaBytes,item.jsHeapLimitBytes,item.words,item.confidence,item.error || ""]);
   }
   downloadOcrBenchmark(rows.map((row) => row.map(csvCell).join(";")).join("\r\n"), "text/csv;charset=utf-8", "csv");
 }
@@ -3438,10 +3490,44 @@ async function runOcrBenchmark() {
     }
 
     const totalMs = performance.now() - startedAt;
-    state.ocr.benchmark.lastRun = { createdAt: new Date().toISOString(), scope, pages: pages.length, profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label, totalMs, sequential: true };
+    const successfulResults = results.filter((item) => item.status === "success");
+    const memorySupported = successfulResults.some((item) => item.memorySupported);
+    const peakHeapBytes = memorySupported
+      ? Math.max(0, ...successfulResults.map((item) => Number(item.heapPeakBytes) || 0))
+      : null;
+    const peakCanvasBytesEstimate = successfulResults.length
+      ? Math.max(0, ...successfulResults.map((item) => Number(item.canvasBytesEstimate) || 0))
+      : 0;
+    state.ocr.benchmark.lastRun = {
+      createdAt: new Date().toISOString(),
+      scope,
+      pages: pages.length,
+      profileKey: profile.key,
+      profileLabel: profile.label,
+      languageKey: languageSelection.key,
+      languageLabel: languageSelection.label,
+      totalMs,
+      sequential: true,
+      memorySupported,
+      peakHeapBytes,
+      jsHeapLimitBytes: successfulResults.find((item) => item.jsHeapLimitBytes)?.jsHeapLimitBytes ?? null,
+      peakCanvasBytesEstimate,
+      deviceMemoryGb: Number(navigator.deviceMemory) || null,
+      memoryWarning: memorySupported
+        ? null
+        : "performance.memory no está disponible; usa canvasBytesEstimate como estimación conservadora.",
+    };
     setOcrProgress(false, 100);
     setOcrStatus(`Banco de pruebas completado en ${formatOcrBatchDuration(totalMs)}. El OCR normal no se ha modificado.`, "success");
-    diagEnd(token, { pages: pages.length, totalMs, errors: results.filter((item) => item.status === "error").length, profileKey: profile.key });
+    diagEnd(token, {
+      pages: pages.length,
+      totalMs,
+      errors: results.filter((item) => item.status === "error").length,
+      profileKey: profile.key,
+      memorySupported: state.ocr.benchmark.lastRun.memorySupported,
+      peakHeapBytes: state.ocr.benchmark.lastRun.peakHeapBytes,
+      peakCanvasBytesEstimate: state.ocr.benchmark.lastRun.peakCanvasBytesEstimate,
+    });
   } finally {
     state.ocr.running = false;
     state.ocr.benchmark.running = false;
