@@ -7820,3 +7820,26 @@ body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
   margin-top: 0.15rem;
   flex: 0 0 auto;
 }
+/* PDFPRIVADO_OCR_MULTIPAGINA_AVANZADO_V1 */
+.viewer-ocr-selection-summary,
+.viewer-ocr-batch-summary {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--viewer-border, #d7dce5);
+  border-radius: 0.65rem;
+  background: var(--viewer-surface-soft, rgba(127, 127, 127, 0.06));
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.viewer-ocr-batch-summary[data-kind="success"] {
+  border-color: rgba(22, 133, 86, 0.35);
+}
+
+.viewer-ocr-batch-summary[data-kind="warning"] {
+  border-color: rgba(185, 111, 20, 0.42);
+}
+
+#viewer-ocr-range {
+  width: 100%;
+}

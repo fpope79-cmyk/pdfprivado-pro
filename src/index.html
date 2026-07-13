@@ -556,10 +556,21 @@
                         <span>Alcance del OCR</span>
                         <select id="viewer-ocr-scope" disabled>
                           <option value="current">Página elegida</option>
+                          <option value="selected">Páginas seleccionadas en Organizar</option>
+                          <option value="ranges">Páginas e intervalos</option>
                           <option value="without-text">Solo páginas sin texto</option>
+                          <option value="failed">Reintentar páginas fallidas</option>
                           <option value="all">Documento completo</option>
                         </select>
                       </label>
+
+                      <!-- PDFPRIVADO_OCR_MULTIPAGINA_AVANZADO_V1 -->
+                      <label class="viewer-field" id="viewer-ocr-range-row" for="viewer-ocr-range" hidden>
+                        <span>Páginas e intervalos</span>
+                        <input id="viewer-ocr-range" type="text" placeholder="1-5, 8, 11-14" autocomplete="off" disabled>
+                      </label>
+
+                      <p class="viewer-ocr-selection-summary" id="viewer-ocr-selection-summary" hidden></p>
 
                       <label class="viewer-ocr-reprocess-option">
                         <input id="viewer-ocr-reprocess" type="checkbox" disabled>
@@ -588,17 +599,20 @@
                   <!-- PDFPRIVADO_OCR_STICKY_CONTROLS_V1_START -->
                   <div class="viewer-ocr-operation-panel" id="viewer-ocr-operation-panel">
 <div class="viewer-ocr-actions">
-                    <button class="primary-button" id="viewer-ocr-start" type="button" disabled>Reconocer página elegida</button>
-                    <button class="secondary-button" id="viewer-ocr-cancel" type="button" hidden disabled>Cancelar OCR</button>
-                    <button class="secondary-button" id="viewer-ocr-clear" type="button" disabled>Eliminar OCR de la página</button>
-                  </div>
+                      <button class="primary-button" id="viewer-ocr-start" type="button" disabled>Reconocer página elegida</button>
+                      <button class="secondary-button" id="viewer-ocr-pause" type="button" hidden disabled>Pausar tras esta página</button>
+                      <button class="secondary-button" id="viewer-ocr-resume" type="button" hidden disabled>Reanudar OCR</button>
+                      <button class="secondary-button" id="viewer-ocr-cancel" type="button" hidden disabled>Cancelar OCR</button>
+                      <button class="secondary-button" id="viewer-ocr-clear" type="button" disabled>Eliminar OCR de la página</button>
+                    </div>
 
-                  <div class="viewer-ocr-progress" id="viewer-ocr-progress-wrap" hidden>
+<div class="viewer-ocr-progress" id="viewer-ocr-progress-wrap" hidden>
                     <progress id="viewer-ocr-progress" max="100" value="0">0 %</progress>
                     <span id="viewer-ocr-progress-value">0 %</span>
                   </div>
 
                   <p class="viewer-ocr-status" id="viewer-ocr-status" role="status" aria-live="polite">Abre un PDF para iniciar el OCR local.</p>
+                    <p class="viewer-ocr-batch-summary" id="viewer-ocr-batch-summary" hidden aria-live="polite"></p>
                   </div>
                   <!-- PDFPRIVADO_OCR_STICKY_CONTROLS_V1_END -->
                   <details class="viewer-ocr-language-admin">
