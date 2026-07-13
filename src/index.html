@@ -550,7 +550,24 @@
                     <strong id="viewer-ocr-page-label">Ninguna página abierta</strong>
                   </div>
 
-                  <div class="viewer-ocr-language-grid">
+                  <!-- PDFPRIVADO_OCR_MULTIPAGINA_BASE_V1 -->
+                    <div class="viewer-ocr-batch-grid">
+                      <label class="viewer-field" for="viewer-ocr-scope">
+                        <span>Alcance del OCR</span>
+                        <select id="viewer-ocr-scope" disabled>
+                          <option value="current">Página elegida</option>
+                          <option value="without-text">Solo páginas sin texto</option>
+                          <option value="all">Documento completo</option>
+                        </select>
+                      </label>
+
+                      <label class="viewer-ocr-reprocess-option">
+                        <input id="viewer-ocr-reprocess" type="checkbox" disabled>
+                        <span>Reprocesar páginas que ya tengan OCR en esta sesión</span>
+                      </label>
+                    </div>
+
+                    <div class="viewer-ocr-language-grid">
                     <label class="viewer-field" for="viewer-ocr-language">
                       <span>Idioma principal</span>
                       <select id="viewer-ocr-language" disabled>
