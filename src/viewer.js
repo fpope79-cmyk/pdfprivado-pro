@@ -42,6 +42,9 @@ import {
   recognizeOcrImage,
 } from "./ocr-worker.js";
 import {
+  createOcrBenchmarkWorkerPool,
+} from "./ocr-benchmark-worker.js";
+import {
   cancelExternalOcrRuntime,
   isExternalOcrCancelledError,
   recognizeExternalOcrImage,
@@ -282,6 +285,8 @@ const ocrClearButton = $("#viewer-ocr-clear");
 const ocrClearAllButton = $("#viewer-ocr-clear-all");
 const ocrBenchmarkPanel = $("#viewer-ocr-benchmark");
 const ocrBenchmarkRunButton = $("#viewer-ocr-benchmark-run");
+const ocrBenchmarkConcurrency = $("#viewer-ocr-benchmark-concurrency");
+const ocrBenchmarkConcurrencyHelp = $("#viewer-ocr-benchmark-concurrency-help");
 const ocrBenchmarkExportJsonButton = $("#viewer-ocr-benchmark-export-json");
 const ocrBenchmarkExportCsvButton = $("#viewer-ocr-benchmark-export-csv");
 const ocrBenchmarkSummary = $("#viewer-ocr-benchmark-summary");
@@ -414,6 +419,9 @@ const state = {
       running: false,
       results: [],
       lastRun: null,
+      concurrency: 1,
+      workerPool: null,
+      renderTasks: new Set(),
     },
   },
 };
@@ -2837,10 +2845,15 @@ async function cancelCurrentOcr({ silent = false } = {}) {
   state.ocr.serial += 1;
   state.ocr.running = false;
   try { state.ocr.renderTask?.cancel?.(); } catch { /* tarea ya finalizada */ }
+  for (const task of state.ocr.benchmark.renderTasks || []) {
+    try { task?.cancel?.(); } catch { /* tarea ya finalizada */ }
+  }
+  state.ocr.benchmark.renderTasks?.clear?.();
   state.ocr.renderTask = null;
   await Promise.allSettled([
     cancelOcrEngine(),
     cancelExternalOcrRuntime(),
+    state.ocr.benchmark.workerPool?.cancel?.(),
   ]);
   ocrLanguagePackages.runtimeCode = "";
   setOcrLanguagePackageBusy(false);
@@ -3370,6 +3383,171 @@ async function recognizeOcrPageInBatch(
 }
 
 
+function requestedOcrBenchmarkConcurrency() {
+  const value = Number.parseInt(ocrBenchmarkConcurrency?.value || "1", 10);
+  return value === 2 ? 2 : 1;
+}
+
+function resolveOcrBenchmarkConcurrency(profile, languageSelection) {
+  const requested = requestedOcrBenchmarkConcurrency();
+  const reasons = [];
+  if (profile.key === "precise") reasons.push("el perfil Preciso se mantiene secuencial");
+  if (languageSelection.usesOptionalModels) reasons.push("los idiomas opcionales usan un runtime exclusivo");
+  if (languageSelection.codes.length !== 1) reasons.push("el OCR bilingüe se mantiene secuencial");
+  const effective = reasons.length ? 1 : requested;
+  return { requested, effective, reasons };
+}
+
+function updateOcrBenchmarkConcurrencyUi() {
+  if (!ocrBenchmarkConcurrency) return;
+  const profile = selectedOcrProfile();
+  const languageSelection = syncOcrLanguageSelectors();
+  const resolved = resolveOcrBenchmarkConcurrency(profile, languageSelection);
+  ocrBenchmarkConcurrency.disabled = Boolean(state.ocr.running || state.search.running || state.saving);
+  if (ocrBenchmarkConcurrencyHelp) {
+    ocrBenchmarkConcurrencyHelp.textContent = resolved.reasons.length
+      ? `Se usará 1 tarea: ${resolved.reasons.join("; ")}.`
+      : resolved.requested === 2
+        ? "Dos workers independientes. Solo para medición interna; el OCR normal sigue secuencial."
+        : "Una tarea. Modo seguro y comparable con el OCR normal.";
+  }
+}
+
+async function recognizeOcrBenchmarkPage(
+  pageNumber,
+  languageSelection,
+  profile,
+  serial,
+  pageIndex,
+  pageTotal,
+  workerPool
+) {
+  const entry = entryAt(pageNumber);
+  if (!entry || entry.kind !== "pdf") return { status: "skipped", reason: "Página no compatible" };
+
+  let page = null;
+  let rendered = null;
+  let renderTask = null;
+  const pageStartedAt = performance.now();
+  const memoryBefore = readOcrMemorySnapshot();
+  let memoryAfterRender = null;
+  let memoryAfterRecognition = null;
+  let renderStartedAt = 0;
+  let renderFinishedAt = 0;
+  let recognitionStartedAt = 0;
+  let recognitionFinishedAt = 0;
+
+  try {
+    page = await getPdfPage(entry);
+    renderStartedAt = performance.now();
+    rendered = await renderPageForOcr(page, entry, {
+      ...OCR_RENDER_LIMITS,
+      ...profile.render,
+      onRenderTask(task) {
+        renderTask = task;
+        state.ocr.benchmark.renderTasks.add(task);
+      },
+      isCancelled() {
+        return serial !== state.ocr.serial || !state.ocr.running;
+      },
+    });
+    renderFinishedAt = performance.now();
+    memoryAfterRender = readOcrMemorySnapshot();
+    if (renderTask) state.ocr.benchmark.renderTasks.delete(renderTask);
+
+    if (serial !== state.ocr.serial || !state.ocr.running) throw new DOMException("OCR cancelado", "AbortError");
+
+    recognitionStartedAt = performance.now();
+    const result = await workerPool.recognize(rendered.canvas, {
+      onProgress(message) {
+        if (serial !== state.ocr.serial || !state.ocr.running) return;
+        const translated = translateOcrProgress(message);
+        setOcrBatchProgress(pageNumber, pageIndex, pageTotal, translated.percent, translated.text);
+      },
+    });
+    recognitionFinishedAt = performance.now();
+    memoryAfterRecognition = readOcrMemorySnapshot();
+
+    if (serial !== state.ocr.serial || !state.ocr.running) throw new DOMException("OCR cancelado", "AbortError");
+
+    const record = buildOcrRecord(result?.data, {
+      imageWidth: rendered.width,
+      imageHeight: rendered.height,
+      language: languageSelection.key,
+      languageLabel: languageSelection.label,
+      rotation: rendered.rotation,
+      effectiveDpi: rendered.effectiveDpi,
+    });
+    const totalMs = Math.max(0, performance.now() - pageStartedAt);
+    const renderMs = Math.max(0, renderFinishedAt - renderStartedAt);
+    const recognitionMs = Math.max(0, recognitionFinishedAt - recognitionStartedAt);
+    return {
+      status: "success",
+      hasText: record.hasText,
+      words: record.words.length,
+      confidence: record.confidence,
+      width: rendered.width,
+      height: rendered.height,
+      pixels: rendered.width * rendered.height,
+      effectiveDpi: rendered.effectiveDpi,
+      renderMs,
+      recognitionMs,
+      totalMs,
+      timingOverheadMs: Math.max(0, totalMs - renderMs - recognitionMs),
+      memorySupported: Boolean(memoryBefore.supported),
+      heapBeforeBytes: memoryBefore.usedJsHeapBytes,
+      heapAfterRenderBytes: memoryAfterRender?.usedJsHeapBytes ?? null,
+      heapAfterRecognitionBytes: memoryAfterRecognition?.usedJsHeapBytes ?? null,
+      heapPeakBytes: benchmarkMemoryPeak(memoryBefore, memoryAfterRender, memoryAfterRecognition),
+      heapDeltaBytes:
+        memoryAfterRecognition?.usedJsHeapBytes != null && memoryBefore.usedJsHeapBytes != null
+          ? memoryAfterRecognition.usedJsHeapBytes - memoryBefore.usedJsHeapBytes
+          : null,
+      jsHeapLimitBytes: memoryBefore.jsHeapLimitBytes,
+      canvasBytesEstimate: rendered.width * rendered.height * 4,
+    };
+  } finally {
+    if (renderTask) state.ocr.benchmark.renderTasks.delete(renderTask);
+    try { page?.cleanup?.(); } catch { /* limpieza defensiva */ }
+    if (rendered?.canvas) {
+      rendered.canvas.width = 1;
+      rendered.canvas.height = 1;
+    }
+  }
+}
+
+async function runOcrBenchmarkQueue({ pages, concurrency, workerPool, languageSelection, profile, serial, results }) {
+  let nextIndex = 0;
+  async function workerLoop() {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= pages.length) return;
+      if (serial !== state.ocr.serial || !state.ocr.running) return;
+      const page = pages[index];
+      try {
+        const result = await recognizeOcrBenchmarkPage(
+          page,
+          languageSelection,
+          profile,
+          serial,
+          index,
+          pages.length,
+          workerPool
+        );
+        results[index] = { page, ...result, profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label };
+      } catch (error) {
+        if (serial !== state.ocr.serial || isOcrCancelledError(error) || error?.name === "AbortError" || error?.name === "OcrCancelledError") return;
+        results[index] = { page, status: "error", profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label, error: String(error?.message || error) };
+      }
+      state.ocr.benchmark.results = results.filter(Boolean);
+      renderOcrBenchmarkResults();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+  }
+  await Promise.all(Array.from({ length: concurrency }, () => workerLoop()));
+}
+
 function formatBenchmarkNumber(value, digits = 0) {
   const number = Number(value);
   return Number.isFinite(number)
@@ -3388,6 +3566,7 @@ function renderOcrBenchmarkResults() {
   if (ocrBenchmarkRunButton) ocrBenchmarkRunButton.disabled = !state.file || !state.pageCount || busy;
   if (ocrBenchmarkExportJsonButton) ocrBenchmarkExportJsonButton.disabled = !results.length || busy;
   if (ocrBenchmarkExportCsvButton) ocrBenchmarkExportCsvButton.disabled = !results.length || busy;
+  updateOcrBenchmarkConcurrencyUi();
 
   if (ocrBenchmarkSummary) {
     if (!run) {
@@ -3404,7 +3583,7 @@ function renderOcrBenchmarkResults() {
       const memoryText = run.memorySupported
         ? ` · pico JS ${formatBenchmarkNumber(peakHeap / 1048576, 1)} MB`
         : " · memoria JS no disponible";
-      ocrBenchmarkSummary.textContent = `${run.profileLabel} · ${results.length} páginas · ${formatOcrBatchDuration(run.totalMs)} · media ${formatOcrBatchDuration(average)}${memoryText}`;
+      ocrBenchmarkSummary.textContent = `${run.profileLabel} · ${results.length} páginas · ${formatOcrBatchDuration(run.totalMs)} · media ${formatOcrBatchDuration(average)} · ${run.concurrencyEffective || 1} tarea${(run.concurrencyEffective || 1) === 1 ? "" : "s"}${memoryText}`;
     }
   }
 
@@ -3439,9 +3618,9 @@ function csvCell(value) {
 }
 
 function exportOcrBenchmarkCsv() {
-  const rows = [["page","status","profile","languages","effective_dpi","width","height","pixels","canvas_bytes_estimate","render_ms","recognition_ms","timing_overhead_ms","total_ms","memory_supported","heap_before_bytes","heap_after_render_bytes","heap_after_recognition_bytes","heap_peak_bytes","heap_delta_bytes","js_heap_limit_bytes","words","confidence","error"]];
+  const rows = [["page","status","profile","languages","concurrency","effective_dpi","width","height","pixels","canvas_bytes_estimate","render_ms","recognition_ms","timing_overhead_ms","total_ms","memory_supported","heap_before_bytes","heap_after_render_bytes","heap_after_recognition_bytes","heap_peak_bytes","heap_delta_bytes","js_heap_limit_bytes","words","confidence","error"]];
   for (const item of state.ocr.benchmark.results) {
-    rows.push([item.page,item.status,item.profileKey,item.languageKey,item.effectiveDpi,item.width,item.height,item.pixels,item.canvasBytesEstimate,Math.round(item.renderMs || 0),Math.round(item.recognitionMs || 0),Math.round(item.timingOverheadMs || 0),Math.round(item.totalMs || 0),item.memorySupported,item.heapBeforeBytes,item.heapAfterRenderBytes,item.heapAfterRecognitionBytes,item.heapPeakBytes,item.heapDeltaBytes,item.jsHeapLimitBytes,item.words,item.confidence,item.error || ""]);
+    rows.push([item.page,item.status,item.profileKey,item.languageKey,state.ocr.benchmark.lastRun?.concurrencyEffective || 1,item.effectiveDpi,item.width,item.height,item.pixels,item.canvasBytesEstimate,Math.round(item.renderMs || 0),Math.round(item.recognitionMs || 0),Math.round(item.timingOverheadMs || 0),Math.round(item.totalMs || 0),item.memorySupported,item.heapBeforeBytes,item.heapAfterRenderBytes,item.heapAfterRecognitionBytes,item.heapPeakBytes,item.heapDeltaBytes,item.jsHeapLimitBytes,item.words,item.confidence,item.error || ""]);
   }
   downloadOcrBenchmark(rows.map((row) => row.map(csvCell).join(";")).join("\r\n"), "text/csv;charset=utf-8", "csv");
 }
@@ -3460,6 +3639,7 @@ async function runOcrBenchmark() {
 
   const languageSelection = syncOcrLanguageSelectors();
   const profile = selectedOcrProfile();
+  const concurrencyPlan = resolveOcrBenchmarkConcurrency(profile, languageSelection);
   const serial = ++state.ocr.serial;
   const startedAt = performance.now();
   const results = [];
@@ -3469,25 +3649,26 @@ async function runOcrBenchmark() {
   state.ocr.benchmark.lastRun = null;
   updateOcrControls();
   renderOcrBenchmarkResults();
-  setOcrStatus(`Banco de pruebas: ${pages.length} páginas en perfil ${profile.label}. No se guardará el OCR.`);
+  setOcrStatus(`Banco de pruebas: ${pages.length} páginas en perfil ${profile.label} · ${concurrencyPlan.effective} tarea${concurrencyPlan.effective === 1 ? "" : "s"}. No se guardará el OCR.`);
 
-  const token = diagStart("ocr-benchmark", { pages: pages.length, scope, profileKey: profile.key, language: languageSelection.key });
+  const token = diagStart("ocr-benchmark", { pages: pages.length, scope, profileKey: profile.key, language: languageSelection.key, concurrencyRequested: concurrencyPlan.requested, concurrencyEffective: concurrencyPlan.effective });
   try {
-    for (let index = 0; index < pages.length; index += 1) {
-      if (serial !== state.ocr.serial || !state.ocr.running) return;
-      const page = pages[index];
-      setOcrBatchProgress(page, index, pages.length, 1, "Medición interna");
-      try {
-        const result = await recognizeOcrPageInBatch(page, languageSelection, profile, serial, index, pages.length, { storeRecord: false });
-        results.push({ page, ...result, profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label });
-      } catch (error) {
-        if (serial !== state.ocr.serial || isOcrCancelledError(error) || isExternalOcrCancelledError(error) || error?.name === "AbortError") return;
-        results.push({ page, status: "error", profileKey: profile.key, profileLabel: profile.label, languageKey: languageSelection.key, languageLabel: languageSelection.label, error: String(error?.message || error) });
-      }
-      state.ocr.benchmark.results = [...results];
-      renderOcrBenchmarkResults();
-      await new Promise((resolve) => window.setTimeout(resolve, 0));
-    }
+    const workerPool = await createOcrBenchmarkWorkerPool({
+      languages: languageSelection.codes,
+      parameters: profile.tesseract,
+      size: concurrencyPlan.effective,
+    });
+    state.ocr.benchmark.workerPool = workerPool;
+    await runOcrBenchmarkQueue({
+      pages,
+      concurrency: concurrencyPlan.effective,
+      workerPool,
+      languageSelection,
+      profile,
+      serial,
+      results,
+    });
+    if (serial !== state.ocr.serial || !state.ocr.running) return;
 
     const totalMs = performance.now() - startedAt;
     const successfulResults = results.filter((item) => item.status === "success");
@@ -3507,7 +3688,10 @@ async function runOcrBenchmark() {
       languageKey: languageSelection.key,
       languageLabel: languageSelection.label,
       totalMs,
-      sequential: true,
+      sequential: concurrencyPlan.effective === 1,
+      concurrencyRequested: concurrencyPlan.requested,
+      concurrencyEffective: concurrencyPlan.effective,
+      concurrencyForcedReason: concurrencyPlan.reasons.join("; ") || null,
       memorySupported,
       peakHeapBytes,
       jsHeapLimitBytes: successfulResults.find((item) => item.jsHeapLimitBytes)?.jsHeapLimitBytes ?? null,
@@ -3524,11 +3708,16 @@ async function runOcrBenchmark() {
       totalMs,
       errors: results.filter((item) => item.status === "error").length,
       profileKey: profile.key,
+      concurrencyRequested: concurrencyPlan.requested,
+      concurrencyEffective: concurrencyPlan.effective,
       memorySupported: state.ocr.benchmark.lastRun.memorySupported,
       peakHeapBytes: state.ocr.benchmark.lastRun.peakHeapBytes,
       peakCanvasBytesEstimate: state.ocr.benchmark.lastRun.peakCanvasBytesEstimate,
     });
   } finally {
+    await state.ocr.benchmark.workerPool?.destroy?.();
+    state.ocr.benchmark.workerPool = null;
+    state.ocr.benchmark.renderTasks.clear();
     state.ocr.running = false;
     state.ocr.benchmark.running = false;
     state.ocr.renderTask = null;
@@ -7042,6 +7231,10 @@ ocrCancelButton?.addEventListener("click", () => cancelCurrentOcr());
 ocrClearButton?.addEventListener("click", clearCurrentOcr);
 ocrClearAllButton?.addEventListener("click", clearAllOcr);
 ocrBenchmarkRunButton?.addEventListener("click", runOcrBenchmark);
+ocrBenchmarkConcurrency?.addEventListener("change", () => {
+  state.ocr.benchmark.concurrency = requestedOcrBenchmarkConcurrency();
+  updateOcrBenchmarkConcurrencyUi();
+});
 ocrBenchmarkExportJsonButton?.addEventListener("click", exportOcrBenchmarkJson);
 ocrBenchmarkExportCsvButton?.addEventListener("click", exportOcrBenchmarkCsv);
 ocrPagePreviousButton?.addEventListener("click", () => {

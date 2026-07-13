@@ -632,7 +632,15 @@
                   <details class="viewer-ocr-benchmark" id="viewer-ocr-benchmark" hidden>
                     <summary>Banco de pruebas OCR interno</summary>
                     <div class="viewer-ocr-benchmark-body">
-                      <p>Herramienta de desarrollo. Ejecuta secuencialmente el alcance, idiomas y perfil seleccionados sin guardar ni sustituir el OCR de la sesión.</p>
+                      <p>Herramienta de desarrollo. Compara una o dos tareas sobre el alcance, idiomas y perfil seleccionados sin guardar ni sustituir el OCR de la sesión.</p>
+                      <label class="viewer-field viewer-ocr-benchmark-concurrency" for="viewer-ocr-benchmark-concurrency">
+                        <span>Concurrencia experimental</span>
+                        <select id="viewer-ocr-benchmark-concurrency">
+                          <option value="1">1 tarea · modo seguro</option>
+                          <option value="2">2 tareas · experimental</option>
+                        </select>
+                        <small id="viewer-ocr-benchmark-concurrency-help">Una tarea. Modo seguro y comparable con el OCR normal.</small>
+                      </label>
                       <div class="viewer-ocr-benchmark-actions">
                         <button class="secondary-button" id="viewer-ocr-benchmark-run" type="button" disabled>Ejecutar medición</button>
                         <button class="secondary-button" id="viewer-ocr-benchmark-export-json" type="button" disabled>Exportar JSON</button>

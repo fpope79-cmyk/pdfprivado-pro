@@ -7884,3 +7884,16 @@ body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
 .viewer-ocr-benchmark-table th, .viewer-ocr-benchmark-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
 .viewer-ocr-benchmark-table th:first-child, .viewer-ocr-benchmark-table td:first-child { text-align: left; }
 .viewer-ocr-benchmark-table th { position: sticky; top: 0; background: #f8fafc; color: #475569; }
+
+/* PDFPRIVADO_OCR_BENCHMARK_CONCURRENCY_V1 */
+.viewer-ocr-benchmark-concurrency {
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #dbe3ec;
+  border-radius: 9px;
+  background: #fff;
+}
+.viewer-ocr-benchmark-concurrency span { font-size: 0.62rem; font-weight: 900; color: #334155; }
+.viewer-ocr-benchmark-concurrency select { width: 100%; min-height: 34px; }
+.viewer-ocr-benchmark-concurrency small { color: #64748b; font-size: 0.56rem; line-height: 1.4; }
