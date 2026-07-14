@@ -1,4 +1,4 @@
-import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
+﻿import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
 import {
   normalizeRotation,
   resolvePageScope,
@@ -306,6 +306,7 @@ const ocrPreview = $("#viewer-ocr-preview");
 const A4 = { width: 595.28, height: 841.89 };
 const ORGANIZE_VIRTUALIZATION_VERSION = "organize-virtual-v1";
 const MAX_STORED_SEARCH_RESULTS = 1200;
+const SEARCH_INPUT_DEBOUNCE_MS = 200;
 
 const ocrLanguagePackages = {
   storage: null,
@@ -1376,7 +1377,7 @@ function updateSearchNavigationControls() {
   const hasResults = count > 0;
   const hasInput = Boolean(normalizeExtractedText(searchInput?.value || ""));
 
-  if (searchInput) searchInput.disabled = !ready || state.saving || state.search.running || state.ocr.running;
+  if (searchInput) searchInput.disabled = !ready || state.saving || state.ocr.running;
   if (searchButton) searchButton.disabled = !ready || !hasInput || state.saving || state.search.running || state.ocr.running;
   if (searchClearButton) {
     searchClearButton.disabled =
@@ -1462,6 +1463,8 @@ function cancelSearchWork({ silent = false } = {}) {
 }
 
 function clearSearch({ keepFocus = true } = {}) {
+  window.clearTimeout(state.search.refreshTimer);
+  state.search.refreshTimer = 0;
   cancelSearchWork({ silent: true });
   clearSearchHighlight();
   state.search.results = [];
@@ -1729,6 +1732,8 @@ function navigateSearchResults(delta) {
 }
 
 async function runDocumentSearch() {
+  window.clearTimeout(state.search.refreshTimer);
+  state.search.refreshTimer = 0;
   if (!state.file || !state.pageCount || state.saving || state.ocr.running) return;
   const query = normalizeExtractedText(searchInput?.value || "");
   if (!query) {
@@ -1877,6 +1882,57 @@ async function runDocumentSearch() {
   }
 }
 
+function scheduleIncrementalDocumentSearch() {
+  updateSearchNavigationControls();
+  window.clearTimeout(state.search.refreshTimer);
+  state.search.refreshTimer = 0;
+
+  const query = normalizeExtractedText(searchInput?.value || "");
+  if (!query) {
+    clearSearch({ keepFocus: false });
+    return;
+  }
+
+  if (!state.file || !state.pageCount || state.saving || state.ocr.running) return;
+
+  state.search.serial += 1;
+  state.search.running = false;
+  clearSearchHighlight();
+  state.search.results = [];
+  state.search.query = query;
+  state.search.foldedQuery = foldSearchText(query);
+  state.search.currentIndex = -1;
+  state.search.processedPages = 0;
+  state.search.pagesWithoutText = 0;
+  state.search.failedPages = 0;
+  state.search.totalMatches = 0;
+  state.search.truncated = false;
+  state.search.navigationLockUntil = 0;
+  state.search.navigationSerial += 1;
+  state.search.positioning = false;
+  state.search.targetPage = 0;
+  state.search.fitApplied = false;
+  if (searchWarning) searchWarning.hidden = true;
+  setSearchProgress(false, 0);
+  setSearchStatus(`Preparando la búsqueda de “${query}”…`);
+  resetSearchResultsView("La búsqueda comenzará automáticamente mientras escribes.");
+  updateSearchNavigationControls();
+  diagnosticContext();
+
+  state.search.refreshTimer = window.setTimeout(() => {
+    state.search.refreshTimer = 0;
+    const currentQuery = normalizeExtractedText(searchInput?.value || "");
+    if (!currentQuery) {
+      clearSearch({ keepFocus: false });
+      return;
+    }
+    if (state.loading || state.saving || state.ocr.running) {
+      scheduleIncrementalDocumentSearch();
+      return;
+    }
+    runDocumentSearch();
+  }, SEARCH_INPUT_DEBOUNCE_MS);
+}
 function scheduleSearchRefresh(message = "El documento cambió. Actualizando los resultados de búsqueda…") {
   window.clearTimeout(state.search.refreshTimer);
   if (!state.search.query || !state.file) return;
@@ -7378,9 +7434,11 @@ revealButton?.addEventListener("click", revealSavedFile);
 progressCloseButton?.addEventListener("click", resetProgress);
 searchForm?.addEventListener("submit", (event) => {
   event.preventDefault();
+  window.clearTimeout(state.search.refreshTimer);
+  state.search.refreshTimer = 0;
   runDocumentSearch();
 });
-searchInput?.addEventListener("input", updateSearchNavigationControls);
+searchInput?.addEventListener("input", scheduleIncrementalDocumentSearch);
 searchInput?.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     event.preventDefault();
