@@ -25,3 +25,6 @@ dist-ssr
 
 # Copias temporales creadas por los parches
 _backup-*/
+
+# Copias locales de parches PDFPrivado
+.pdfprivado-backups/
