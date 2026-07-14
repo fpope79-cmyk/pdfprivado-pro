@@ -1671,11 +1671,7 @@ async function activateSearchResult(index, { focus = false } = {}) {
   state.search.targetPage = result.page;
   state.search.navigationLockUntil = Date.now() + 7000;
 
-  const applyFitPage = !state.search.fitApplied;
-  if (applyFitPage) {
-    state.search.fitApplied = true;
-    state.zoomMode = "fit-page";
-  }
+  state.search.fitApplied = true;
 
   updateSearchCurrentVisual();
   updateSearchNavigationControls();
@@ -1689,9 +1685,7 @@ async function activateSearchResult(index, { focus = false } = {}) {
       scroll: false,
       searchNavigation: true,
     });
-    if (applyFitPage && ["continuous", "spread"].includes(state.viewMode)) {
-      refreshReadingView();
-    }
+
     if (renderPromise && typeof renderPromise.then === "function") {
       await renderPromise;
     }
