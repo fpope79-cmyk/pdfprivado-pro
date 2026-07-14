@@ -6801,12 +6801,43 @@ function searchableOcrSummary() {
   };
 }
 
+async function loadSearchablePdfUnicodeFont(output) {
+  if (!window.fontkit) {
+    throw new Error("El motor Unicode local no esta disponible.");
+  }
+
+  output.registerFontkit(window.fontkit);
+
+  const response = await fetch(
+    new URL(
+      "./vendor/fonts/noto-sans-latin-400-normal.woff",
+      window.location.href
+    )
+  );
+
+  if (!response.ok) {
+    throw new Error("No se pudo cargar la fuente Unicode local.");
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  return output.embedFont(bytes, { subset: true });
+}
+
 async function buildSearchablePdfBytesForEntries(entries, outputName = null) {
   if (!window.PDFLib?.PDFDocument) throw new Error("El motor PDF local no esta disponible.");
 
   const { PDFDocument, StandardFonts, degrees } = window.PDFLib;
   const output = await PDFDocument.create();
-  const font = await output.embedFont(StandardFonts.Helvetica);
+
+  let font;
+  let unicodeFont = true;
+  try {
+    font = await loadSearchablePdfUnicodeFont(output);
+  } catch (error) {
+    unicodeFont = false;
+    font = await output.embedFont(StandardFonts.Helvetica);
+    console.warn("PDF buscable: se usa Helvetica como respaldo.", error);
+  }
   const loaded = new Map();
   const report = {
     pagesWithLayer: 0,
@@ -6814,6 +6845,8 @@ async function buildSearchablePdfBytesForEntries(entries, outputName = null) {
     wordsSkipped: 0,
     pagesWithoutOcr: 0,
     pagesRotatedSkipped: 0,
+    unicodeFont,
+    fontFallback: !unicodeFont,
   };
 
   for (const entry of entries) {

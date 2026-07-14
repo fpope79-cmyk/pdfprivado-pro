@@ -35,6 +35,14 @@ async function validateOcrLanguageAssets() {
 
   await assertFile(path.join(sourceDir, "vendor", "tesseract", "LICENSE-TESSDATA-APACHE-2.0.txt"), true);
   await assertFile(path.join(sourceDir, "vendor", "tesseract", "NOTICE-LANGUAGE-DATA.txt"), true);
+
+  await assertFile(path.join(sourceDir, "vendor", "fontkit.umd.min.js"), true);
+  await assertFile(
+    path.join(sourceDir, "vendor", "fonts", "noto-sans-latin-400-normal.woff"),
+    true
+  );
+  await assertFile(path.join(sourceDir, "vendor", "licenses", "FONTKIT-MIT.txt"), true);
+  await assertFile(path.join(sourceDir, "vendor", "licenses", "NOTO-SANS-OFL.txt"), true);
 }
 
 async function copyDirectory(source, destination) {
