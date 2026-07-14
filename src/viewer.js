@@ -285,6 +285,9 @@ const ocrPageTotal = $("#viewer-ocr-page-total");
 const ocrPageNextButton = $("#viewer-ocr-page-next");
 const ocrUseVisibleButton = $("#viewer-ocr-use-visible");
 const ocrStartButton = $("#viewer-ocr-start");
+const ocrSearchableSaveButton = $("#viewer-ocr-searchable-save");
+const ocrSearchableSummary = $("#viewer-ocr-searchable-summary");
+const ocrSearchableBadge = $("#viewer-ocr-searchable-badge");
 const ocrCancelButton = $("#viewer-ocr-cancel");
 const ocrClearButton = $("#viewer-ocr-clear");
 const ocrClearAllButton = $("#viewer-ocr-clear-all");
@@ -2887,6 +2890,7 @@ function updateOcrControls() {
       ? `Eliminar todo el OCR (${state.ocr.records.size})`
       : "Eliminar todo el OCR";
   }
+  updateSearchablePdfUi();
   renderOcrBenchmarkResults();
   refreshOcrPanel();
 }
@@ -6851,6 +6855,40 @@ function searchableOcrSummary() {
   };
 }
 
+function updateSearchablePdfUi() {
+  if (!ocrSearchableSaveButton || !ocrSearchableSummary || !ocrSearchableBadge) return;
+
+  const summary = searchableOcrSummary();
+  const ready = Boolean(state.file && summary.usablePages);
+  const busy = state.saving || state.ocr.running || state.search.running;
+
+  ocrSearchableSaveButton.disabled = !ready || busy;
+  ocrSearchableBadge.textContent = ready
+    ? `${summary.pageCount} ${summary.pageCount === 1 ? "página" : "páginas"}`
+    : "Sin OCR";
+  ocrSearchableBadge.dataset.ready = ready ? "true" : "false";
+
+  if (!state.file) {
+    ocrSearchableSummary.textContent =
+      "Abre un PDF y reconoce al menos una página para crear una copia buscable.";
+    return;
+  }
+
+  if (!ready) {
+    ocrSearchableSummary.textContent =
+      "Todavía no hay páginas con palabras OCR posicionadas en esta sesión.";
+    return;
+  }
+
+  const rotationDetail = summary.rotated
+    ? ` · ${summary.rotated} ${summary.rotated === 1 ? "página girada compatible" : "páginas giradas compatibles"}`
+    : "";
+
+  ocrSearchableSummary.textContent =
+    `${summary.pageCount} ${summary.pageCount === 1 ? "página preparada" : "páginas preparadas"} · ` +
+    `${summary.words} ${summary.words === 1 ? "palabra" : "palabras"}${rotationDetail}.`;
+}
+
 async function loadSearchablePdfUnicodeFont(output) {
   if (!window.fontkit) {
     throw new Error("El motor Unicode local no esta disponible.");
@@ -7444,6 +7482,13 @@ searchPreviousButton?.addEventListener("click", () => navigateSearchResults(-1))
 searchNextButton?.addEventListener("click", () => navigateSearchResults(1));
 searchCancelButton?.addEventListener("click", () => cancelSearchWork());
 ocrStartButton?.addEventListener("click", recognizeCurrentPage);
+ocrSearchableSaveButton?.addEventListener("click", async () => {
+  try {
+    await saveSearchableCopyInternal();
+  } catch {
+    // La funcion ya presenta el error en progreso y feedback.
+  }
+});
 ocrCancelButton?.addEventListener("click", () => cancelCurrentOcr());
 ocrClearButton?.addEventListener("click", clearCurrentOcr);
 ocrClearAllButton?.addEventListener("click", clearAllOcr);

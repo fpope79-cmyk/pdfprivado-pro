@@ -8061,3 +8061,93 @@ body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section {
     white-space: normal;
   }
 }
+
+
+/* PDFPRIVADO_SEARCHABLE_PDF_UI_V1 */
+
+.viewer-ocr-searchable-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(236, 253, 245, 0.98), rgba(240, 249, 255, 0.96));
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.viewer-ocr-searchable-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.viewer-ocr-searchable-heading > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.viewer-ocr-searchable-heading strong {
+  color: #0f172a;
+  font-size: 0.78rem;
+}
+
+.viewer-ocr-searchable-heading small,
+.viewer-ocr-searchable-note {
+  color: #64748b;
+  font-size: 0.61rem;
+  line-height: 1.45;
+}
+
+.viewer-ocr-searchable-badge {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.58rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.viewer-ocr-searchable-badge[data-ready="true"] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.viewer-ocr-searchable-summary {
+  margin: 0;
+  color: #334155;
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.viewer-ocr-searchable-save {
+  width: 100%;
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.viewer-ocr-searchable-save:disabled {
+  cursor: not-allowed;
+}
+
+.viewer-ocr-searchable-note {
+  display: block;
+}
+
+@media (max-width: 1050px) {
+  .viewer-ocr-searchable-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .viewer-ocr-searchable-badge {
+    justify-self: start;
+  }
+
+  .viewer-ocr-searchable-save {
+    white-space: normal;
+  }
+}
