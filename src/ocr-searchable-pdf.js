@@ -258,7 +258,17 @@ export function addInvisibleOcrTextToPdfPage({
       applied: false,
       words: 0,
       skipped: 0,
-      reason: "La primera prueba interna omite páginas giradas.",
+      reason: "Esta operación está configurada para omitir páginas giradas.",
+    };
+  }
+
+  if (allowRotated && pageRotation !== recordRotation) {
+    return {
+      applied: false,
+      words: 0,
+      skipped: 0,
+      reason:
+        "La rotación de la página PDF no coincide con la usada durante el OCR.",
     };
   }
 
@@ -301,10 +311,6 @@ export function addInvisibleOcrTextToPdfPage({
         size,
         font,
         opacity: 0,
-        rotate:
-          allowRotated && placement.rotation && typeof degrees === "function"
-            ? degrees(placement.rotation)
-            : undefined,
       });
       words += 1;
     } catch {

@@ -8,7 +8,7 @@ assert.match(viewer, /addInvisibleOcrTextToPdfPage/);
 assert.match(viewer, /async function buildSearchablePdfBytesForEntries/);
 assert.match(viewer, /async function saveSearchableCopyInternal/);
 assert.match(viewer, /window\.PDFPrivadoSearchablePdfTest/);
-assert.match(viewer, /allowRotated:\s*false/);
+assert.match(viewer, /allowRotated:\s*true/);
 assert.match(moduleSource, /export function addInvisibleOcrTextToPdfPage/);
 assert.match(moduleSource, /opacity:\s*0/);
 

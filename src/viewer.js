@@ -6797,7 +6797,7 @@ function searchableOcrSummary() {
     pageCount: pages.length,
     words,
     rotated,
-    usablePages: pages.length - rotated,
+    usablePages: pages.length,
   };
 }
 
@@ -6852,14 +6852,14 @@ async function buildSearchablePdfBytesForEntries(entries, outputName = null) {
       font,
       record,
       degrees,
-      allowRotated: false,
+      allowRotated: true,
     });
 
     report.wordsSkipped += layer.skipped || 0;
     if (layer.applied) {
       report.pagesWithLayer += 1;
       report.wordsInserted += layer.words;
-    } else if (/girad/i.test(layer.reason || "")) {
+    } else if (/rotaci|girad/i.test(layer.reason || "")) {
       report.pagesRotatedSkipped += 1;
     } else {
       report.pagesWithoutOcr += 1;
@@ -6885,9 +6885,7 @@ async function saveSearchableCopyInternal() {
   const summary = searchableOcrSummary();
   if (!summary.usablePages) {
     throw new Error(
-      summary.rotated
-        ? "Solo hay OCR en paginas giradas, que esta primera prueba interna todavia omite."
-        : "No hay paginas con OCR posicionado disponible en esta sesion."
+      "No hay paginas con OCR posicionado disponible en esta sesion."
     );
   }
 
