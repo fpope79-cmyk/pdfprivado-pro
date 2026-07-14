@@ -7901,3 +7901,163 @@ body.viewer-active.viewer-tools-collapsed .viewer-tool-tabs {
 /* PDFPRIVADO_OCR_CONCURRENCIA_NORMAL_V1 */
 .viewer-ocr-concurrency-field { margin-top: 0.8rem; }
 #viewer-ocr-concurrency-help { margin: 0.45rem 0 0; color: var(--text-muted); font-size: 0.86rem; line-height: 1.45; }
+
+
+/* PDFPRIVADO_PANEL_OCR_PRIORITARIO_V1 */
+
+/* El documento gana espacio sin sacrificar la legibilidad del panel. */
+.viewer-shell {
+  --viewer-tools-column: 324px;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-shell {
+  --viewer-tools-column: min(324px, 32vw);
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tools-panel {
+  grid-template-columns: 50px minmax(0, 1fr);
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs {
+  width: 50px;
+  padding: 7px 5px;
+  gap: 5px;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-tabs button {
+  min-height: 44px;
+  padding: 4px 2px;
+  font-size: 0.56rem;
+}
+
+body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section {
+  padding: 14px 12px 18px;
+}
+
+/* La accion principal aparece inmediatamente despues de elegir pagina. */
+.viewer-ocr-operation-panel {
+  top: 0;
+  margin: 0 0 3px;
+  padding: 11px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  background: rgba(240, 249, 255, 0.98);
+  box-shadow: 0 9px 22px rgba(15, 23, 42, 0.08);
+}
+
+.viewer-ocr-operation-panel .viewer-ocr-actions {
+  gap: 7px;
+}
+
+.viewer-ocr-operation-panel #viewer-ocr-start {
+  min-height: 42px;
+  font-weight: 900;
+}
+
+.viewer-ocr-advanced-options,
+.viewer-ocr-maintenance {
+  overflow: hidden;
+  border: 1px solid #dbe3ec;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.viewer-ocr-advanced-options > summary,
+.viewer-ocr-maintenance > summary {
+  min-height: 44px;
+  padding: 10px 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.viewer-ocr-advanced-options > summary::-webkit-details-marker,
+.viewer-ocr-maintenance > summary::-webkit-details-marker {
+  display: none;
+}
+
+.viewer-ocr-advanced-options > summary span:first-child,
+.viewer-ocr-maintenance > summary span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.viewer-ocr-advanced-options > summary strong,
+.viewer-ocr-maintenance > summary strong {
+  color: #1e293b;
+  font-size: 0.72rem;
+}
+
+.viewer-ocr-advanced-options > summary small,
+.viewer-ocr-maintenance > summary small {
+  color: #64748b;
+  font-size: 0.59rem;
+  line-height: 1.35;
+}
+
+.viewer-ocr-advanced-body,
+.viewer-ocr-maintenance-actions {
+  padding: 0 10px 10px;
+}
+
+.viewer-ocr-advanced-body .viewer-ocr-profile-card {
+  margin: 0;
+}
+
+.viewer-ocr-maintenance-actions {
+  display: grid;
+  gap: 7px;
+}
+
+.viewer-ocr-maintenance-actions button {
+  width: 100%;
+}
+
+@media (max-width: 1160px) {
+  body.viewer-active:not(.viewer-tools-collapsed) .viewer-shell {
+    --viewer-tools-column: min(312px, 38vw);
+  }
+}
+
+@media (max-width: 900px) {
+  body.viewer-active:not(.viewer-tools-collapsed) .viewer-shell {
+    --viewer-tools-column: min(300px, 46vw);
+  }
+}
+
+
+/* PDFPRIVADO_AJUSTE_ANCHO_PANEL_OCR_V1 */
+
+.viewer-ocr-operation-panel #viewer-ocr-start {
+  white-space: nowrap;
+  padding-inline: 12px;
+  font-size: 0.72rem;
+}
+
+.viewer-ocr-operation-panel .viewer-ocr-status {
+  max-height: none;
+  overflow: visible;
+  line-height: 1.45;
+}
+
+.viewer-ocr-operation-panel .viewer-ocr-progress {
+  min-width: 0;
+}
+
+.viewer-ocr-page-card,
+.viewer-ocr-operation-panel,
+.viewer-ocr-batch-grid,
+.viewer-ocr-language-grid,
+.viewer-ocr-advanced-options,
+.viewer-ocr-maintenance {
+  min-width: 0;
+}
+
+@media (max-width: 1050px) {
+  .viewer-ocr-operation-panel #viewer-ocr-start {
+    white-space: normal;
+  }
+}
