@@ -333,6 +333,7 @@ const state = {
   undoStack: [],
   redoStack: [],
   viewMode: "continuous",
+  interactionMode: "pointer",
   activeTool: "overview",
   zoomMode: "fit-width",
   spreadCoverAlone: true,
@@ -791,6 +792,12 @@ async function renderSpread() {
         if (serial !== state.spreadRenderSerial || state.viewMode !== "spread") return;
         targetCanvas.style.width = `${Math.round(result.width * result.scale)}px`;
         targetCanvas.style.height = `${Math.round(result.height * result.scale)}px`;
+        await renderSelectableTextLayer(
+          entry,
+          targetCanvas,
+          targetCanvas.closest(".viewer-spread-page"),
+          `spread:${entry.id}:${result.scale}:${entry.rotation || 0}`
+        );
         diagEnd(diagnosticToken, { width: targetCanvas.width, height: targetCanvas.height, mode: "spread" });
       } catch (error) {
         diagFail(diagnosticToken, error, { page, mode: "spread" });
@@ -5314,6 +5321,226 @@ function getFitScale(baseWidth, baseHeight) {
   return Math.max(0.1, state.zoom);
 }
 
+/* PDFPRIVADO_SELECTABLE_TEXT_LAYER_V1 */
+const selectableTextCache = new Map();
+
+function selectableTextCacheKey(entry) {
+  if (!entry || entry.kind !== "pdf") return "";
+  return [
+    entry.sourceId,
+    entry.sourcePage,
+    normalizeRotation(entry.rotation || 0),
+  ].join(":");
+}
+
+function removeSelectableTextLayer(host) {
+  host?.querySelector?.(":scope > .viewer-text-layer")?.remove();
+}
+
+async function selectableTextContent(entry) {
+  const key = selectableTextCacheKey(entry);
+  if (!key) return null;
+
+  if (selectableTextCache.has(key)) {
+    return selectableTextCache.get(key);
+  }
+
+  const page = await getPdfPage(entry);
+
+  try {
+    const [content, styles] = await Promise.all([
+      page.getTextContent(),
+      Promise.resolve(null),
+    ]);
+
+    const value = {
+      items: Array.isArray(content?.items) ? content.items : [],
+      styles: content?.styles || styles || {},
+      pageRotation: page.rotate || 0,
+    };
+
+    selectableTextCache.set(key, value);
+    return value;
+  }
+  finally {
+    page.cleanup();
+  }
+}
+
+function textItemAscent(style, fontHeight) {
+  if (Number.isFinite(style?.ascent)) {
+    return style.ascent * fontHeight;
+  }
+
+  if (Number.isFinite(style?.descent)) {
+    return (1 + style.descent) * fontHeight;
+  }
+
+  return fontHeight;
+}
+
+async function renderSelectableTextLayer(
+  entry,
+  targetCanvas,
+  host,
+  signature
+) {
+  removeSelectableTextLayer(host);
+
+  if (
+    !entry ||
+    entry.kind !== "pdf" ||
+    !targetCanvas ||
+    !host ||
+    targetCanvas.width <= 1
+  ) {
+    return;
+  }
+
+  const content = await selectableTextContent(entry);
+
+  if (!content?.items?.length || !targetCanvas.isConnected) {
+    return;
+  }
+
+  const page = await getPdfPage(entry);
+
+  try {
+    const rotation = normalizeRotation(
+      (page.rotate || 0) + (entry.rotation || 0)
+    );
+
+    const cssWidth = Math.max(
+      1,
+      Number.parseFloat(targetCanvas.style.width) ||
+        targetCanvas.clientWidth ||
+        1
+    );
+
+    const base = page.getViewport({ scale: 1, rotation });
+    const scale = cssWidth / Math.max(1, base.width);
+    const viewport = page.getViewport({ scale, rotation });
+    const transform = window.pdfjsLib?.Util?.transform;
+
+    if (typeof transform !== "function") {
+      return;
+    }
+
+    const layer = document.createElement("div");
+    layer.className = "viewer-text-layer";
+    layer.dataset.renderedSignature = String(signature || "");
+    layer.setAttribute("aria-label", "Texto seleccionable de la pagina");
+    layer.style.width = `${Math.round(viewport.width)}px`;
+    layer.style.height = `${Math.round(viewport.height)}px`;
+    layer.style.left = `${Math.round(targetCanvas.offsetLeft)}px`;
+    layer.style.top = `${Math.round(targetCanvas.offsetTop)}px`;
+
+    const fragment = document.createDocumentFragment();
+
+    for (const item of content.items) {
+      const value = String(item?.str || "");
+
+      if (!value) continue;
+
+      const tx = transform(viewport.transform, item.transform);
+      const angle = Math.atan2(tx[1], tx[0]);
+      const fontHeight = Math.hypot(tx[2], tx[3]);
+
+      if (!Number.isFinite(fontHeight) || fontHeight <= 0) {
+        continue;
+      }
+
+      /* PDFPRIVADO_SELECTABLE_TEXT_ROTATION_FIX_V1 */
+      const style = content.styles?.[item.fontName] || {};
+      const span = document.createElement("span");
+      span.textContent = value;
+      span.dir = item.dir || "ltr";
+
+      const textAngle = style.vertical
+        ? angle + Math.PI / 2
+        : angle;
+
+      const fontAscent = textItemAscent(style, fontHeight);
+
+      const left = textAngle === 0
+        ? tx[4]
+        : tx[4] + fontAscent * Math.sin(textAngle);
+
+      const top = textAngle === 0
+        ? tx[5] - fontAscent
+        : tx[5] - fontAscent * Math.cos(textAngle);
+
+      span.style.left = `${left}px`;
+      span.style.top = `${top}px`;
+      span.style.fontSize = `${fontHeight}px`;
+      span.style.fontFamily =
+        style.fontFamily ||
+        "sans-serif";
+
+      const transforms = [];
+
+      if (textAngle) {
+        transforms.push(`rotate(${textAngle}rad)`);
+      }
+
+      if (
+        Number.isFinite(item.width) &&
+        item.width > 0 &&
+        value.trim()
+      ) {
+        span.dataset.pdfWidth = String(item.width * scale);
+      }
+
+      if (transforms.length) {
+        span.style.transform = transforms.join(" ");
+      }
+
+      fragment.append(span);
+    }
+
+    layer.append(fragment);
+    host.append(layer);
+
+    for (const span of layer.querySelectorAll(
+      "span[data-pdf-width]"
+    )) {
+      const desiredWidth = Number(span.dataset.pdfWidth);
+
+      const measuredWidth =
+        span.offsetWidth ||
+        span.scrollWidth ||
+        0;
+
+      if (
+        Number.isFinite(desiredWidth) &&
+        desiredWidth > 0 &&
+        measuredWidth > 0
+      ) {
+        const current = span.style.transform;
+        const scaleX = desiredWidth / measuredWidth;
+        span.style.transform = `${
+          current ? `${current} ` : ""
+        }scaleX(${scaleX})`;
+      }
+    }
+
+    layer.addEventListener("pointerdown", (event) => {
+      if (state.interactionMode === "pointer") {
+        event.stopPropagation();
+      }
+    });
+
+    layer.addEventListener("click", (event) => {
+      if (state.interactionMode === "pointer") {
+        event.stopPropagation();
+      }
+    });
+  }
+  finally {
+    page.cleanup();
+  }
+}
+
 async function renderCurrentPage() {
   if (!state.file || !state.pageCount || state.viewMode !== "page") return;
   const diagnosticToken = diagStart("render-page", { page: state.currentPage });
@@ -5355,6 +5582,12 @@ async function renderCurrentPage() {
     });
     if (serial !== state.renderSerial) return;
     canvas.dataset.renderedSignature = renderSignature;
+    await renderSelectableTextLayer(
+      entry,
+      canvas,
+      canvasStage,
+      renderSignature
+    );
     pageInput.value = String(state.currentPage);
     pageInfo.textContent = `Página ${state.currentPage} · ${Math.round(result.width)} × ${Math.round(result.height)} pt · ${sourceLabel(entry)}`;
     zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
@@ -5817,6 +6050,12 @@ async function performRenderContinuousPage(entryId) {
   try {
     const result = await renderEntryToCanvas(entry, target, options);
     target.dataset.renderedSignature = signature;
+    await renderSelectableTextLayer(
+      entry,
+      target,
+      item,
+      signature
+    );
     if (Number(item.dataset.page) === state.currentPage || state.zoomMode === "custom") {
       zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
     }
@@ -6592,17 +6831,58 @@ function targetPagesForRotation() {
   });
 }
 
+/* PDFPRIVADO_ROTATION_CURSOR_FIX_V2 */
 function applyRotation(delta, positions = null) {
   if (!state.file || state.loading || state.saving) return;
+
+  const currentPage = state.currentPage;
+
   try {
     const pages = positions || targetPagesForRotation();
     const next = clonePlan();
+
     for (const page of pages) {
       const entry = next[page - 1];
-      if (entry) entry.rotation = normalizeRotation((entry.rotation || 0) + delta);
+
+      if (entry) {
+        entry.rotation = normalizeRotation(
+          (entry.rotation || 0) + delta
+        );
+      }
     }
-    commitPlan(next, `${pages.length === 1 ? "Página girada" : `${pages.length} páginas giradas`}`);
-  } catch (error) {
+
+    commitPlan(
+      next,
+      `${pages.length === 1
+        ? "Página girada"
+        : `${pages.length} páginas giradas`}`
+    );
+
+    state.currentPage = Math.max(
+      1,
+      Math.min(currentPage, state.pageCount || 1)
+    );
+
+    pageInput.value = String(state.currentPage);
+
+    requestAnimationFrame(() => {
+      if (!state.file) return;
+
+      if (["continuous", "spread"].includes(state.viewMode)) {
+        beginReadingNavigation(state.currentPage, "auto");
+        scrollReadingPageIntoView(state.currentPage, {
+          behavior: "auto",
+          block: "start",
+        });
+      }
+      else if (state.viewMode === "page") {
+        renderCurrentPage();
+      }
+
+      updateControls();
+    });
+  }
+  catch (error) {
     setFeedback(String(error?.message || error), "error");
   }
 }
@@ -7331,8 +7611,101 @@ async function initializeNativeOpenHandling() {
   }
 }
 
+/* PDFPRIVADO_VIEWER_POINTER_HAND_V3 */
+let pointerModeButton = null;
+let handModeButton = null;
+
+function viewerHandModeActive() {
+  return state.interactionMode === "hand";
+}
+
+function updateViewerInteractionControls() {
+  pointerModeButton?.classList.toggle(
+    "is-active",
+    state.interactionMode === "pointer"
+  );
+
+  handModeButton?.classList.toggle(
+    "is-active",
+    state.interactionMode === "hand"
+  );
+
+  pointerModeButton?.setAttribute(
+    "aria-pressed",
+    String(state.interactionMode === "pointer")
+  );
+
+  handModeButton?.setAttribute(
+    "aria-pressed",
+    String(state.interactionMode === "hand")
+  );
+
+  [canvasStage, continuousStage, spreadStage].forEach((stage) => {
+    stage?.classList.toggle(
+      "is-pointer-mode",
+      state.interactionMode === "pointer"
+    );
+
+    stage?.classList.toggle(
+      "is-hand-mode",
+      state.interactionMode === "hand"
+    );
+  });
+}
+
+function setViewerInteractionMode(mode) {
+  state.interactionMode = mode === "hand" ? "hand" : "pointer";
+  updateViewerInteractionControls();
+}
+
+function initializeViewerInteractionControls() {
+  const modeGroup = document.querySelector(".viewer-mode-group");
+  const navigationGroup = document.querySelector(
+    ".viewer-page-navigation"
+  );
+
+  if (!modeGroup || !navigationGroup || pointerModeButton || handModeButton) {
+    updateViewerInteractionControls();
+    return;
+  }
+
+  const group = document.createElement("div");
+  group.className =
+    "viewer-toolbar-group viewer-interaction-group";
+  group.setAttribute("role", "group");
+  group.setAttribute("aria-label", "Modo de interaccion");
+
+  pointerModeButton = document.createElement("button");
+  pointerModeButton.id = "viewer-pointer-mode-button";
+  pointerModeButton.type = "button";
+  pointerModeButton.textContent = "Puntero";
+  pointerModeButton.title = "Puntero: interactuar con el documento";
+  pointerModeButton.setAttribute("aria-label", "Activar modo Puntero");
+
+  handModeButton = document.createElement("button");
+  handModeButton.id = "viewer-hand-mode-button";
+  handModeButton.type = "button";
+  handModeButton.textContent = "Mano";
+  handModeButton.title = "Mano: arrastrar para desplazarse";
+  handModeButton.setAttribute("aria-label", "Activar modo Mano");
+
+  pointerModeButton.addEventListener(
+    "click",
+    () => setViewerInteractionMode("pointer")
+  );
+
+  handModeButton.addEventListener(
+    "click",
+    () => setViewerInteractionMode("hand")
+  );
+
+  group.append(pointerModeButton, handModeButton);
+  navigationGroup.before(group);
+  updateViewerInteractionControls();
+}
+
 function handlePagePanStart(event) {
-  if (state.viewMode !== "page" || event.button !== 0 || !state.file) return;
+  if (state.viewMode !== "page" || event.button !== 0 || !state.file || !viewerHandModeActive()) return;
   state.pan = {
     pointerId: event.pointerId,
     startX: event.clientX,
@@ -7358,7 +7731,7 @@ function handlePagePanEnd(event) {
 }
 
 function handleContinuousPanStart(event) {
-  if (!["continuous", "spread"].includes(state.viewMode) || event.button !== 0 || !state.file) return;
+  if (!["continuous", "spread"].includes(state.viewMode) || event.button !== 0 || !state.file || !viewerHandModeActive()) return;
   state.continuousPan = {
     pointerId: event.pointerId,
     startX: event.clientX,
@@ -7607,6 +7980,8 @@ mergeOrganizeButton?.addEventListener("click", () => { setViewMode("organize"); 
 });
 detectBlankButton?.addEventListener("click", detectBlankPages);
 splitSaveButton?.addEventListener("click", saveSplitResults);
+initializeViewerInteractionControls();
+
 canvasStage?.addEventListener("pointerdown", handlePagePanStart);
 canvasStage?.addEventListener("pointermove", handlePagePanMove);
 canvasStage?.addEventListener("pointerup", handlePagePanEnd);
