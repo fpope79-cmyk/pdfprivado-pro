@@ -798,6 +798,14 @@ async function renderSpread() {
           targetCanvas.closest(".viewer-spread-page"),
           `spread:${entry.id}:${result.scale}:${entry.rotation || 0}`
         );
+
+        await renderOcrSelectableTextLayer(
+entry,
+          targetCanvas,
+          targetCanvas.closest(".viewer-spread-page"),
+          `spread:${entry.id}:${result.scale}:${entry.rotation || 0}`
+
+        );
         diagEnd(diagnosticToken, { width: targetCanvas.width, height: targetCanvas.height, mode: "spread" });
       } catch (error) {
         diagFail(diagnosticToken, error, { page, mode: "spread" });
@@ -3456,6 +3464,7 @@ async function recognizeOcrPageInBatch(
       state.ocr.records.set(ocrRecordKey(entry), record);
       state.search.cache.delete(searchCacheKey(entry));
       state.ocr.panelKey = "";
+          scheduleOcrSelectableLayerRefresh();
     }
 
     return {
@@ -4090,6 +4099,7 @@ function removeOcrRecords(records, message) {
     state.search.cache.delete(searchCacheKey(record.entry));
   }
   state.ocr.panelKey = "";
+    scheduleOcrSelectableLayerRefresh();
   refreshOcrPanel({ force: true });
   setOcrStatus(message, "info");
   if (state.search.query) {
@@ -4305,6 +4315,8 @@ async function destroySources() {
 }
 
 async function resetDocument() {
+  /* PDFPRIVADO_SELECTABLE_TEXT_CACHE_RESET_V1 */
+  selectableTextCache.clear();
   await destroySources();
   state.file = null;
   resetSearchSession();
@@ -5379,6 +5391,629 @@ function textItemAscent(style, fontHeight) {
   return fontHeight;
 }
 
+/* PDFPRIVADO_OCR_SELECTABLE_LAYER_V1G */
+let ocrSelectableLayerRefreshTimer = 0;
+
+function removeOcrSelectableTextLayer(host) {
+  host?.querySelector?.(":scope > .viewer-ocr-text-layer")?.remove();
+}
+
+function scheduleOcrSelectableLayerRefresh() {
+  window.clearTimeout(ocrSelectableLayerRefreshTimer);
+  ocrSelectableLayerRefreshTimer = window.setTimeout(() => {
+    if (!state.file) return;
+    if (state.ocr.running || state.saving) {
+      scheduleOcrSelectableLayerRefresh();
+      return;
+    }
+    setViewMode(state.viewMode, true);
+  }, 80);
+}
+
+/* PDFPRIVADO_OCR_ASSISTED_SELECTION_V1V */
+function buildOcrSelectableLines(words) {
+  const normalizedWords = [];
+
+  for (const word of words) {
+    const text = String(word?.text || "").trim();
+    const bbox = word?.bbox;
+    if (!text || !bbox) continue;
+
+    const x0 = Number(bbox.x0);
+    const y0 = Number(bbox.y0);
+    const x1 = Number(bbox.x1);
+    const y1 = Number(bbox.y1);
+
+    if (
+      ![x0, y0, x1, y1].every(Number.isFinite) ||
+      x1 <= x0 ||
+      y1 <= y0
+    ) {
+      continue;
+    }
+
+    normalizedWords.push({
+      text,
+      x0,
+      y0,
+      x1,
+      y1,
+      width: x1 - x0,
+      height: y1 - y0,
+      centerY: (y0 + y1) / 2,
+    });
+  }
+
+  normalizedWords.sort((a, b) =>
+    a.y0 - b.y0 ||
+    a.centerY - b.centerY ||
+    a.x0 - b.x0
+  );
+
+  const lines = [];
+
+  for (const word of normalizedWords) {
+    let bestLine = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (const line of lines) {
+      const overlap = Math.max(
+        0,
+        Math.min(word.y1, line.bottom) - Math.max(word.y0, line.top)
+      );
+
+      const overlapRatio =
+        overlap / Math.max(1, Math.min(word.height, line.averageHeight));
+
+      const centerDistance = Math.abs(word.centerY - line.centerY);
+      const centerTolerance =
+        Math.max(word.height, line.averageHeight) * 0.72;
+
+      if (overlapRatio < 0.3 && centerDistance > centerTolerance) {
+        continue;
+      }
+
+      const score = centerDistance - overlapRatio * centerTolerance;
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestLine = line;
+      }
+    }
+
+    if (!bestLine) {
+      lines.push({
+        words: [word],
+        top: word.y0,
+        bottom: word.y1,
+        centerY: word.centerY,
+        averageHeight: word.height,
+      });
+      continue;
+    }
+
+    bestLine.words.push(word);
+    const count = bestLine.words.length;
+    bestLine.top = Math.min(bestLine.top, word.y0);
+    bestLine.bottom = Math.max(bestLine.bottom, word.y1);
+    bestLine.centerY =
+      (bestLine.centerY * (count - 1) + word.centerY) / count;
+    bestLine.averageHeight =
+      (bestLine.averageHeight * (count - 1) + word.height) / count;
+  }
+
+  lines.sort((a, b) =>
+    a.top - b.top ||
+    a.centerY - b.centerY
+  );
+
+  for (const line of lines) {
+    line.words.sort((a, b) => a.x0 - b.x0);
+  }
+
+  return lines;
+}
+
+function ocrTextBoundaries(textNode) {
+  const text = String(textNode?.nodeValue || "");
+  const parent = textNode?.parentElement;
+  const parentRect = parent?.getBoundingClientRect?.();
+
+  if (!text || !parentRect || parentRect.width <= 0) {
+    return [0];
+  }
+
+  const fallback = Array.from(
+    { length: text.length + 1 },
+    (_, index) => parentRect.width * index / Math.max(1, text.length)
+  );
+
+  try {
+    const range = document.createRange();
+    const boundaries = [0];
+
+    for (let offset = 1; offset <= text.length; offset += 1) {
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, offset);
+      const rect = range.getBoundingClientRect();
+      const width = Number(rect?.width);
+
+      boundaries.push(
+        Number.isFinite(width) && width >= boundaries.at(-1)
+          ? width
+          : fallback[offset]
+      );
+    }
+
+    range.detach?.();
+
+    if (boundaries.at(-1) <= 0) {
+      return fallback;
+    }
+
+    return boundaries;
+  }
+  catch {
+    return fallback;
+  }
+}
+
+function buildOcrSelectionMap(layer) {
+  const layerRect = layer.getBoundingClientRect();
+  const lines = new Map();
+
+  for (const wordBox of layer.querySelectorAll(
+    ".viewer-ocr-word-box[data-ocr-line]"
+  )) {
+    const wordText = wordBox.querySelector(".viewer-ocr-word-text");
+    const textNode = wordText?.firstChild;
+
+    if (!wordText || !textNode || textNode.nodeType !== Node.TEXT_NODE) {
+      continue;
+    }
+
+    const rect = wordText.getBoundingClientRect();
+    const lineIndex = Number(wordBox.dataset.ocrLine);
+
+    if (
+      !Number.isFinite(lineIndex) ||
+      rect.width <= 0 ||
+      rect.height <= 0
+    ) {
+      continue;
+    }
+
+    const descriptor = {
+      node: textNode,
+      length: String(textNode.nodeValue || "").length,
+      left: rect.left - layerRect.left,
+      right: rect.right - layerRect.left,
+      top: rect.top - layerRect.top,
+      bottom: rect.bottom - layerRect.top,
+      height: rect.height,
+      boundaries: ocrTextBoundaries(textNode),
+    };
+
+    if (!lines.has(lineIndex)) {
+      lines.set(lineIndex, []);
+    }
+
+    lines.get(lineIndex).push(descriptor);
+  }
+
+  return [...lines.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([lineIndex, words]) => {
+      words.sort((a, b) => a.left - b.left);
+
+      return {
+        lineIndex,
+        words,
+        left: Math.min(...words.map((word) => word.left)),
+        right: Math.max(...words.map((word) => word.right)),
+        top: Math.min(...words.map((word) => word.top)),
+        bottom: Math.max(...words.map((word) => word.bottom)),
+        averageHeight:
+          words.reduce((sum, word) => sum + word.height, 0) /
+          Math.max(1, words.length),
+      };
+    })
+    .filter((line) => line.words.length);
+}
+
+function ocrCharacterOffsetAtX(word, localX) {
+  if (localX <= word.left) return 0;
+  if (localX >= word.right) return word.length;
+
+  const relativeX = localX - word.left;
+  const boundaries = word.boundaries;
+
+  for (let offset = 1; offset < boundaries.length; offset += 1) {
+    const previous = boundaries[offset - 1];
+    const current = boundaries[offset];
+    const midpoint = previous + (current - previous) / 2;
+
+    if (relativeX <= midpoint) {
+      return offset - 1;
+    }
+  }
+
+  return word.length;
+}
+
+function ocrCaretFromPoint(layer, selectionMap, clientX, clientY, {
+  starting = false,
+} = {}) {
+  if (!layer || !selectionMap?.length) return null;
+
+  const layerRect = layer.getBoundingClientRect();
+  const localX = clientX - layerRect.left;
+  const localY = clientY - layerRect.top;
+
+  let selectedLine = null;
+  let selectedScore = Number.POSITIVE_INFINITY;
+
+  for (const line of selectionMap) {
+    const verticalDistance =
+      localY < line.top
+        ? line.top - localY
+        : localY > line.bottom
+          ? localY - line.bottom
+          : 0;
+
+    const horizontalDistance =
+      localX < line.left
+        ? line.left - localX
+        : localX > line.right
+          ? localX - line.right
+          : 0;
+
+    if (starting) {
+      const verticalTolerance = Math.max(
+        8,
+        line.averageHeight * 0.72
+      );
+
+      const horizontalTolerance = Math.max(
+        16,
+        line.averageHeight * 1.35
+      );
+
+      if (
+        verticalDistance > verticalTolerance ||
+        horizontalDistance > horizontalTolerance
+      ) {
+        continue;
+      }
+    }
+
+    const score =
+      verticalDistance * 5 +
+      horizontalDistance * 0.12;
+
+    if (score < selectedScore) {
+      selectedScore = score;
+      selectedLine = line;
+    }
+  }
+
+  if (!selectedLine) return null;
+
+  const firstWord = selectedLine.words[0];
+  const lastWord = selectedLine.words.at(-1);
+
+  if (localX <= firstWord.left) {
+    return { node: firstWord.node, offset: 0 };
+  }
+
+  if (localX >= lastWord.right) {
+    return { node: lastWord.node, offset: lastWord.length };
+  }
+
+  for (let index = 0; index < selectedLine.words.length; index += 1) {
+    const word = selectedLine.words[index];
+
+    if (localX >= word.left && localX <= word.right) {
+      return {
+        node: word.node,
+        offset: ocrCharacterOffsetAtX(word, localX),
+      };
+    }
+
+    const nextWord = selectedLine.words[index + 1];
+
+    if (
+      nextWord &&
+      localX > word.right &&
+      localX < nextWord.left
+    ) {
+      const distanceToPrevious = localX - word.right;
+      const distanceToNext = nextWord.left - localX;
+
+      return distanceToPrevious <= distanceToNext
+        ? { node: word.node, offset: word.length }
+        : { node: nextWord.node, offset: 0 };
+    }
+  }
+
+  return { node: lastWord.node, offset: lastWord.length };
+}
+
+function setOcrNativeSelection(anchor, focus) {
+  if (!anchor?.node || !focus?.node) return;
+
+  const selection = window.getSelection?.();
+  if (!selection) return;
+
+  if (typeof selection.setBaseAndExtent === "function") {
+    selection.setBaseAndExtent(
+      anchor.node,
+      anchor.offset,
+      focus.node,
+      focus.offset
+    );
+    return;
+  }
+
+  const range = document.createRange();
+  range.setStart(anchor.node, anchor.offset);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  if (typeof selection.extend === "function") {
+    selection.extend(focus.node, focus.offset);
+  }
+}
+
+function enableOcrAssistedSelection(layer) {
+  let selectionMap = buildOcrSelectionMap(layer);
+  let drag = null;
+
+  const refreshMap = () => {
+    selectionMap = buildOcrSelectionMap(layer);
+  };
+
+  const finishDrag = (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+
+    const focus = ocrCaretFromPoint(
+      layer,
+      selectionMap,
+      event.clientX,
+      event.clientY
+    );
+
+    if (focus) {
+      setOcrNativeSelection(drag.anchor, focus);
+    }
+
+    try {
+      layer.releasePointerCapture?.(event.pointerId);
+    }
+    catch {
+      // El puntero puede haberse liberado al terminar el arrastre.
+    }
+
+    drag = null;
+    layer.classList.remove("is-ocr-selecting");
+  };
+
+  layer.addEventListener("pointerdown", (event) => {
+    if (
+      state.interactionMode !== "pointer" ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    refreshMap();
+
+    const anchor = ocrCaretFromPoint(
+      layer,
+      selectionMap,
+      event.clientX,
+      event.clientY,
+      { starting: true }
+    );
+
+    if (!anchor) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    drag = {
+      pointerId: event.pointerId,
+      anchor,
+    };
+
+    layer.classList.add("is-ocr-selecting");
+    layer.setPointerCapture?.(event.pointerId);
+    setOcrNativeSelection(anchor, anchor);
+  });
+
+  layer.addEventListener("pointermove", (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const focus = ocrCaretFromPoint(
+      layer,
+      selectionMap,
+      event.clientX,
+      event.clientY
+    );
+
+    if (focus) {
+      setOcrNativeSelection(drag.anchor, focus);
+    }
+  });
+
+  layer.addEventListener("pointerup", finishDrag);
+  layer.addEventListener("pointercancel", finishDrag);
+
+  layer.addEventListener("lostpointercapture", () => {
+    drag = null;
+    layer.classList.remove("is-ocr-selecting");
+  });
+
+  layer.addEventListener("selectstart", (event) => {
+    if (drag) {
+      event.preventDefault();
+    }
+  });
+
+  layer.addEventListener("dragstart", (event) => {
+    event.preventDefault();
+  });
+
+  layer.addEventListener("click", (event) => {
+    if (state.interactionMode === "pointer") {
+      event.stopPropagation();
+    }
+  });
+}
+
+async function renderOcrSelectableTextLayer(
+  entry,
+  targetCanvas,
+  host,
+  signature
+) {
+  removeOcrSelectableTextLayer(host);
+
+  if (
+    !entry ||
+    entry.kind !== "pdf" ||
+    !targetCanvas ||
+    !host ||
+    targetCanvas.width <= 1 ||
+    !targetCanvas.isConnected
+  ) {
+    return;
+  }
+
+  const nativeLayer = host.querySelector(":scope > .viewer-text-layer");
+  if (nativeLayer?.querySelector("span")) return;
+
+  const record = currentOcrRecord(entry);
+  const words = Array.isArray(record?.words) ? record.words : [];
+  const imageWidth = Number(record?.imageWidth) || 0;
+  const imageHeight = Number(record?.imageHeight) || 0;
+
+  if (!words.length || imageWidth <= 0 || imageHeight <= 0) return;
+
+  /* PDFPRIVADO_OCR_LAYER_CANVAS_OFFSET_V1H */
+  const canvasRect = targetCanvas.getBoundingClientRect();
+  const hostRect = host.getBoundingClientRect();
+  const cssWidth =
+    canvasRect.width ||
+    Number.parseFloat(targetCanvas.style.width) ||
+    0;
+  const cssHeight =
+    canvasRect.height ||
+    Number.parseFloat(targetCanvas.style.height) ||
+    0;
+  const canvasOffsetLeft = canvasRect.left - hostRect.left;
+  const canvasOffsetTop = canvasRect.top - hostRect.top;
+
+  if (cssWidth <= 0 || cssHeight <= 0) return;
+
+  const scaleX = cssWidth / imageWidth;
+  const scaleY = cssHeight / imageHeight;
+  const layer = document.createElement("div");
+  layer.className = "viewer-ocr-text-layer";
+  layer.dataset.signature = String(signature || "");
+  layer.setAttribute("aria-label", "Texto reconocido por OCR");
+
+  Object.assign(layer.style, {
+    left: `${canvasOffsetLeft}px`,
+    top: `${canvasOffsetTop}px`,
+    width: `${cssWidth}px`,
+    height: `${cssHeight}px`,
+  });
+
+  const fragment = document.createDocumentFragment();
+  const lines = buildOcrSelectableLines(words);
+
+  for (const [lineIndex, line] of lines.entries()) {
+    /* PDFPRIVADO_OCR_UNIFORM_HIGHLIGHT_V1X */
+    const lineTop = line.top * scaleY;
+    const lineHeight = Math.max(1, (line.bottom - line.top) * scaleY);
+    /* PDFPRIVADO_OCR_HIGHLIGHT_VERTICAL_CENTER_V1Z */
+    /* PDFPRIVADO_OCR_HIGHLIGHT_VERTICAL_CENTER_V2A */
+    const verticalLift = lineHeight * 0.15;
+    const lineFontHeight = Math.max(
+      1,
+      Math.min(lineHeight, line.averageHeight * scaleY) * 0.86
+    );
+
+    for (const word of line.words) {
+      const { text, x0, x1 } = word;
+      const width = Math.max(1, (x1 - x0) * scaleX);
+
+      /* PDFPRIVADO_OCR_SELECTION_GEOMETRY_V1K */
+      const wordBox = document.createElement("span");
+      const wordText = document.createElement("span");
+
+      wordBox.className = "viewer-ocr-word-box";
+      wordBox.dataset.ocrText = text;
+      wordBox.dataset.ocrWidth = String(width);
+      wordBox.dataset.ocrLine = String(lineIndex);
+      wordBox.style.left = `${x0 * scaleX}px`;
+      wordBox.style.top = `${lineTop - verticalLift}px`;
+      wordBox.style.width = `${width}px`;
+      wordBox.style.height = `${lineHeight}px`;
+
+      wordText.className = "viewer-ocr-word-text";
+      wordText.textContent = `${text} `;
+      wordText.style.fontSize = `${lineFontHeight}px`;
+      wordText.style.lineHeight = `${lineHeight}px`;
+
+      wordBox.append(wordText);
+      fragment.append(wordBox);
+    }
+
+    if (lineIndex < lines.length - 1) {
+      const lineBreak = document.createElement("span");
+      const lastWord = line.words.at(-1);
+      const lineHeight = Math.max(
+        1,
+        (line.bottom - line.top) * scaleY
+      );
+
+      lineBreak.className = "viewer-ocr-line-break";
+      lineBreak.dataset.ocrLineBreak = String(lineIndex);
+      lineBreak.textContent = "\n";
+      lineBreak.style.left = `${lastWord.x1 * scaleX}px`;
+      lineBreak.style.top = `${line.top * scaleY}px`;
+      lineBreak.style.height = `${lineHeight}px`;
+      lineBreak.style.fontSize = `${lineHeight}px`;
+      lineBreak.style.lineHeight = `${lineHeight}px`;
+      fragment.append(lineBreak);
+    }
+  }
+
+  if (!fragment.childNodes.length) return;
+
+  layer.append(fragment);
+  host.append(layer);
+
+  for (const wordBox of layer.querySelectorAll(
+    ".viewer-ocr-word-box[data-ocr-width]"
+  )) {
+    const desiredWidth = Number(wordBox.dataset.ocrWidth);
+    const wordText = wordBox.querySelector(".viewer-ocr-word-text");
+    const measuredWidth = wordText?.getBoundingClientRect?.().width || 0;
+
+    if (desiredWidth > 0 && measuredWidth > 0 && wordText) {
+      wordText.style.transform = `scaleX(${desiredWidth / measuredWidth})`;
+    }
+  }
+
+  enableOcrAssistedSelection(layer);
+}
 async function renderSelectableTextLayer(
   entry,
   targetCanvas,
@@ -5587,6 +6222,14 @@ async function renderCurrentPage() {
       canvas,
       canvasStage,
       renderSignature
+    );
+
+    await renderOcrSelectableTextLayer(
+entry,
+      canvas,
+      canvasStage,
+      renderSignature
+
     );
     pageInput.value = String(state.currentPage);
     pageInfo.textContent = `Página ${state.currentPage} · ${Math.round(result.width)} × ${Math.round(result.height)} pt · ${sourceLabel(entry)}`;
@@ -6055,6 +6698,14 @@ async function performRenderContinuousPage(entryId) {
       target,
       item,
       signature
+    );
+
+    await renderOcrSelectableTextLayer(
+entry,
+      target,
+      item,
+      signature
+
     );
     if (Number(item.dataset.page) === state.currentPage || state.zoomMode === "custom") {
       zoomValue.textContent = `${Math.round(result.scale * 100)} %`;
