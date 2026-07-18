@@ -1544,6 +1544,7 @@ async function appendPdfPagesToPlan(item, fileIndex) {
       data: sourceBytes,
       isEvalSupported: false,
       useSystemFonts: true,
+      wasmUrl: new URL("./vendor/pdfjs/wasm/", import.meta.url).href,
     });
     const pdfDocument = await loadingTask.promise;
 

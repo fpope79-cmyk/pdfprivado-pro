@@ -1,4 +1,4 @@
-﻿import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
+import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
 import {
   normalizeRotation,
   resolvePageScope,
@@ -4413,7 +4413,10 @@ async function createSource(file, purpose = "source") {
 
   const loadToken = diagStart("pdfjs-load", { purpose, bytes: bytes.byteLength });
   try {
-    const loadingTask = pdfjsLib.getDocument({ data: bytes.slice() });
+    const loadingTask = pdfjsLib.getDocument({
+      data: bytes.slice(),
+      wasmUrl: new URL("./vendor/pdfjs/wasm/", import.meta.url).href,
+    });
     const pdfDocument = await loadingTask.promise;
     if (!pdfDocument.numPages) {
       await pdfDocument.destroy();
@@ -7129,7 +7132,7 @@ function buildOrganizeGrid() {
       (entries) => entries.forEach((observed) => {
         const entryId = observed.target.dataset.entryId;
         if (observed.isIntersecting) scheduleOrganizeCard(entryId, renderPriority(observed, organizeStage));
-        else cancelScheduledRender("organize", entryId, observed.target);
+        else cancelScheduledRender("organize", entryId);
       }),
       { root: organizeStage, rootMargin: "220px 0px", threshold: [0.01, 0.3, 0.6] }
     );

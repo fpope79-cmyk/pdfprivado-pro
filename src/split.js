@@ -448,7 +448,10 @@ async function loadPdf(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     state.sourceBytes = new Uint8Array(arrayBuffer);
-    const loadingTask = pdfjsLib.getDocument({ data: state.sourceBytes.slice() });
+    const loadingTask = pdfjsLib.getDocument({
+      data: state.sourceBytes.slice(),
+      wasmUrl: new URL("./vendor/pdfjs/wasm/", import.meta.url).href,
+    });
     state.pdfDocument = await loadingTask.promise;
     state.pageCount = state.pdfDocument.numPages;
 
