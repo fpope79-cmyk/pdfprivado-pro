@@ -16,7 +16,15 @@ export class RenderScheduler {
 
   enqueue({ key, channel = "default", priority = 0, run, cancel = null }) {
     if (!key || typeof run !== "function") return false;
-    if (this.active.has(key)) return false;
+
+    /*
+     * PDFPRIVADO_RENDER_RETRY_AFTER_CANCEL_V1
+     * Una tarea cancelada puede seguir en active hasta terminar su finally.
+     * Permitimos dejar preparado un nuevo trabajo con la misma clave, pero
+     * nunca se iniciara mientras la tarea anterior siga activa.
+     */
+    const active = this.active.get(key);
+    if (active && !active.cancelled) return false;
 
     const current = this.queue.get(key);
     if (current) {
@@ -90,6 +98,11 @@ export class RenderScheduler {
   }
 
   canStart(job) {
+    /*
+     * El reintento con la misma clave puede estar ya en queue mientras
+     * la tarea cancelada termina. No deben ejecutarse simultneamente.
+     */
+    if (this.active.has(job.key)) return false;
     if (this.active.size >= this.maxConcurrent) return false;
     const limit = Number(this.channelLimits[job.channel]);
     if (Number.isFinite(limit) && limit > 0 && this.channelActiveCount(job.channel) >= limit) return false;
