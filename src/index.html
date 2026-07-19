@@ -14,6 +14,9 @@
     <script type="module" src="/main.js" defer></script>
     <script type="module" src="/viewer.js" defer></script>
     <script type="module" src="/split.js" defer></script>
+    <link rel="stylesheet" href="/protection.css" />
+    <script src="/protection.js" defer></script>
+    <!-- PDFPRIVADO_PROTECTION_PRO_V1 -->
   </head>
   <body>
     <div class="app-shell">
@@ -63,6 +66,8 @@
             <button type="button" role="menuitem" data-app-tool="split"><span>Dividir PDF</span></button>
             <button type="button" role="menuitem" data-app-tool="merge"><span>Añadir otro PDF</span></button>
             <button type="button" role="menuitem" data-app-tool="save"><span>Opciones de guardado</span></button>
+            <span class="app-menu-separator" role="separator"></span>
+            <button type="button" role="menuitem" data-open-tool="protection"><span>Protección PDF</span></button>
           </div>
         </div>
         <div class="app-menu" data-app-menu>
@@ -194,6 +199,7 @@
                   <span class="tool-card-arrow" aria-hidden="true">→</span>
                 </span>
               </button>
+
             </div>
           </section>
         </div>
@@ -1541,12 +1547,329 @@
           </div>
         </dialog>
 
-      </main>
+
+        </main>
 
       <footer>
         <span>PDFPrivado Pro · lector y herramientas PDF locales v6.0</span>
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>
+  <dialog class="protection-dialog" id="protection-dialog" aria-labelledby="protection-dialog-title">
+      <div class="protection-dialog-shell">
+        <header class="protection-dialog-header">
+          <div>
+            <p class="eyebrow">Herramienta local premium</p>
+            <h2 id="protection-dialog-title">Protección PDF</h2>
+            <p>Protege o desprotege una copia sin cerrar el documento actual.</p>
+          </div>
+          <button
+            class="protection-dialog-close"
+            type="button"
+            data-protection-close
+            aria-label="Cerrar Protección PDF"
+          >×</button>
+        </header>
+
+        <div class="protection-dialog-body">
+          <div class="protection-document-card">
+            <strong id="protection-modal-document-name">Documento actual</strong>
+            <span id="protection-modal-document-meta">—</span>
+          </div>
+
+          <p class="protection-changes-note" id="protection-modal-changes-note"></p>
+
+          <div class="protection-mode-tabs" role="group" aria-label="Operación de protección">
+            <button
+              class="secondary-button is-active"
+              id="protection-modal-mode-protect"
+              type="button"
+              aria-pressed="true"
+            >Proteger</button>
+            <button
+              class="secondary-button"
+              id="protection-modal-mode-unlock"
+              type="button"
+              aria-pressed="false"
+            >Quitar protección</button>
+          </div>
+
+          <div class="protection-fields" id="protection-modal-protect-fields">
+            <label class="protection-field" for="protection-modal-password">
+              <span>Nueva contraseña de apertura</span>
+              <span class="protection-password-row">
+                <input
+                  id="protection-modal-password"
+                  type="password"
+                  autocomplete="new-password"
+                />
+                <button
+                  class="secondary-button"
+                  type="button"
+                  data-protection-password-toggle="protection-modal-password"
+                  aria-pressed="false"
+                >Mostrar</button>
+              </span>
+              <small>Fortaleza: <strong id="protection-modal-strength">—</strong></small>
+            </label>
+
+            <label class="protection-field" for="protection-modal-password-confirm">
+              <span>Confirmar contraseña</span>
+              <span class="protection-password-row">
+                <input
+                  id="protection-modal-password-confirm"
+                  type="password"
+                  autocomplete="new-password"
+                />
+                <button
+                  class="secondary-button"
+                  type="button"
+                  data-protection-password-toggle="protection-modal-password-confirm"
+                  aria-pressed="false"
+                >Mostrar</button>
+              </span>
+            </label>
+
+            <!-- PDFPRIVADO_PROTECTION_PREMIUM_EXPERIENCE_FINAL_V1 -->
+            <section class="protection-experience-panel" aria-labelledby="protection-experience-title">
+              <div class="protection-experience-heading">
+                <div>
+                  <strong id="protection-experience-title">Nivel de protección</strong>
+                  <small>Elige una configuración rápida o ajusta todos los permisos.</small>
+                </div>
+
+                <div class="protection-level-switch" role="group" aria-label="Nivel de protección">
+                  <button
+                    class="secondary-button is-active"
+                    id="protection-modal-level-quick"
+                    type="button"
+                    aria-pressed="true"
+                  >Rápido</button>
+                  <button
+                    class="secondary-button"
+                    id="protection-modal-level-advanced"
+                    type="button"
+                    aria-pressed="false"
+                  >Avanzado</button>
+                </div>
+              </div>
+
+              <label class="protection-field" for="protection-modal-profile">
+                <span>Perfil de protección</span>
+                <select id="protection-modal-profile">
+                  <option value="password" selected>Solo contraseña</option>
+                  <option value="print">Lectura e impresión</option>
+                  <option value="readonly">Solo lectura</option>
+                  <option value="maximum">Máxima restricción</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </label>
+
+              <div class="protection-generator-row">
+                <button
+                  class="secondary-button"
+                  id="protection-modal-generate-password"
+                  type="button"
+                >Generar contraseña segura</button>
+                <button
+                  class="secondary-button"
+                  id="protection-modal-copy-password"
+                  type="button"
+                  disabled
+                >Copiar contraseña</button>
+              </div>
+
+              <p class="protection-generator-note" id="protection-modal-generator-note" hidden>
+                Guarda esta contraseña en un lugar seguro. PDFPrivado no puede recuperarla.
+              </p>
+            </section>
+
+            <!-- PDFPRIVADO_PROTECTION_PREMIUM_PERMISSIONS_V1 -->
+            <details class="protection-premium-panel" open>
+              <summary>
+                <span>
+                  <strong>Control avanzado</strong>
+                  <small>Contraseña de propietario y permisos del documento</small>
+                </span>
+              </summary>
+
+              <div class="protection-premium-content">
+                <label class="protection-check-row">
+                  <input id="protection-modal-custom-owner-enabled" type="checkbox" />
+                  <span>
+                    <strong>Definir una contraseña de propietario distinta</strong>
+                    <small>Si se deja desactivado, PDFPrivado genera una clave interna segura y aleatoria.</small>
+                  </span>
+                </label>
+
+                <div class="protection-owner-fields" id="protection-modal-owner-fields" hidden>
+                  <label class="protection-field" for="protection-modal-owner-password">
+                    <span>Contraseña de propietario</span>
+                    <span class="protection-password-row">
+                      <input
+                        id="protection-modal-owner-password"
+                        type="password"
+                        autocomplete="new-password"
+                      />
+                      <button
+                        class="secondary-button"
+                        type="button"
+                        data-protection-password-toggle="protection-modal-owner-password"
+                        aria-pressed="false"
+                      >Mostrar</button>
+                    </span>
+                  </label>
+
+                  <label class="protection-field" for="protection-modal-owner-confirm">
+                    <span>Confirmar contraseña de propietario</span>
+                    <span class="protection-password-row">
+                      <input
+                        id="protection-modal-owner-confirm"
+                        type="password"
+                        autocomplete="new-password"
+                      />
+                      <button
+                        class="secondary-button"
+                        type="button"
+                        data-protection-password-toggle="protection-modal-owner-confirm"
+                        aria-pressed="false"
+                      >Mostrar</button>
+                    </span>
+                  </label>
+                </div>
+
+                <fieldset class="protection-permissions">
+                  <legend>Permisos para quien abra el PDF</legend>
+
+                  <label class="protection-permission-select">
+                    <span>
+                      <strong>Impresión</strong>
+                      <small>Controla si se permite imprimir y con qué calidad.</small>
+                    </span>
+                    <select id="protection-modal-print-permission">
+                      <option value="full" selected>Impresión completa</option>
+                      <option value="low">Solo baja resolución</option>
+                      <option value="none">No permitir impresión</option>
+                    </select>
+                  </label>
+
+                  <label class="protection-check-row">
+                    <input id="protection-modal-allow-copy" type="checkbox" checked />
+                    <span><strong>Permitir copiar texto e imágenes</strong></span>
+                  </label>
+
+                  <label class="protection-check-row">
+                    <input id="protection-modal-allow-annotate" type="checkbox" checked />
+                    <span><strong>Permitir comentarios y anotaciones</strong></span>
+                  </label>
+
+                  <label class="protection-check-row">
+                    <input id="protection-modal-allow-form" type="checkbox" checked />
+                    <span><strong>Permitir rellenar formularios y firmar</strong></span>
+                  </label>
+
+                  <label class="protection-check-row">
+                    <input id="protection-modal-allow-assemble" type="checkbox" checked />
+                    <span><strong>Permitir insertar, eliminar y girar páginas</strong></span>
+                  </label>
+
+                  <label class="protection-check-row">
+                    <input id="protection-modal-allow-modify" type="checkbox" checked />
+                    <span><strong>Permitir otras modificaciones</strong></span>
+                  </label>
+                </fieldset>
+
+                <div class="protection-permission-summary" id="protection-modal-permission-summary">
+                  <strong>Permisos actuales</strong>
+                  <span>Impresión completa · copia permitida · edición permitida</span>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="protection-fields" id="protection-modal-unlock-fields" hidden>
+            <label class="protection-field" for="protection-modal-known-password">
+              <span>Contraseña conocida</span>
+              <span class="protection-password-row">
+                <input
+                  id="protection-modal-known-password"
+                  type="password"
+                  autocomplete="current-password"
+                />
+                <button
+                  class="secondary-button"
+                  type="button"
+                  data-protection-password-toggle="protection-modal-known-password"
+                  aria-pressed="false"
+                >Mostrar</button>
+              </span>
+              <small>PDFPrivado Pro no intenta descubrir ni recuperar contraseñas desconocidas.</small>
+            </label>
+          </div>
+
+          <!-- PDFPRIVADO_PROTECTION_OPERATION_SUMMARY_V1 -->
+          <section class="protection-operation-summary" id="protection-modal-operation-summary">
+            <div class="protection-operation-summary-heading">
+              <div>
+                <strong id="protection-modal-operation-summary-title">Resumen antes de guardar</strong>
+                <small id="protection-modal-operation-summary-subtitle">Se creará una copia nueva y el original permanecerá intacto.</small>
+              </div>
+              <span class="protection-operation-badge" id="protection-modal-operation-badge">AES-256</span>
+            </div>
+
+            <dl class="protection-operation-details">
+              <div>
+                <dt>Operación</dt>
+                <dd id="protection-modal-summary-operation">Proteger PDF</dd>
+              </div>
+              <div>
+                <dt>Perfil</dt>
+                <dd id="protection-modal-summary-profile">Solo contraseña</dd>
+              </div>
+              <div>
+                <dt>Propietario</dt>
+                <dd id="protection-modal-summary-owner">Clave interna segura</dd>
+              </div>
+              <div>
+                <dt>Permisos</dt>
+                <dd id="protection-modal-summary-permissions">Sin restricciones adicionales</dd>
+              </div>
+            </dl>
+          </section>
+
+          <p class="protection-permissions-warning" id="protection-modal-permissions-warning" hidden>
+            Los permisos de impresión, copia y edición dependen del lector PDF utilizado.
+            Algunos programas pueden ignorarlos. La contraseña de apertura y AES-256 sí protegen el acceso.
+          </p>
+
+          <p class="protection-privacy-note">
+            El cifrado AES-256 y la eliminación de contraseña se realizan localmente.
+            El original y el documento que estás visualizando no se sustituyen.
+          </p>
+
+          <progress
+            class="protection-dialog-progress"
+            id="protection-modal-progress"
+            max="100"
+            value="0"
+            hidden
+          ></progress>
+          <p
+            class="protection-dialog-status"
+            id="protection-modal-status"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></p>
+        </div>
+
+        <footer class="protection-dialog-footer">
+          <button class="secondary-button" type="button" data-protection-close>Cancelar</button>
+          <button class="primary-button" id="protection-modal-action" type="button">
+            Guardar copia protegida
+          </button>
+        </footer>
+      </div>
+    </dialog>
   </body>
 </html>

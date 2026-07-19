@@ -1,0 +1,548 @@
+/* PDFPrivado Pro · Protección contextual v1 */
+.protection-dialog {
+  width: min(720px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.38);
+}
+
+.protection-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.protection-dialog-shell {
+  max-height: calc(100vh - 36px);
+  display: flex;
+  flex-direction: column;
+}
+
+.protection-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #dbe3ec;
+  background: #f8fafc;
+}
+
+.protection-dialog-header h2 {
+  margin: 4px 0 5px;
+  font-size: 1.45rem;
+}
+
+.protection-dialog-header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.protection-dialog-close {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.protection-dialog-body {
+  min-height: 0;
+  max-height: calc(100vh - 210px);
+  padding: 20px 24px;
+  overflow: auto;
+}
+
+.protection-document-card {
+  padding: 15px 16px;
+  border: 1px solid #bae6fd;
+  border-radius: 14px;
+  background: #f0f9ff;
+}
+
+.protection-document-card strong,
+.protection-document-card span {
+  display: block;
+}
+
+.protection-document-card span {
+  margin-top: 4px;
+  color: #475569;
+  font-size: 0.84rem;
+}
+
+.protection-changes-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.84rem;
+}
+
+.protection-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.protection-mode-tabs button {
+  min-height: 42px;
+}
+
+.protection-mode-tabs .is-active {
+  border-color: #38bdf8;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.protection-fields {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.protection-field {
+  display: grid;
+  gap: 7px;
+}
+
+.protection-password-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.protection-password-row input {
+  min-width: 0;
+  width: 100%;
+}
+
+.protection-field small {
+  color: #64748b;
+}
+
+.protection-privacy-note {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid #22c55e;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.protection-dialog-status {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+}
+
+.protection-dialog-status[data-kind="info"] {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.protection-dialog-status[data-kind="warning"] {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.protection-dialog-status[data-kind="error"] {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.protection-dialog-status[data-kind="success"] {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.protection-dialog-progress {
+  width: 100%;
+  height: 8px;
+  margin-top: 12px;
+}
+
+.protection-dialog-footer {
+  display: flex !important;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #dbe3ec;
+  background: #f8fafc;
+  visibility: visible !important;
+}
+
+@media (max-width: 620px) {
+  .protection-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .protection-dialog-header,
+  .protection-dialog-body,
+  .protection-dialog-footer {
+  display: flex !important;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #dbe3ec;
+  background: #f8fafc;
+  visibility: visible !important;
+}
+
+  .protection-dialog-footer {
+  display: flex !important;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #dbe3ec;
+  background: #f8fafc;
+  visibility: visible !important;
+}
+
+  .protection-dialog-footer button {
+    width: 100%;
+  }
+}
+
+/* PDFPRIVADO_PROTECTION_HIDDEN_FIX_V1 */
+.protection-fields[hidden],
+.protection-dialog-progress[hidden],
+.protection-dialog-status[hidden],
+.protection-changes-note[hidden] {
+  display: none !important;
+}
+
+/* PDFPRIVADO_PROTECTION_COMPACT_MODAL_V1 */
+.protection-dialog[open] {
+  display: block;
+}
+
+.protection-dialog-footer button {
+  min-width: 150px;
+}
+
+.protection-dialog-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* PDFPRIVADO_PROTECTION_PREMIUM_PERMISSIONS_CSS_V1 */
+.protection-premium-panel {
+  margin-top: 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.protection-premium-panel summary {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 14px 16px;
+  user-select: none;
+}
+
+.protection-premium-panel summary span,
+.protection-premium-panel summary small {
+  display: block;
+}
+
+.protection-premium-panel summary small {
+  margin-top: 3px;
+  color: #64748b;
+}
+
+.protection-premium-content {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+
+.protection-owner-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.protection-owner-fields[hidden] {
+  display: none !important;
+}
+
+.protection-permissions {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.protection-permissions legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.protection-check-row,
+.protection-permission-select {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.protection-check-row input {
+  margin-top: 3px;
+}
+
+.protection-check-row span,
+.protection-check-row small,
+.protection-permission-select span,
+.protection-permission-select small {
+  display: block;
+}
+
+.protection-check-row small,
+.protection-permission-select small {
+  margin-top: 2px;
+  color: #64748b;
+}
+
+.protection-permission-select {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.protection-permission-select select {
+  min-width: 190px;
+}
+
+.protection-permission-summary {
+  padding: 12px 14px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  background: #f0f9ff;
+}
+
+.protection-permission-summary strong,
+.protection-permission-summary span {
+  display: block;
+}
+
+.protection-permission-summary span {
+  margin-top: 4px;
+  color: #334155;
+}
+
+@media (max-width: 620px) {
+  .protection-permission-select {
+    display: grid;
+  }
+
+  .protection-permission-select select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* PDFPRIVADO_PROTECTION_PREMIUM_EXPERIENCE_FINAL_CSS_V1 */
+.protection-experience-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #dbe3ec;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.protection-experience-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.protection-experience-heading small {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+}
+
+.protection-level-switch {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #eef2f7;
+}
+
+.protection-level-switch .secondary-button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.protection-level-switch .is-active {
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 14%);
+}
+
+.protection-experience-panel select {
+  width: 100%;
+}
+
+.protection-generator-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.protection-generator-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.protection-permissions-warning {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  line-height: 1.45;
+}
+
+.protection-premium-panel[hidden],
+.protection-permissions-warning[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 620px) {
+  .protection-experience-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .protection-level-switch {
+    width: 100%;
+  }
+
+  .protection-level-switch .secondary-button {
+    flex: 1;
+  }
+
+  .protection-generator-row {
+    display: grid;
+  }
+}
+
+
+
+/* PDFPRIVADO_PROTECTION_OPERATION_SUMMARY_CSS_V1 */
+.protection-operation-summary {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 15px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.protection-operation-summary.is-success {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.protection-operation-summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.protection-operation-summary-heading small {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.protection-operation-badge {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.protection-operation-summary.is-success .protection-operation-badge {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.protection-operation-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.protection-operation-details div {
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.protection-operation-details dt {
+  margin: 0 0 3px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.protection-operation-details dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .protection-operation-summary-heading {
+    display: grid;
+  }
+
+  .protection-operation-badge {
+    justify-self: start;
+  }
+
+  .protection-operation-details {
+    grid-template-columns: 1fr;
+  }
+}

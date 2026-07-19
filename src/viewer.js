@@ -4318,6 +4318,7 @@ async function resetDocument() {
   /* PDFPRIVADO_SELECTABLE_TEXT_CACHE_RESET_V1 */
   selectableTextCache.clear();
   await destroySources();
+  clearPendingEncryptedDocument();
   state.file = null;
   resetSearchSession();
   state.sourceSequence = 0;
@@ -4535,6 +4536,9 @@ function updateDocumentIdentity() {
 
 async function loadPdf(file, sourceText = "el selector de archivos") {
   if (state.loading || state.saving) return;
+
+  /* PDFPRIVADO_PROTECTION_DOCUMENT_REPLACEMENT_V1 */
+  clearPendingEncryptedDocument();
   if (!isPdfFile(file)) {
     setFeedback("Selecciona un archivo PDF válido.", "error");
     return;
@@ -4587,22 +4591,42 @@ async function loadPdf(file, sourceText = "el selector de archivos") {
     document.title = `${file.name} | PDFPrivado Pro`;
     diagEnd(openDiagnosticToken, { pages: state.pageCount });
     diagEmit("document-open-ready", { pages: state.pageCount, fileSizeBytes: Number(file.size) || null });
+    window.dispatchEvent(new CustomEvent("pdfprivado:document-opened"));
     diagnosticContext();
   } catch (error) {
     const detail = String(error?.message || error);
-    const message = /password|encrypt/i.test(detail)
-      ? "El PDF está protegido con contraseña o cifrado y no puede abrirse en esta versión."
-      : `No se pudo abrir ${file.name}. Puede estar dañado o usar una estructura no compatible.`;
-    setLoading(true, "No se pudo abrir el PDF", message);
-    setFeedback(message, "error");
+    const encrypted = /password|encrypt/i.test(detail);
+
     diagFail(openDiagnosticToken, error, { stage: "open" });
-    diagEmit("document-open-failed", { errorType: error?.name || "Error" });
+    diagEmit("document-open-failed", { errorType: error?.name || "Error", encrypted });
+
     await destroySources();
-    state.file = null;
     state.pagePlan = [];
     state.pageCount = 0;
     viewerShell.hidden = true;
     emptyState.hidden = false;
+
+    if (encrypted) {
+      const encryptedBytes = new Uint8Array(await file.arrayBuffer());
+      window.PDFPrivadoProtectionBridge?.setEncryptedDocument?.(file, encryptedBytes);
+      state.file = null;
+      fileName.textContent = file.name;
+      fileDetails.textContent = `${formatBytes(encryptedBytes.byteLength)} · PDF cifrado`;
+      setFeedback(
+        "PDF cifrado detectado. Introduce la contraseña conocida para guardar una copia sin protección.",
+        "info"
+      );
+      window.dispatchEvent(
+        new CustomEvent("pdfprivado:encrypted-document-detected", {
+          detail: { name: file.name, size: encryptedBytes.byteLength },
+        })
+      );
+    } else {
+      state.file = null;
+      const message = `No se pudo abrir ${file.name}. Puede estar dañado o usar una estructura no compatible.`;
+      setLoading(true, "No se pudo abrir el PDF", message);
+      setFeedback(message, "error");
+    }
   } finally {
     state.loading = false;
     setLoading(false);
@@ -8605,6 +8629,134 @@ async function buildPdfBytesForEntries(entries, outputName = null) {
   return output.save({ useObjectStreams: true });
 }
 
+/* PDFPRIVADO_ENCRYPTED_DOCUMENT_FLOW_V1 */
+let pendingEncryptedDocument = null;
+
+function setPendingEncryptedDocument(file, bytes) {
+  pendingEncryptedDocument = Object.freeze({
+    file,
+    bytes: new Uint8Array(bytes).slice(),
+  });
+}
+
+function clearPendingEncryptedDocument() {
+  pendingEncryptedDocument = null;
+}
+/* PDFPRIVADO_PROTECTION_CONTEXT_BRIDGE_V1 */
+/* PDFPRIVADO_PROTECTION_DIRECT_API_V1 */
+/* PDFPRIVADO_PROTECTION_FAST_INFO_V1 */
+window.PDFPrivadoProtectionBridge = Object.freeze({
+  getCurrentDocumentInfo() {
+    if (state.file && state.pagePlan.length) {
+      return {
+        hasDocument: true,
+        encryptedSource: false,
+        name: state.file.name,
+        pages: state.pageCount,
+        sizeLabel: formatBytes(state.file.size),
+        changed: isDocumentChanged(),
+      };
+    }
+
+    if (pendingEncryptedDocument) {
+      return {
+        hasDocument: true,
+        encryptedSource: true,
+        name: pendingEncryptedDocument.file.name,
+        pages: null,
+        sizeLabel: formatBytes(pendingEncryptedDocument.bytes.byteLength),
+        changed: false,
+      };
+    }
+
+    return { hasDocument: false };
+  },
+
+  async buildCurrentDocumentBytes() {
+    if (state.file && state.pagePlan.length) {
+      const changed = isDocumentChanged();
+      const sourceIds = new Set(
+        state.pagePlan
+          .filter((entry) => entry.kind === "pdf")
+          .map((entry) => entry.sourceId)
+      );
+
+      if (!changed && sourceIds.size === 1) {
+        const source = state.sources.get([...sourceIds][0]);
+
+        if (source?.bytes instanceof Uint8Array) {
+          return {
+            hasDocument: true,
+            encryptedSource: false,
+            name: state.file.name,
+            pages: state.pageCount,
+            sizeLabel: formatBytes(source.bytes.byteLength),
+            changed: false,
+            fastPath: true,
+            bytes: source.bytes.slice(),
+          };
+        }
+      }
+
+      const bytes = new Uint8Array(
+        await buildPdfBytesForEntries(state.pagePlan, state.file.name)
+      );
+
+      return {
+        hasDocument: true,
+        encryptedSource: false,
+        name: state.file.name,
+        pages: state.pageCount,
+        sizeLabel: formatBytes(bytes.byteLength),
+        changed,
+        fastPath: false,
+        bytes,
+      };
+    }
+
+    if (pendingEncryptedDocument) {
+      return {
+        hasDocument: true,
+        encryptedSource: true,
+        name: pendingEncryptedDocument.file.name,
+        pages: null,
+        sizeLabel: formatBytes(pendingEncryptedDocument.bytes.byteLength),
+        changed: false,
+        fastPath: true,
+        bytes: pendingEncryptedDocument.bytes.slice(),
+      };
+    }
+
+    return { hasDocument: false };
+  },
+
+  /* PDFPRIVADO_PROTECTION_FAST_BYTES_V1 */
+  setEncryptedDocument(file, bytes) {
+    setPendingEncryptedDocument(file, bytes);
+  },
+
+  clearEncryptedDocument() {
+    clearPendingEncryptedDocument();
+  },
+  openFileSelector() {
+    if (state.loading || state.saving) return false;
+    fileInput.value = "";
+    fileInput.click();
+    return true;
+  },
+
+  notifySaved(operation) {
+    if (operation === "unlock") {
+      clearPendingEncryptedDocument();
+    }
+
+    const message =
+      operation === "unlock"
+        ? "Copia sin protección guardada. El documento actual continúa abierto."
+        : "Copia protegida guardada. El documento actual continúa abierto.";
+    setFeedback(message, "success");
+  },
+});
 function pathFileName(path) {
   return String(path || "documento.pdf").split(/[\\/]/).pop() || "documento.pdf";
 }
