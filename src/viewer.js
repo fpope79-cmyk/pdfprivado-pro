@@ -5878,6 +5878,934 @@ function enableOcrAssistedSelection(layer) {
   });
 }
 
+/* PDFPRIVADO_SHARED_COORDINATE_SELECTION_V1 */
+const sharedCoordinateSelection = {
+  layer: null,
+  map: null,
+  anchor: null,
+  focus: null,
+  drag: null,
+  text: "",
+};
+
+function removeSharedCoordinateSelectionVisual(layer = null) {
+  const root = layer || document;
+
+  root
+    .querySelectorAll?.(".viewer-coordinate-selection-layer")
+    .forEach((node) => node.remove());
+}
+
+function clearSharedCoordinateSelection() {
+  removeSharedCoordinateSelectionVisual(
+    sharedCoordinateSelection.layer
+  );
+
+  sharedCoordinateSelection.layer = null;
+  sharedCoordinateSelection.map = null;
+  sharedCoordinateSelection.anchor = null;
+  sharedCoordinateSelection.focus = null;
+  sharedCoordinateSelection.drag = null;
+  sharedCoordinateSelection.text = "";
+}
+
+function sharedSelectableTextNodes(layer) {
+  if (layer.classList.contains("viewer-ocr-text-layer")) {
+    return [
+      ...layer.querySelectorAll(".viewer-ocr-word-text"),
+    ];
+  }
+
+  return [...layer.querySelectorAll(":scope > span")];
+}
+
+function sharedTextBoundaries(element, textNode) {
+  const text = String(textNode?.nodeValue || "");
+  const rect = element?.getBoundingClientRect?.();
+
+  if (!text || !rect || rect.width <= 0) {
+    return [0];
+  }
+
+  const fallback = Array.from(
+    { length: text.length + 1 },
+    (_, index) =>
+      rect.width * index / Math.max(1, text.length)
+  );
+
+  try {
+    const range = document.createRange();
+    const values = [0];
+
+    for (let offset = 1; offset <= text.length; offset += 1) {
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, offset);
+
+      const width = Number(
+        range.getBoundingClientRect()?.width
+      );
+
+      values.push(
+        Number.isFinite(width) &&
+        width >= values.at(-1)
+          ? width
+          : fallback[offset]
+      );
+    }
+
+    range.detach?.();
+
+    if (values.at(-1) <= 0) {
+      return fallback;
+    }
+
+    const multiplier =
+      rect.width / Math.max(0.001, values.at(-1));
+
+    return values.map((value) => value * multiplier);
+  }
+  catch {
+    return fallback;
+  }
+}
+
+function buildSharedCoordinateSelectionMap(layer) {
+  const layerRect = layer.getBoundingClientRect();
+  const fragments = [];
+
+  for (const element of sharedSelectableTextNodes(layer)) {
+    const node = element.firstChild;
+
+    if (!node || node.nodeType !== Node.TEXT_NODE) {
+      continue;
+    }
+
+    const text = String(node.nodeValue || "");
+
+    if (!text.trim()) continue;
+
+    const rect = element.getBoundingClientRect();
+
+    if (rect.width <= 0.5 || rect.height <= 0.5) {
+      continue;
+    }
+
+    fragments.push({
+      element,
+      node,
+      text,
+      length: text.length,
+      left: rect.left - layerRect.left,
+      right: rect.right - layerRect.left,
+      top: rect.top - layerRect.top,
+      bottom: rect.bottom - layerRect.top,
+      width: rect.width,
+      height: rect.height,
+      centerY:
+        (rect.top + rect.bottom) / 2 -
+        layerRect.top,
+      boundaries: sharedTextBoundaries(element, node),
+      lineIndex: -1,
+      orderIndex: -1,
+    });
+  }
+
+  fragments.sort(
+    (a, b) =>
+      a.top - b.top ||
+      a.centerY - b.centerY ||
+      a.left - b.left
+  );
+
+  const lines = [];
+
+  for (const fragment of fragments) {
+    let selected = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const line of lines) {
+      const tolerance = Math.max(
+        3,
+        Math.min(
+          fragment.height,
+          line.averageHeight
+        ) * 0.55
+      );
+
+      const distance = Math.abs(
+        fragment.centerY - line.centerY
+      );
+
+      if (
+        distance <= tolerance &&
+        distance < bestDistance
+      ) {
+        selected = line;
+        bestDistance = distance;
+      }
+    }
+
+    if (!selected) {
+      selected = {
+        fragments: [],
+        top: fragment.top,
+        bottom: fragment.bottom,
+        centerY: fragment.centerY,
+        averageHeight: fragment.height,
+      };
+
+      lines.push(selected);
+    }
+
+    selected.fragments.push(fragment);
+
+    const count = selected.fragments.length;
+
+    selected.top = Math.min(selected.top, fragment.top);
+    selected.bottom = Math.max(
+      selected.bottom,
+      fragment.bottom
+    );
+
+    selected.centerY =
+      (
+        selected.centerY * (count - 1) +
+        fragment.centerY
+      ) / count;
+
+    selected.averageHeight =
+      (
+        selected.averageHeight * (count - 1) +
+        fragment.height
+      ) / count;
+  }
+
+  lines.sort(
+    (a, b) =>
+      a.top - b.top ||
+      a.centerY - b.centerY
+  );
+
+  const ordered = [];
+
+  lines.forEach((line, lineIndex) => {
+    line.fragments.sort((a, b) => a.left - b.left);
+
+    line.lineIndex = lineIndex;
+    line.left = Math.min(
+      ...line.fragments.map((item) => item.left)
+    );
+    line.right = Math.max(
+      ...line.fragments.map((item) => item.right)
+    );
+
+    for (const fragment of line.fragments) {
+      fragment.lineIndex = lineIndex;
+      fragment.orderIndex = ordered.length;
+      ordered.push(fragment);
+    }
+  });
+
+  return {
+    layer,
+    lines,
+    ordered,
+  };
+}
+
+function sharedCharacterOffsetAtX(fragment, localX) {
+  if (localX <= fragment.left) return 0;
+  if (localX >= fragment.right) return fragment.length;
+
+  const relativeX = localX - fragment.left;
+
+  for (
+    let offset = 1;
+    offset < fragment.boundaries.length;
+    offset += 1
+  ) {
+    const previous = fragment.boundaries[offset - 1];
+    const current = fragment.boundaries[offset];
+    const midpoint =
+      previous + (current - previous) / 2;
+
+    if (relativeX <= midpoint) {
+      return offset - 1;
+    }
+  }
+
+  return fragment.length;
+}
+
+function sharedCoordinatePointFromPointer(
+  map,
+  clientX,
+  clientY,
+  { starting = false } = {}
+) {
+  if (!map?.lines?.length) return null;
+
+  const layerRect = map.layer.getBoundingClientRect();
+  const localX = clientX - layerRect.left;
+  const localY = clientY - layerRect.top;
+
+  let selectedLine = null;
+
+  for (const line of map.lines) {
+    const verticalTolerance = starting
+      ? Math.max(4, line.averageHeight * 0.32)
+      : 1.5;
+
+    const insideVertical =
+      localY >= line.top - verticalTolerance &&
+      localY <= line.bottom + verticalTolerance;
+
+    const insideHorizontal =
+      localX >= line.left - 2 &&
+      localX <= line.right + 2;
+
+    if (insideVertical && insideHorizontal) {
+      selectedLine = line;
+      break;
+    }
+  }
+
+  if (!selectedLine) return null;
+
+  const first = selectedLine.fragments[0];
+  const last = selectedLine.fragments.at(-1);
+
+  if (localX <= first.left) {
+    return { fragment: first, offset: 0 };
+  }
+
+  if (localX >= last.right) {
+    return {
+      fragment: last,
+      offset: last.length,
+    };
+  }
+
+  for (
+    let index = 0;
+    index < selectedLine.fragments.length;
+    index += 1
+  ) {
+    const fragment = selectedLine.fragments[index];
+
+    if (
+      localX >= fragment.left &&
+      localX <= fragment.right
+    ) {
+      return {
+        fragment,
+        offset: sharedCharacterOffsetAtX(
+          fragment,
+          localX
+        ),
+      };
+    }
+
+    const next = selectedLine.fragments[index + 1];
+
+    if (
+      next &&
+      localX > fragment.right &&
+      localX < next.left
+    ) {
+      return (
+        localX - fragment.right <=
+        next.left - localX
+      )
+        ? {
+            fragment,
+            offset: fragment.length,
+          }
+        : {
+            fragment: next,
+            offset: 0,
+          };
+    }
+  }
+
+  return null;
+}
+
+function compareSharedCoordinatePoints(a, b) {
+  if (
+    a.fragment.orderIndex !==
+    b.fragment.orderIndex
+  ) {
+    return (
+      a.fragment.orderIndex -
+      b.fragment.orderIndex
+    );
+  }
+
+  return a.offset - b.offset;
+}
+
+function sharedCoordinateSelectedParts(
+  map,
+  anchor,
+  focus
+) {
+  const forward =
+    compareSharedCoordinatePoints(
+      anchor,
+      focus
+    ) <= 0;
+
+  const start = forward ? anchor : focus;
+  const end = forward ? focus : anchor;
+  const parts = [];
+
+  for (
+    let index = start.fragment.orderIndex;
+    index <= end.fragment.orderIndex;
+    index += 1
+  ) {
+    const fragment = map.ordered[index];
+
+    let startOffset =
+      index === start.fragment.orderIndex
+        ? start.offset
+        : 0;
+
+    let endOffset =
+      index === end.fragment.orderIndex
+        ? end.offset
+        : fragment.length;
+
+    startOffset = Math.max(
+      0,
+      Math.min(fragment.length, startOffset)
+    );
+
+    endOffset = Math.max(
+      startOffset,
+      Math.min(fragment.length, endOffset)
+    );
+
+    if (endOffset <= startOffset) continue;
+
+    parts.push({
+      fragment,
+      startOffset,
+      endOffset,
+      text: fragment.text.slice(
+        startOffset,
+        endOffset
+      ),
+    });
+  }
+
+  return parts;
+}
+
+function sharedCoordinateText(parts) {
+  let result = "";
+  let previous = null;
+
+  for (const part of parts) {
+    if (previous) {
+      if (
+        part.fragment.lineIndex !==
+        previous.fragment.lineIndex
+      ) {
+        result = result.trimEnd() + "\n";
+      }
+      else if (
+        result &&
+        !/\s$/.test(result) &&
+        !/^\s/.test(part.text)
+      ) {
+        result += " ";
+      }
+    }
+
+    result += part.text;
+    previous = part;
+  }
+
+  return result
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
+}
+
+function renderSharedCoordinateSelection() {
+  const {
+    layer,
+    map,
+    anchor,
+    focus,
+  } = sharedCoordinateSelection;
+
+  if (!layer || !map || !anchor || !focus) return;
+
+  removeSharedCoordinateSelectionVisual(layer);
+
+  const parts = sharedCoordinateSelectedParts(
+    map,
+    anchor,
+    focus
+  );
+
+  sharedCoordinateSelection.text =
+    sharedCoordinateText(parts);
+
+  const visual = document.createElement("div");
+  visual.className =
+    "viewer-coordinate-selection-layer";
+
+  for (const part of parts) {
+    const { fragment, startOffset, endOffset } = part;
+
+    const startX =
+      fragment.boundaries[startOffset] ?? 0;
+
+    const endX =
+      fragment.boundaries[endOffset] ??
+      fragment.width;
+
+    const marker = document.createElement("span");
+
+    marker.className =
+      "viewer-coordinate-selection-marker";
+
+    Object.assign(marker.style, {
+      left: `${
+        fragment.left +
+        Math.min(startX, endX)
+      }px`,
+      top: `${fragment.top}px`,
+      width: `${Math.max(
+        1,
+        Math.abs(endX - startX)
+      )}px`,
+      height: `${Math.max(
+        1,
+        fragment.height
+      )}px`,
+    });
+
+    visual.append(marker);
+  }
+
+  if (visual.childElementCount) {
+    layer.append(visual);
+  }
+}
+
+function enableSharedCoordinateSelection(layer) {
+  if (
+    !layer ||
+    layer.dataset.coordinateSelection === "1"
+  ) {
+    return;
+  }
+
+  layer.dataset.coordinateSelection = "1";
+
+  let map = buildSharedCoordinateSelectionMap(layer);
+  let drag = null;
+
+  const finish = (event) => {
+    if (
+      !drag ||
+      event.pointerId !== drag.pointerId
+    ) {
+      return;
+    }
+
+    const candidate =
+      sharedCoordinatePointFromPointer(
+        map,
+        event.clientX,
+        event.clientY
+      );
+
+    if (candidate) {
+      drag.lastFocus = candidate;
+    }
+
+    sharedCoordinateSelection.focus =
+      drag.lastFocus;
+
+    renderSharedCoordinateSelection();
+
+    try {
+      layer.releasePointerCapture?.(
+        event.pointerId
+      );
+    }
+    catch {
+      // Ya puede estar liberado.
+    }
+
+    drag = null;
+    sharedCoordinateSelection.drag = null;
+
+    layer.classList.remove(
+      "is-coordinate-selecting"
+    );
+  };
+
+  layer.addEventListener("pointerdown", (event) => {
+    if (
+      state.interactionMode !== "pointer" ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    map = buildSharedCoordinateSelectionMap(layer);
+
+    const anchor =
+      sharedCoordinatePointFromPointer(
+        map,
+        event.clientX,
+        event.clientY,
+        { starting: true }
+      );
+
+    if (!anchor) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    window.getSelection?.()?.removeAllRanges?.();
+    clearSharedCoordinateSelection();
+
+    drag = {
+      pointerId: event.pointerId,
+      anchor,
+      lastFocus: anchor,
+    };
+
+    sharedCoordinateSelection.layer = layer;
+    sharedCoordinateSelection.map = map;
+    sharedCoordinateSelection.anchor = anchor;
+    sharedCoordinateSelection.focus = anchor;
+    sharedCoordinateSelection.drag = drag;
+
+    layer.setPointerCapture?.(event.pointerId);
+
+    renderSharedCoordinateSelection();
+  });
+
+  layer.addEventListener("pointermove", (event) => {
+    if (
+      !drag ||
+      event.pointerId !== drag.pointerId
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const candidate =
+      sharedCoordinatePointFromPointer(
+        map,
+        event.clientX,
+        event.clientY
+      );
+
+    if (!candidate) return;
+
+    drag.lastFocus = candidate;
+    sharedCoordinateSelection.focus = candidate;
+
+    renderSharedCoordinateSelection();
+  });
+
+  layer.addEventListener("pointerup", finish);
+  layer.addEventListener("pointercancel", finish);
+
+  layer.addEventListener(
+    "lostpointercapture",
+    () => {
+      drag = null;
+      sharedCoordinateSelection.drag = null;
+    }
+  );
+
+  layer.addEventListener("selectstart", (event) => {
+    event.preventDefault();
+  });
+
+  layer.addEventListener("dragstart", (event) => {
+    event.preventDefault();
+  });
+
+  layer.addEventListener("click", (event) => {
+    if (state.interactionMode === "pointer") {
+      event.stopPropagation();
+    }
+  });
+}
+
+document.addEventListener("copy", (event) => {
+  const text = sharedCoordinateSelection.text;
+
+  if (
+    !text ||
+    !sharedCoordinateSelection.layer?.isConnected
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  event.clipboardData?.setData("text/plain", text);
+});
+
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    const layer = sharedCoordinateSelection.layer;
+
+    /* PDFPRIVADO_SHARED_CONTEXT_PRESERVE_SELECTION_V4 */
+    const insideSelectionContextMenu =
+      event.target?.closest?.(
+        ".viewer-selection-context-menu"
+      );
+
+    if (insideSelectionContextMenu) {
+      return;
+    }
+
+    if (!layer || layer.contains(event.target)) {
+      return;
+    }
+
+    clearSharedCoordinateSelection();
+  },
+  true
+);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    clearSharedCoordinateSelection();
+  }
+});
+/* PDFPRIVADO_SHARED_CONTEXT_COPY_V1 */
+let sharedSelectionContextMenu = null;
+
+function removeSharedSelectionContextMenu() {
+  sharedSelectionContextMenu?.remove();
+  sharedSelectionContextMenu = null;
+}
+
+/* PDFPRIVADO_SHARED_CONTEXT_COPY_FIX_V2 */
+async function copySharedCoordinateSelectionText() {
+  const text = String(
+    sharedCoordinateSelection.text || ""
+  );
+
+  if (!text) return false;
+
+  /*
+   * Usamos la misma ruta que Ctrl+C. El controlador global
+   * del evento "copy" introduce sharedCoordinateSelection.text
+   * en event.clipboardData.
+   */
+  try {
+    const copied = document.execCommand("copy");
+
+    if (copied) {
+      return true;
+    }
+  }
+  catch {
+    // Se probará el portapapeles moderno como alternativa.
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  catch {
+    return false;
+  }
+}
+
+function showSharedSelectionContextMenu(
+  clientX,
+  clientY
+) {
+  removeSharedSelectionContextMenu();
+
+  const menu = document.createElement("div");
+
+  menu.className =
+    "viewer-selection-context-menu";
+
+  menu.setAttribute("role", "menu");
+  menu.setAttribute(
+    "aria-label",
+    "Opciones del texto seleccionado"
+  );
+
+  const copyButton =
+    document.createElement("button");
+
+  copyButton.type = "button";
+  copyButton.className =
+    "viewer-selection-context-copy";
+
+  copyButton.setAttribute(
+    "role",
+    "menuitem"
+  );
+
+  copyButton.textContent =
+    "Copiar texto seleccionado";
+
+  copyButton.addEventListener(
+    "click",
+    async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const copied =
+        await copySharedCoordinateSelectionText();
+
+      removeSharedSelectionContextMenu();
+
+      if (!copied) {
+        diagnostics()?.error?.(
+          new Error(
+            "No se pudo copiar el texto seleccionado."
+          ),
+          "copiar-seleccion-contextual"
+        );
+      }
+    }
+  );
+
+  menu.append(copyButton);
+  document.body.append(menu);
+
+  sharedSelectionContextMenu = menu;
+
+  const margin = 8;
+  const rect = menu.getBoundingClientRect();
+
+  const left = Math.max(
+    margin,
+    Math.min(
+      clientX,
+      window.innerWidth -
+        rect.width -
+        margin
+    )
+  );
+
+  const top = Math.max(
+    margin,
+    Math.min(
+      clientY,
+      window.innerHeight -
+        rect.height -
+        margin
+    )
+  );
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+
+  copyButton.focus();
+}
+
+document.addEventListener(
+  "contextmenu",
+  (event) => {
+    const layer =
+      sharedCoordinateSelection.layer;
+
+    const text = String(
+      sharedCoordinateSelection.text || ""
+    );
+
+    if (
+      !layer ||
+      !layer.isConnected ||
+      !text
+    ) {
+      removeSharedSelectionContextMenu();
+      return;
+    }
+
+    const rect =
+      layer.getBoundingClientRect();
+
+    const insideLayer =
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+
+    if (!insideLayer) {
+      removeSharedSelectionContextMenu();
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    showSharedSelectionContextMenu(
+      event.clientX,
+      event.clientY
+    );
+  },
+  true
+);
+
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (
+      sharedSelectionContextMenu &&
+      !sharedSelectionContextMenu.contains(
+        event.target
+      )
+    ) {
+      removeSharedSelectionContextMenu();
+    }
+  },
+  true
+);
+
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (
+      event.key === "Escape" &&
+      sharedSelectionContextMenu
+    ) {
+      event.preventDefault();
+      removeSharedSelectionContextMenu();
+    }
+  },
+  true
+);
+
+window.addEventListener(
+  "blur",
+  removeSharedSelectionContextMenu
+);
+
+window.addEventListener(
+  "resize",
+  removeSharedSelectionContextMenu
+);
+
+document.addEventListener(
+  "scroll",
+  removeSharedSelectionContextMenu,
+  true
+);
 async function renderOcrSelectableTextLayer(
   entry,
   targetCanvas,
@@ -6014,8 +6942,7 @@ async function renderOcrSelectableTextLayer(
       wordText.style.transform = `scaleX(${desiredWidth / measuredWidth})`;
     }
   }
-
-  enableOcrAssistedSelection(layer);
+  enableSharedCoordinateSelection(layer);
 }
 async function renderSelectableTextLayer(
   entry,
@@ -6161,18 +7088,7 @@ async function renderSelectableTextLayer(
         }scaleX(${scaleX})`;
       }
     }
-
-    layer.addEventListener("pointerdown", (event) => {
-      if (state.interactionMode === "pointer") {
-        event.stopPropagation();
-      }
-    });
-
-    layer.addEventListener("click", (event) => {
-      if (state.interactionMode === "pointer") {
-        event.stopPropagation();
-      }
-    });
+    enableSharedCoordinateSelection(layer);
   }
   finally {
     page.cleanup();
