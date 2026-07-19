@@ -15,7 +15,9 @@
     <script type="module" src="/viewer.js" defer></script>
     <script type="module" src="/split.js" defer></script>
     <link rel="stylesheet" href="/protection.css" />
+    <link rel="stylesheet" href="/metadata.css" />
     <script src="/protection.js" defer></script>
+    <script type="module" src="/metadata.js" defer></script>
     <!-- PDFPRIVADO_PROTECTION_PRO_V1 -->
   </head>
   <body>
@@ -68,6 +70,7 @@
             <button type="button" role="menuitem" data-app-tool="save"><span>Opciones de guardado</span></button>
             <span class="app-menu-separator" role="separator"></span>
             <button type="button" role="menuitem" data-open-tool="protection"><span>Protección PDF</span></button>
+            <button type="button" role="menuitem" data-open-tool="metadata"><span>Metadatos PDF Pro</span></button>
           </div>
         </div>
         <div class="app-menu" data-app-menu>
@@ -1555,7 +1558,90 @@
         <span>© <span id="current-year">2026</span> PDFPrivado</span>
       </footer>
     </div>
-  <dialog class="protection-dialog" id="protection-dialog" aria-labelledby="protection-dialog-title">
+
+    <!-- PDFPRIVADO_METADATA_PREMIUM_V1 -->
+    <dialog class="metadata-dialog" id="metadata-dialog" aria-labelledby="metadata-dialog-title">
+      <div class="metadata-shell">
+        <header class="metadata-header">
+          <div>
+            <p class="eyebrow">Auditoría local y privada</p>
+            <h2 id="metadata-dialog-title">Metadatos PDF Pro</h2>
+          </div>
+          <button class="secondary-button" type="button" data-metadata-close aria-label="Cerrar">Cerrar</button>
+        </header>
+
+        <div class="metadata-body">
+          <div class="metadata-document-card">
+            <strong id="metadata-document-name">Documento actual</strong>
+            <span id="metadata-document-meta">—</span>
+          </div>
+
+          <section class="metadata-panel">
+            <div class="metadata-profile-row">
+              <label class="metadata-field">
+                <span>Perfil de limpieza</span>
+                <select id="metadata-profile">
+                  <option value="preserve">Conservar todo</option>
+                  <option value="basic">Limpieza básica</option>
+                  <option value="privacy">Privacidad</option>
+                  <option value="full">Limpieza completa</option>
+                </select>
+              </label>
+              <div>
+                <strong>Riesgo de privacidad</strong>
+                <div class="metadata-risk">
+                  <span class="metadata-risk-badge risk-low" id="metadata-risk-badge">BAJO</span>
+                  <strong id="metadata-risk-score">0/100</strong>
+                </div>
+              </div>
+            </div>
+            <ul class="metadata-findings" id="metadata-findings"></ul>
+          </section>
+
+          <section class="metadata-panel">
+            <h3>Editar metadatos estándar</h3>
+            <div class="metadata-grid">
+              <label class="metadata-field"><span>Título</span><input id="metadata-title" type="text" /></label>
+              <label class="metadata-field"><span>Autor</span><input id="metadata-author" type="text" /></label>
+              <label class="metadata-field"><span>Asunto</span><input id="metadata-subject" type="text" /></label>
+              <label class="metadata-field"><span>Palabras clave</span><input id="metadata-keywords" type="text" /></label>
+              <label class="metadata-field"><span>Creador / aplicación</span><input id="metadata-creator" type="text" /></label>
+              <label class="metadata-field"><span>Productor / conversor</span><input id="metadata-producer" type="text" /></label>
+              <label class="metadata-field"><span>Fecha de creación</span><input id="metadata-creation-date" type="text" /></label>
+              <label class="metadata-field"><span>Fecha de modificación</span><input id="metadata-modification-date" type="text" /></label>
+            </div>
+            <div class="metadata-checks">
+              <label><input id="metadata-preserve-creation" type="checkbox" checked /> Conservar fecha de creación original</label>
+              <label><input id="metadata-update-modification" type="checkbox" /> Actualizar modificación al guardar</label>
+            </div>
+          </section>
+
+          <section class="metadata-panel">
+            <h3>Comparación antes y después</h3>
+            <div class="metadata-comparison-wrap">
+              <table class="metadata-comparison">
+                <thead><tr><th>Campo</th><th>Original</th><th>Resultado</th></tr></thead>
+                <tbody id="metadata-comparison-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <progress class="metadata-progress" id="metadata-progress" max="100" value="0" hidden></progress>
+          <p class="metadata-status" id="metadata-status" role="status" aria-live="polite" hidden></p>
+          <p>El procesamiento se realiza localmente. Se guarda siempre una copia nueva y el original permanece intacto.</p>
+        </div>
+
+        <footer class="metadata-footer">
+          <button class="secondary-button" id="metadata-reset" type="button">Restaurar valores</button>
+          <button class="secondary-button" id="metadata-export-report" type="button" disabled>Exportar informe</button>
+          <span></span>
+          <button class="secondary-button" type="button" data-metadata-close>Cancelar</button>
+          <button class="primary-button" id="metadata-save" type="button" disabled>Guardar copia verificada</button>
+        </footer>
+      </div>
+    </dialog>
+
+<dialog class="protection-dialog" id="protection-dialog" aria-labelledby="protection-dialog-title">
       <div class="protection-dialog-shell">
         <header class="protection-dialog-header">
           <div>
