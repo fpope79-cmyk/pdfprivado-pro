@@ -19,7 +19,8 @@
     <script src="/protection.js" defer></script>
     <script type="module" src="/metadata.js" defer></script>
     <!-- PDFPRIVADO_PROTECTION_PRO_V1 -->
-  </head>
+      <link rel="stylesheet" href="metadata-batch.css" />
+</head>
   <body>
     <div class="app-shell">
       <nav class="app-menu-bar" id="app-menu-bar" aria-label="Menú principal de PDFPrivado Pro">
@@ -1570,10 +1571,30 @@
           <button class="secondary-button" type="button" data-metadata-close aria-label="Cerrar">Cerrar</button>
         </header>
 
+
+        <!-- PDFPRIVADO_METADATA_INDEPENDENT_MODES_V1 -->
+        <nav class="metadata-mode-tabs" role="tablist" aria-label="Modo de Metadatos PDF Pro">
+          <button class="metadata-mode-tab is-active" type="button" role="tab"
+            data-metadata-mode="single" aria-selected="true">
+            Documento individual
+          </button>
+          <button class="metadata-mode-tab" type="button" role="tab"
+            data-metadata-mode="batch" aria-selected="false">
+            Procesamiento por lotes
+          </button>
+        </nav>
+
         <div class="metadata-body">
           <div class="metadata-document-card">
-            <strong id="metadata-document-name">Documento actual</strong>
-            <span id="metadata-document-meta">—</span>
+            <div class="metadata-document-info">
+              <strong id="metadata-document-name" tabindex="-1">Ningún documento seleccionado</strong>
+              <span id="metadata-document-meta">Elige un PDF local o usa el abierto en el visor.</span>
+            </div>
+            <div class="metadata-document-actions">
+              <button class="secondary-button" id="metadata-use-viewer" type="button">Usar documento abierto</button>
+              <button class="secondary-button" id="metadata-choose-file" type="button">Elegir PDF</button>
+              <button class="secondary-button" id="metadata-remove-file" type="button" disabled>Quitar</button>
+            </div>
           </div>
 
           <section class="metadata-panel">
@@ -1624,6 +1645,46 @@
                 <tbody id="metadata-comparison-body"></tbody>
               </table>
             </div>
+          </section>
+
+          <!-- PDFPRIVADO_METADATA_BATCH_V2 -->
+          <section class="metadata-panel metadata-batch-panel" id="metadata-batch">
+            <div class="metadata-batch-header">
+              <div>
+                <h3>Procesamiento por lotes</h3>
+                <p>Analiza y aplica un perfil común a varios PDF sin modificar los originales.</p>
+              </div>
+              <div class="metadata-batch-actions">
+                <button class="secondary-button" id="metadata-batch-add" type="button">Añadir PDF</button>
+                <button class="secondary-button" id="metadata-batch-clear" type="button" disabled>Vaciar lista</button>
+              </div>
+            </div>
+
+            <div class="metadata-batch-options">
+              <label class="metadata-field">
+                <span>Perfil común</span>
+                <select id="metadata-batch-profile">
+                  <option value="basic">Limpieza básica</option>
+                  <option value="privacy" selected>Privacidad</option>
+                  <option value="full">Limpieza completa</option>
+                  <option value="preserve">Conservar metadatos</option>
+                </select>
+              </label>
+              <label><input id="metadata-batch-preserve-creation" type="checkbox" checked /> Conservar fecha de creación</label>
+              <label><input id="metadata-batch-update-modification" type="checkbox" /> Actualizar fecha de modificación</label>
+            </div>
+
+            <p class="metadata-batch-summary" id="metadata-batch-summary">No hay archivos añadidos.</p>
+            <p class="metadata-batch-empty" id="metadata-batch-empty">Añade varios PDF para analizarlos antes de procesar.</p>
+            <div class="metadata-batch-list" id="metadata-batch-list"></div>
+
+            <div class="metadata-batch-progress-row">
+              <progress id="metadata-batch-progress" value="0" max="1" hidden></progress>
+              <strong id="metadata-batch-progress-value">0 / 0</strong>
+              <button class="primary-button" id="metadata-batch-process" type="button" disabled>Elegir carpeta y procesar</button>
+            </div>
+            <p class="metadata-status" id="metadata-batch-status" role="status" aria-live="polite" hidden></p>
+            <p>Se crearán copias nuevas con nombres libres. Al finalizar se guardarán informes globales TXT y CSV.</p>
           </section>
 
           <progress class="metadata-progress" id="metadata-progress" max="100" value="0" hidden></progress>
@@ -1957,5 +2018,6 @@
         </footer>
       </div>
     </dialog>
-  </body>
+      <script src="metadata-batch-loader.js"></script>
+</body>
 </html>

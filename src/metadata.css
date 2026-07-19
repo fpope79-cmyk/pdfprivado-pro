@@ -206,3 +206,70 @@
   min-height: 40px !important;
   white-space: nowrap !important;
 }
+/* PDFPRIVADO_METADATA_INDEPENDENT_MODES_V1 */
+.metadata-mode-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 22px 0;
+  background: var(--surface, #fff);
+}
+.metadata-mode-tab {
+  flex: 1 1 0;
+  min-height: 42px;
+  border: 1px solid rgba(100, 116, 139, .28);
+  border-radius: 12px 12px 0 0;
+  background: rgba(226, 232, 240, .55);
+  color: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.metadata-mode-tab.is-active {
+  background: #fff;
+  border-bottom-color: #fff;
+  box-shadow: 0 -2px 0 rgba(37, 99, 235, .8) inset;
+}
+.metadata-document-card {
+  align-items: center;
+}
+.metadata-document-info {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.metadata-document-info strong,
+.metadata-document-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metadata-document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.metadata-document-actions button {
+  min-height: 38px;
+}
+.metadata-dialog[data-metadata-mode="batch"] #metadata-reset,
+.metadata-dialog[data-metadata-mode="batch"] #metadata-export-report,
+.metadata-dialog[data-metadata-mode="batch"] #metadata-save {
+  display: none !important;
+}
+.metadata-dialog[data-metadata-mode="batch"] .metadata-footer {
+  justify-content: flex-end !important;
+}
+.metadata-dialog[data-metadata-mode="batch"] .metadata-footer > span {
+  display: none;
+}
+@media (max-width: 760px) {
+  .metadata-mode-tabs {
+    padding-inline: 16px;
+  }
+  .metadata-document-actions {
+    justify-content: stretch;
+  }
+  .metadata-document-actions button {
+    flex: 1 1 140px;
+  }
+}

@@ -1,0 +1,125 @@
+/* PDFPRIVADO_METADATA_BATCH_V2 */
+.metadata-batch-panel {
+  display: grid;
+  gap: 14px;
+}
+.metadata-batch-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.metadata-batch-header h3,
+.metadata-batch-header p {
+  margin: 0;
+}
+.metadata-batch-header p {
+  margin-top: 5px;
+  color: var(--muted, #64748b);
+}
+.metadata-batch-actions,
+.metadata-batch-options,
+.metadata-batch-progress-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.metadata-batch-options {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(226, 232, 240, .5);
+}
+.metadata-batch-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.metadata-batch-options .metadata-field {
+  min-width: 220px;
+}
+.metadata-batch-summary {
+  margin: 0;
+  font-weight: 700;
+}
+.metadata-batch-list {
+  display: grid;
+  gap: 9px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.metadata-batch-empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed rgba(100, 116, 139, .4);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--muted, #64748b);
+}
+.metadata-batch-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(148, 163, 184, .3);
+  border-radius: 12px;
+  background: #fff;
+}
+.metadata-batch-item.is-error {
+  border-color: rgba(220, 38, 38, .4);
+  background: rgba(254, 226, 226, .45);
+}
+.metadata-batch-item.is-success {
+  border-color: rgba(22, 163, 74, .35);
+}
+.metadata-batch-item.is-warning {
+  border-color: rgba(217, 119, 6, .4);
+}
+.metadata-batch-item-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.metadata-batch-item-copy strong,
+.metadata-batch-item-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metadata-batch-item-copy span {
+  font-size: .88rem;
+  color: var(--muted, #64748b);
+}
+.metadata-batch-state {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, .8);
+  font-size: .76rem;
+  font-weight: 800;
+}
+.metadata-batch-remove {
+  min-height: 34px !important;
+}
+.metadata-batch-progress-row progress {
+  flex: 1 1 240px;
+}
+#metadata-batch-status {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .metadata-batch-header,
+  .metadata-batch-item {
+    grid-template-columns: 1fr;
+  }
+  .metadata-batch-header {
+    display: grid;
+  }
+  .metadata-batch-item {
+    justify-items: stretch;
+  }
+  .metadata-batch-state {
+    justify-self: start;
+  }
+}
