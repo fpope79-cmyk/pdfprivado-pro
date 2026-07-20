@@ -1,0 +1,106 @@
+/* PDFPRIVADO_PAGE_NUMBERING_PREMIUM_V1 */
+.page-numbering-dialog {
+  width: min(1220px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, .28);
+}
+.page-numbering-dialog::backdrop { background: rgba(15, 23, 42, .62); backdrop-filter: blur(4px); }
+.page-numbering-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: calc(100vh - 32px); background: #f8fafc; }
+.page-numbering-header, .page-numbering-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px; background: #fff; }
+.page-numbering-header { border-bottom: 1px solid rgba(148, 163, 184, .3); }
+.page-numbering-footer { border-top: 1px solid rgba(148, 163, 184, .3); }
+.page-numbering-header h2, .page-numbering-header p { margin: 0; }
+.page-numbering-header p { margin-bottom: 4px; color: #64748b; }
+.page-numbering-body { overflow: auto; padding: 18px; display: grid; gap: 16px; }
+.page-numbering-document { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; background: #fff; border: 1px solid rgba(148, 163, 184, .3); border-radius: 14px; }
+.page-numbering-document-info { display: grid; gap: 4px; min-width: 0; }
+.page-numbering-document-info strong, .page-numbering-document-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.page-numbering-document-info span { color: #64748b; }
+.page-numbering-document-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.page-numbering-layout { display: grid; grid-template-columns: minmax(360px, .9fr) minmax(460px, 1.35fr); gap: 16px; align-items: start; }
+.page-numbering-preview-panel, .page-numbering-options-panel { background: #fff; border: 1px solid rgba(148, 163, 184, .3); border-radius: 16px; padding: 16px; }
+.page-numbering-preview-panel { position: sticky; top: 0; display: grid; gap: 12px; }
+.page-numbering-preview-stage { position: relative; height: 520px; min-height: 520px; display: grid; place-items: center; overflow: auto; border-radius: 12px; background: #e2e8f0; padding: 18px; contain: layout paint; }
+.page-numbering-preview-stage canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: 484px; flex: 0 0 auto; box-shadow: 0 8px 30px rgba(15, 23, 42, .18); background: white; }
+.page-numbering-preview-label { position: absolute; z-index: 2; padding: 3px 5px; border-radius: 4px; pointer-events: none; max-width: 85%; text-align: center; }
+.page-numbering-preview-label[data-position="top-left"] { top: 30px; left: 30px; }
+.page-numbering-preview-label[data-position="top-center"] { top: 30px; left: 50%; transform: translateX(-50%); }
+.page-numbering-preview-label[data-position="top-right"] { top: 30px; right: 30px; }
+.page-numbering-preview-label[data-position="bottom-left"] { bottom: 30px; left: 30px; }
+.page-numbering-preview-label[data-position="bottom-center"] { bottom: 30px; left: 50%; transform: translateX(-50%); }
+.page-numbering-preview-label[data-position="bottom-right"] { bottom: 30px; right: 30px; }
+.page-numbering-preview-label.has-border { outline: 1px solid currentColor; }
+.page-numbering-preview-nav { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.page-numbering-preview-nav input { width: 76px; text-align: center; }
+.page-numbering-options-panel { display: grid; gap: 14px; }
+.page-numbering-section { border: 1px solid rgba(148, 163, 184, .25); border-radius: 13px; padding: 14px; display: grid; gap: 12px; }
+.page-numbering-section h3 { margin: 0; }
+.page-numbering-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.page-numbering-field { display: grid; gap: 5px; }
+.page-numbering-field > span { font-weight: 700; font-size: .86rem; color: #334155; }
+.page-numbering-field input, .page-numbering-field select { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: white; }
+.page-numbering-checks { display: flex; flex-wrap: wrap; gap: 12px; }
+.page-numbering-checks label { display: inline-flex; align-items: center; gap: 7px; }
+.page-numbering-manual-grid { max-height: 150px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 7px; padding: 8px; background: #f1f5f9; border-radius: 10px; }
+.page-numbering-page-chip { min-width: 38px; min-height: 34px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; }
+.page-numbering-page-chip.is-selected { background: #0f172a; color: white; border-color: #0f172a; }
+.page-numbering-summary { margin: 0; padding: 10px 12px; border-radius: 10px; background: #eff6ff; color: #1e3a8a; font-weight: 700; }
+.page-numbering-status { margin: 0; padding: 10px 12px; border-radius: 10px; background: #e2e8f0; }
+.page-numbering-status[data-kind="success"] { background: #dcfce7; color: #166534; }
+.page-numbering-status[data-kind="error"] { background: #fee2e2; color: #991b1b; }
+.page-numbering-status[data-kind="warning"] { background: #fef3c7; color: #92400e; }
+.page-numbering-progress { width: 100%; }
+.page-numbering-footer-actions { display: flex; gap: 10px; }
+@media (max-width: 900px) {
+  .page-numbering-layout { grid-template-columns: 1fr; }
+  .page-numbering-preview-panel { position: static; }
+}
+@media (max-width: 620px) {
+  .page-numbering-document, .page-numbering-header, .page-numbering-footer { align-items: stretch; flex-direction: column; }
+  .page-numbering-grid { grid-template-columns: 1fr; }
+  .page-numbering-document-actions, .page-numbering-footer-actions { width: 100%; }
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_PREVIEW_STABILITY_V6 */
+.page-numbering-preview-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.page-numbering-preview-stage.is-rendering::after {
+  content: "Actualizando vista previa\2026";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .78);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_CANVAS_BOUNDS_V11 */
+.page-numbering-preview-label {
+  right: auto !important;
+  bottom: auto !important;
+  max-width: min(85%, 430px);
+  box-sizing: border-box;
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_LABEL_ALIGNMENT_V12 */
+.page-numbering-preview-label {
+  width: max-content;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}

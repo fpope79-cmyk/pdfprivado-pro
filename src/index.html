@@ -16,8 +16,10 @@
     <script type="module" src="/split.js" defer></script>
     <link rel="stylesheet" href="/protection.css" />
     <link rel="stylesheet" href="/metadata.css" />
+    <link rel="stylesheet" href="/page-numbering.css" />
     <script src="/protection.js" defer></script>
     <script type="module" src="/metadata.js" defer></script>
+    <script type="module" src="/page-numbering.js" defer></script>
     <!-- PDFPRIVADO_PROTECTION_PRO_V1 -->
       <link rel="stylesheet" href="metadata-batch.css" />
 </head>
@@ -71,6 +73,7 @@
             <button type="button" role="menuitem" data-app-tool="save"><span>Opciones de guardado</span></button>
             <span class="app-menu-separator" role="separator"></span>
             <button type="button" role="menuitem" data-open-tool="protection"><span>Protección PDF</span></button>
+            <button type="button" role="menuitem" data-open-tool="page-numbering"><span>Numeración PDF Pro</span></button>
             <button type="button" role="menuitem" data-open-tool="metadata"><span>Metadatos PDF Pro</span></button>
           </div>
         </div>
@@ -158,7 +161,7 @@
                 </p>
                 <span class="tool-card-footer">
                   <span class="tool-card-status" id="viewer-card-status">Abrir espacio de trabajo</span>
-                  <span class="tool-card-arrow" aria-hidden="true">→</span>
+                  <span class="tool-card-arrow" aria-hidden="true">&#8594;</span>
                 </span>
               </button>
 
@@ -201,6 +204,26 @@
                 <span class="tool-card-footer">
                   <span class="tool-card-status" id="split-card-status">Abrir herramienta</span>
                   <span class="tool-card-arrow" aria-hidden="true">→</span>
+                </span>
+              </button>
+              <button
+                class="tool-card tool-card-button tool-card-active"
+                type="button"
+                data-open-tool="page-numbering"
+                aria-describedby="page-numbering-tool-description page-numbering-card-status"
+              >
+                <span class="tool-card-topline">
+                  <span class="tool-number">03</span>
+                  <span class="available-label">Premium</span>
+                </span>
+                <h3>Numeración PDF Pro</h3>
+                <p id="page-numbering-tool-description">
+                  Diseña numeraciones profesionales con selección visual, reinicios,
+                  estilos, fondos, márgenes y vista previa antes de guardar.
+                </p>
+                <span class="tool-card-footer">
+                  <span class="tool-card-status" id="page-numbering-card-status">Abrir herramienta premium</span>
+                  <span class="tool-card-arrow" aria-hidden="true">â†’</span>
                 </span>
               </button>
 
@@ -1560,6 +1583,142 @@
       </footer>
     </div>
 
+    <!-- PDFPRIVADO_PAGE_NUMBERING_PREMIUM_V1 -->
+    <dialog class="page-numbering-dialog" id="page-numbering-dialog" aria-labelledby="page-numbering-title">
+      <div class="page-numbering-shell">
+        <header class="page-numbering-header">
+          <div>
+            <p class="eyebrow">Herramienta premium local</p>
+            <h2 id="page-numbering-title">Numeración PDF Pro</h2>
+          </div>
+          <button class="secondary-button" type="button" data-page-numbering-close>Cerrar</button>
+        </header>
+
+        <div class="page-numbering-body">
+          <section class="page-numbering-document">
+            <div class="page-numbering-document-info">
+              <strong id="page-numbering-file-name" tabindex="-1">Ningún documento seleccionado</strong>
+              <span id="page-numbering-file-meta">Elige un PDF local o usa el abierto en el visor.</span>
+            </div>
+            <div class="page-numbering-document-actions">
+              <button class="secondary-button" id="page-numbering-use-viewer" type="button">Usar documento abierto</button>
+              <button class="secondary-button" id="page-numbering-choose-file" type="button">Elegir PDF</button>
+              <button class="secondary-button" id="page-numbering-remove-file" type="button" disabled>Quitar</button>
+            </div>
+          </section>
+
+          <div class="page-numbering-layout">
+            <section class="page-numbering-preview-panel" aria-labelledby="page-numbering-preview-title">
+              <h3 id="page-numbering-preview-title">Vista previa profesional</h3>
+              <div class="page-numbering-preview-stage">
+                <canvas id="page-numbering-preview-canvas" aria-label="Vista previa de la página"></canvas>
+                <span class="page-numbering-preview-label" id="page-numbering-preview-label" data-position="bottom-center">Vista previa pendiente</span>
+              </div>
+              <div class="page-numbering-preview-nav">
+                <button class="secondary-button" id="page-numbering-preview-prev" type="button" aria-label="Página anterior">&#8592;</button>
+                <input id="page-numbering-preview-page" type="number" min="1" value="1" aria-label="Página de vista previa" />
+                <button class="secondary-button" id="page-numbering-preview-next" type="button" aria-label="Página siguiente">&#8594;</button>
+              </div>
+            </section>
+
+            <section class="page-numbering-options-panel">
+              <section class="page-numbering-section">
+                <h3>Páginas que se numerarán</h3>
+                <div class="page-numbering-grid">
+                  <label class="page-numbering-field"><span>Selección</span>
+                    <select id="page-numbering-page-mode">
+                      <option value="all">Todas las páginas</option>
+                      <option value="range">Rango o páginas concretas</option>
+                      <option value="even">Solo páginas pares</option>
+                      <option value="odd">Solo páginas impares</option>
+                      <option value="manual">Selección manual visual</option>
+                    </select>
+                  </label>
+                  <label class="page-numbering-field"><span>Rango</span>
+                    <input id="page-numbering-expression" type="text" placeholder="1-5, 8, 12-16" disabled />
+                  </label>
+                </div>
+                <div class="page-numbering-manual-grid" id="page-numbering-manual-grid" hidden></div>
+                <p class="page-numbering-summary" id="page-numbering-selection-summary">Ningún documento preparado</p>
+              </section>
+
+              <section class="page-numbering-section">
+                <h3>Posición y secuencia</h3>
+                <div class="page-numbering-grid">
+                  <label class="page-numbering-field"><span>Posición</span>
+                    <select id="page-numbering-position">
+                      <option value="top-left">Superior izquierda</option>
+                      <option value="top-center">Superior centro</option>
+                      <option value="top-right">Superior derecha</option>
+                      <option value="bottom-left">Inferior izquierda</option>
+                      <option value="bottom-center" selected>Inferior centro</option>
+                      <option value="bottom-right">Inferior derecha</option>
+                    </select>
+                  </label>
+                  <label class="page-numbering-field"><span>Número inicial</span><input id="page-numbering-initial" type="number" value="1" /></label>
+                  <label class="page-numbering-field"><span>Margen horizontal</span><input id="page-numbering-margin-x" type="number" min="0" value="24" /></label>
+                  <label class="page-numbering-field"><span>Margen vertical</span><input id="page-numbering-margin-y" type="number" min="0" value="20" /></label>
+                  <label class="page-numbering-field"><span>Comenzar o reiniciar en página</span><input id="page-numbering-restart-page" type="number" min="1" value="1" /></label>
+                </div>
+                <div class="page-numbering-checks">
+                  <label><input id="page-numbering-skip-cover" type="checkbox" /> No numerar la portada</label>
+                </div>
+              </section>
+
+              <section class="page-numbering-section">
+                <h3>Formato profesional</h3>
+                <div class="page-numbering-grid">
+                  <label class="page-numbering-field"><span>Formato</span>
+                    <select id="page-numbering-format">
+                      <option value="number">1, 2, 3</option>
+                      <option value="page">Página 1</option>
+                      <option value="page-total" selected>Página 1 de N</option>
+                      <option value="padded">001, 002, 003</option>
+                    </select>
+                  </label>
+                  <label class="page-numbering-field"><span>Dígitos con ceros</span><input id="page-numbering-digits" type="number" min="2" max="8" value="3" disabled /></label>
+                  <label class="page-numbering-field"><span>Prefijo</span><input id="page-numbering-prefix" type="text" maxlength="40" /></label>
+                  <label class="page-numbering-field"><span>Sufijo</span><input id="page-numbering-suffix" type="text" maxlength="40" /></label>
+                </div>
+              </section>
+
+              <section class="page-numbering-section">
+                <h3>Tipografía y estilo</h3>
+                <div class="page-numbering-grid">
+                  <label class="page-numbering-field"><span>Tamaño</span><input id="page-numbering-font-size" type="number" min="6" max="72" value="11" /></label>
+                  <label class="page-numbering-field"><span>Color</span><input id="page-numbering-color" type="color" value="#334155" /></label>
+                  <label class="page-numbering-field"><span>Opacidad (%)</span><input id="page-numbering-opacity" type="number" min="5" max="100" value="90" /></label>
+                </div>
+                <div class="page-numbering-checks">
+                  <label><input id="page-numbering-bold" type="checkbox" /> Negrita</label>
+                  <label><input id="page-numbering-background" type="checkbox" /> Fondo o caja</label>
+                  <label><input id="page-numbering-border" type="checkbox" /> Borde</label>
+                </div>
+                <div class="page-numbering-grid">
+                  <label class="page-numbering-field"><span>Color de fondo</span><input id="page-numbering-background-color" type="color" value="#ffffff" disabled /></label>
+                  <label class="page-numbering-field"><span>Opacidad del fondo (%)</span><input id="page-numbering-background-opacity" type="number" min="5" max="100" value="88" disabled /></label>
+                  <label class="page-numbering-field"><span>Grosor del borde</span><input id="page-numbering-border-width" type="number" min="0.25" max="8" step="0.25" value="0.75" disabled /></label>
+                  <label class="page-numbering-field"><span>Relleno horizontal</span><input id="page-numbering-padding-x" type="number" min="0" max="40" value="5" disabled /></label>
+                  <label class="page-numbering-field"><span>Relleno vertical</span><input id="page-numbering-padding-y" type="number" min="0" max="30" value="3" disabled /></label>
+                </div>
+              </section>
+
+              <progress class="page-numbering-progress" id="page-numbering-progress" max="100" value="0" hidden></progress>
+              <p class="page-numbering-status" id="page-numbering-status" role="status" aria-live="polite" hidden></p>
+            </section>
+          </div>
+        </div>
+
+        <footer class="page-numbering-footer">
+          <span>Procesamiento 100 % local. Se guardará una copia nueva y se verificará el número de páginas.</span>
+          <div class="page-numbering-footer-actions">
+            <button class="secondary-button" id="page-numbering-reset" type="button">Restablecer</button>
+            <button class="secondary-button" type="button" data-page-numbering-close>Cancelar</button>
+            <button class="primary-button" id="page-numbering-save" type="button" disabled>Guardar copia numerada</button>
+          </div>
+        </footer>
+      </div>
+    </dialog>
     <!-- PDFPRIVADO_METADATA_PREMIUM_V1 -->
     <dialog class="metadata-dialog" id="metadata-dialog" aria-labelledby="metadata-dialog-title">
       <div class="metadata-shell">
