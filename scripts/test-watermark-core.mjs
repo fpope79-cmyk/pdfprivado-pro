@@ -32,4 +32,17 @@ for (const position of ["top-left", "top-center", "top-right", "middle-left", "c
   assert.ok(placement.boxX + placement.boxWidth <= 595 + 1e-7);
   assert.ok(placement.boxY + placement.boxHeight <= 842 + 1e-7);
 }
-console.log("OK watermark-core V1.1 geometry");
+
+assert.deepEqual(
+  [...selectedPagesForMode("manual", 6, "", new Set([1, 3, 8]), false)],
+  [1, 3]
+);
+assert.deepEqual(
+  [...selectedPagesForMode("all", 4, "", new Set(), true)],
+  [2, 3, 4]
+);
+assert.deepEqual(
+  [...selectedPagesForMode("manual", 4, "", new Set([1, 2, 4]), true)],
+  [2, 4]
+);
+console.log("OK watermark-core V1.2 selección avanzada y geometría");

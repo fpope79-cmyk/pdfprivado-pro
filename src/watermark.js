@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_UI_V1_1 */
+/* PDFPRIVADO_WATERMARK_UI_V1_2G */
 import {
   applyTextWatermark,
   resolveWatermarkPlacement,
@@ -18,7 +18,13 @@ const els = {
   text: $("#watermark-text"),
   pageMode: $("#watermark-page-mode"),
   expression: $("#watermark-expression"),
-  expressionField: $("#watermark-expression")?.closest(".watermark-field"),
+  expressionField: $("#watermark-expression-field"),
+  manualPanel: $("#watermark-manual-panel"),
+  manualGrid: $("#watermark-manual-grid"),
+  selectAll: $("#watermark-select-all"),
+  selectNone: $("#watermark-select-none"),
+  selectInvert: $("#watermark-select-invert"),
+  skipCover: $("#watermark-skip-cover"),
   position: $("#watermark-position"),
   fontSize: $("#watermark-font-size"),
   color: $("#watermark-color"),
@@ -31,8 +37,11 @@ const els = {
   previewPage: $("#watermark-preview-page"),
   previewPrev: $("#watermark-preview-prev"),
   previewNext: $("#watermark-preview-next"),
+  previewFirst: $("#watermark-preview-first"),
+  previewLast: $("#watermark-preview-last"),
   previewCounter: $("#watermark-preview-counter"),
   selectionSummary: $("#watermark-selection-summary"),
+  footerSummary: $("#watermark-footer-summary"),
   status: $("#watermark-status"),
   save: $("#watermark-save"),
   reset: $("#watermark-reset"),
@@ -48,6 +57,7 @@ const state = {
   previewPage: 1,
   previewTask: null,
   previewSerial: 0,
+  manualPages: new Set(),
 };
 
 const PRESETS = Object.freeze({
@@ -75,6 +85,8 @@ function options() {
     text: els.text.value,
     pageMode: els.pageMode.value,
     pageExpression: els.expression.value,
+    manualPages: new Set(state.manualPages),
+    skipCover: Boolean(els.skipCover?.checked),
     position: els.position.value,
     fontSize: Number(els.fontSize.value),
     color: els.color.value,
@@ -87,30 +99,123 @@ function options() {
 }
 
 function currentSelection() {
-  return selectedPagesForMode(options().pageMode, state.pageCount, options().pageExpression);
+  const opts = options();
+  return selectedPagesForMode(
+    opts.pageMode,
+    state.pageCount,
+    opts.pageExpression,
+    opts.manualPages,
+    opts.skipCover
+  );
 }
+
+function selectedPagesSorted() {
+  return [...currentSelection()].sort((a, b) => a - b);
+}
+
+function renderManualGrid() {
+  if (!els.manualGrid) return;
+  els.manualGrid.replaceChildren();
+
+  for (let page = 1; page <= state.pageCount; page += 1) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "watermark-page-chip";
+    button.textContent = String(page);
+    button.dataset.page = String(page);
+    button.title = `Página ${page}`;
+    button.setAttribute("aria-label", `Alternar página ${page}`);
+    button.addEventListener("click", () => {
+      if (state.manualPages.has(page)) state.manualPages.delete(page);
+      else state.manualPages.add(page);
+      updateManualGridState();
+      refresh();
+      schedulePreview();
+    });
+    els.manualGrid.append(button);
+  }
+
+  updateManualGridState();
+}
+
+function updateManualGridState() {
+  if (!els.manualGrid) return;
+  for (const button of els.manualGrid.querySelectorAll(".watermark-page-chip")) {
+    const page = Number(button.dataset.page);
+    const selected = state.manualPages.has(page);
+    const current = page === state.previewPage;
+    button.classList.toggle("is-selected", selected);
+    button.classList.toggle("is-current", current);
+    button.setAttribute("aria-pressed", String(selected));
+  }
+}
+
+function setManualPages(mode) {
+  if (!state.pageCount || state.busy) return;
+  els.pageMode.value = "manual";
+  if (mode === "all") {
+    state.manualPages = new Set(Array.from({ length: state.pageCount }, (_, index) => index + 1));
+  } else if (mode === "none") {
+    state.manualPages.clear();
+  } else if (mode === "invert") {
+    state.manualPages = new Set(
+      Array.from({ length: state.pageCount }, (_, index) => index + 1)
+        .filter((page) => !state.manualPages.has(page))
+    );
+  }
+  updateManualGridState();
+  refresh();
+  schedulePreview();
+}
+
 
 function refresh() {
   const opts = options();
   const rangeMode = opts.pageMode === "range";
   els.expression.disabled = !rangeMode || state.busy;
   if (els.expressionField) els.expressionField.hidden = !rangeMode;
+  if (els.manualPanel) els.manualPanel.hidden = !state.pageCount;
   els.choose.disabled = state.busy;
   els.remove.disabled = state.busy || !state.file;
-  els.save.disabled = state.busy || !state.file || !opts.text.trim();
+  const selected = state.pageCount ? currentSelection() : new Set();
+  els.save.disabled = state.busy || !state.file || !opts.text.trim() || selected.size === 0;
+  if (els.selectAll) els.selectAll.disabled = state.busy || !state.pageCount;
+  if (els.selectNone) els.selectNone.disabled = state.busy || !state.pageCount;
+  if (els.selectInvert) els.selectInvert.disabled = state.busy || !state.pageCount;
   els.previewPrev.disabled = state.busy || state.previewPage <= 1;
   els.previewNext.disabled = state.busy || !state.pageCount || state.previewPage >= state.pageCount;
+  if (els.previewFirst) els.previewFirst.disabled = state.busy || state.previewPage <= 1;
+  if (els.previewLast) els.previewLast.disabled = state.busy || !state.pageCount || state.previewPage >= state.pageCount;
   els.previewPage.disabled = state.busy || !state.pageCount;
   els.previewPage.max = String(Math.max(1, state.pageCount));
 
   if (state.pageCount) {
     const selected = currentSelection();
-    els.selectionSummary.textContent = `${selected.size} de ${state.pageCount} páginas recibirán la marca.`;
+    if (selected.size === 0) {
+      els.selectionSummary.textContent = "No hay páginas seleccionadas. Elige al menos una para poder guardar.";
+      els.selectionSummary.dataset.state = "warning";
+    } else {
+      const coverText = opts.skipCover ? " · portada omitida" : "";
+      els.selectionSummary.textContent = `${selected.size} de ${state.pageCount} páginas recibirán la marca${coverText}.`;
+      els.selectionSummary.dataset.state = "ready";
+    }
+    if (els.footerSummary) {
+      els.footerSummary.textContent = selected.size
+        ? `${selected.size} página${selected.size === 1 ? "" : "s"} seleccionada${selected.size === 1 ? "" : "s"}`
+        : "Ninguna página seleccionada";
+      els.footerSummary.dataset.state = selected.size ? "ready" : "warning";
+    }
     els.previewCounter.textContent = `Página ${state.previewPage} de ${state.pageCount}`;
   } else {
     els.selectionSummary.textContent = "Ningún documento preparado.";
     els.previewCounter.textContent = "Sin documento";
+    els.selectionSummary.dataset.state = "empty";
+    if (els.footerSummary) {
+      els.footerSummary.textContent = "Carga un PDF para comenzar";
+      els.footerSummary.dataset.state = "empty";
+    }
   }
+  updateManualGridState();
 }
 
 async function destroyPreviewDocument() {
@@ -144,9 +249,11 @@ async function loadFile(file) {
     state.pdfDocument = await loadingTask.promise;
     state.pageCount = state.pdfDocument.numPages;
     state.previewPage = 1;
+    state.manualPages = new Set(Array.from({ length: state.pageCount }, (_, index) => index + 1));
     els.previewPage.value = "1";
     els.fileName.textContent = file.name;
     els.fileMeta.textContent = `${state.pageCount} páginas · ${formatBytes(file.size)}`;
+    renderManualGrid();
     setStatus("Documento preparado localmente. Revisa cada página antes de guardar.", "success");
     await renderPreview();
   } catch (error) {
@@ -175,11 +282,13 @@ async function removeFile() {
   state.bytes = null;
   state.pageCount = 0;
   state.previewPage = 1;
+  state.manualPages.clear();
   els.fileInput.value = "";
   els.fileName.textContent = "Ningún documento seleccionado";
   els.fileMeta.textContent = "Elige un PDF local.";
   els.previewPage.value = "1";
   clearPreviewCanvas();
+  els.manualGrid?.replaceChildren();
   setStatus("");
   refresh();
 }
@@ -188,6 +297,9 @@ function resetOptions() {
   els.text.value = "CONFIDENCIAL";
   els.pageMode.value = "all";
   els.expression.value = "";
+  els.skipCover.checked = false;
+  state.manualPages = new Set(Array.from({ length: state.pageCount }, (_, index) => index + 1));
+  updateManualGridState();
   els.position.value = "center";
   els.fontSize.value = "54";
   els.color.value = "#b91c1c";
@@ -266,6 +378,7 @@ async function renderPreview() {
 
     state.previewPage = Math.max(1, Math.min(state.pageCount, Number(state.previewPage) || 1));
     els.previewPage.value = String(state.previewPage);
+    updateManualGridState();
 
     const page = await state.pdfDocument.getPage(state.previewPage);
     if (serial !== state.previewSerial) return;
@@ -360,13 +473,24 @@ els.remove?.addEventListener("click", removeFile);
 els.reset?.addEventListener("click", resetOptions);
 els.save?.addEventListener("click", saveWatermark);
 els.preset?.addEventListener("change", applyPreset);
+els.selectAll?.addEventListener("click", () => setManualPages("all"));
+els.selectNone?.addEventListener("click", () => setManualPages("none"));
+els.selectInvert?.addEventListener("click", () => setManualPages("invert"));
 
+els.previewFirst?.addEventListener("click", () => {
+  state.previewPage = 1;
+  void renderPreview();
+});
 els.previewPrev?.addEventListener("click", () => {
   state.previewPage = Math.max(1, state.previewPage - 1);
   void renderPreview();
 });
 els.previewNext?.addEventListener("click", () => {
   state.previewPage = Math.min(state.pageCount, state.previewPage + 1);
+  void renderPreview();
+});
+els.previewLast?.addEventListener("click", () => {
+  state.previewPage = state.pageCount;
   void renderPreview();
 });
 els.previewPage?.addEventListener("change", () => {
@@ -376,7 +500,7 @@ els.previewPage?.addEventListener("change", () => {
 
 [
   els.text, els.pageMode, els.expression, els.position, els.fontSize,
-  els.color, els.opacity, els.rotation, els.marginX, els.marginY, els.bold,
+  els.color, els.opacity, els.rotation, els.marginX, els.marginY, els.bold, els.skipCover,
 ].forEach((control) => {
   control?.addEventListener("input", () => { refresh(); schedulePreview(); });
   control?.addEventListener("change", () => { refresh(); schedulePreview(); });

@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_CORE_V1_1 */
+/* PDFPRIVADO_WATERMARK_CORE_V1_2 */
 export const WATERMARK_POSITIONS = Object.freeze({
   "top-left": { vertical: "top", horizontal: "left" },
   "top-center": { vertical: "top", horizontal: "center" },
@@ -46,12 +46,18 @@ export function parsePageExpression(expression, pageCount) {
   return result;
 }
 
-export function selectedPagesForMode(mode, pageCount, expression = "") {
+export function selectedPagesForMode(mode, pageCount, expression = "", manualPages = new Set(), skipCover = false) {
   const total = Math.max(0, Number(pageCount) || 0);
-  if (mode === "range") return parsePageExpression(expression, total);
-  if (mode === "even") return new Set(Array.from({ length: total }, (_, i) => i + 1).filter((p) => p % 2 === 0));
-  if (mode === "odd") return new Set(Array.from({ length: total }, (_, i) => i + 1).filter((p) => p % 2 === 1));
-  return new Set(Array.from({ length: total }, (_, i) => i + 1));
+  let selected;
+
+  if (mode === "range") selected = parsePageExpression(expression, total);
+  else if (mode === "even") selected = new Set(Array.from({ length: total }, (_, i) => i + 1).filter((p) => p % 2 === 0));
+  else if (mode === "odd") selected = new Set(Array.from({ length: total }, (_, i) => i + 1).filter((p) => p % 2 === 1));
+  else if (mode === "manual") selected = new Set([...manualPages].filter((p) => Number.isInteger(p) && p >= 1 && p <= total));
+  else selected = new Set(Array.from({ length: total }, (_, i) => i + 1));
+
+  if (skipCover) selected.delete(1);
+  return selected;
 }
 
 export function rotatedTextBounds(textWidth, textHeight, rotationDegrees) {
@@ -130,7 +136,13 @@ export async function applyTextWatermark(sourceBytes, options = {}) {
 
   const font = await pdf.embedFont(options.bold ? StandardFonts.HelveticaBold : StandardFonts.Helvetica);
   const pages = pdf.getPages();
-  const selected = selectedPagesForMode(options.pageMode, pages.length, options.pageExpression);
+  const selected = selectedPagesForMode(
+    options.pageMode,
+    pages.length,
+    options.pageExpression,
+    options.manualPages,
+    options.skipCover
+  );
   const text = String(options.text || "").trim();
   if (!text) throw new Error("Escribe el texto de la marca de agua.");
 

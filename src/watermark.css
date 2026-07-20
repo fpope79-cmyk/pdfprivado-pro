@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_STYLE_V1_1 */
+/* PDFPRIVADO_WATERMARK_STYLE_V1_2G */
 .watermark-dialog {
   width: min(1120px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
@@ -62,4 +62,780 @@
 @media (max-width: 850px) {
   .watermark-layout { grid-template-columns: 1fr; }
   .watermark-preview-stage { min-height: 400px; }
+}
+
+
+/* Selección avanzada V1.2 */
+.watermark-selection-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0 10px;
+}
+.watermark-selection-options {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.watermark-manual-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.watermark-manual-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.watermark-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 8px;
+  max-height: 210px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 3px 5px 3px 3px;
+  scrollbar-gutter: stable;
+}
+.watermark-page-chip {
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+}
+.watermark-page-chip:hover {
+  border-color: #64748b;
+  background: #f1f5f9;
+}
+.watermark-page-chip.is-selected {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.watermark-page-chip.is-current {
+  outline: 3px solid rgba(245, 158, 11, .45);
+  outline-offset: 1px;
+}
+.watermark-summary[data-state="warning"] {
+  color: #b45309;
+  font-weight: 700;
+}
+.watermark-selected-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+
+/* Ajustes UX V1.2d */
+#watermark-dialog {
+  max-height: 92vh;
+}
+#watermark-dialog .tool-dialog-content,
+#watermark-dialog .dialog-content {
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+#watermark-dialog .watermark-layout {
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+#watermark-dialog .dialog-actions,
+#watermark-dialog .tool-dialog-actions,
+#watermark-dialog footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+.watermark-preview-nav {
+  display: grid;
+  grid-template-columns: auto auto minmax(110px, 150px) auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.watermark-preview-page-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(72px, 1fr);
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+}
+.watermark-preview-page-wrap input {
+  width: 100%;
+  min-height: 38px;
+  text-align: center;
+}
+.watermark-manual-panel[hidden] {
+  display: none !important;
+}
+
+
+/* Maquetación premium amplia V1.2e */
+.watermark-dialog {
+  width: min(94vw, 1500px);
+  max-width: none;
+  height: min(93vh, 980px);
+  max-height: 93vh;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 20px;
+}
+
+.watermark-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  background: #fff;
+}
+
+.watermark-header {
+  position: relative;
+  z-index: 10;
+  flex: none;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.watermark-body {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 16px 20px 0;
+}
+
+.watermark-document {
+  flex: none;
+  margin: 0 0 14px;
+}
+
+.watermark-layout {
+  min-height: 0;
+  height: 100%;
+  margin-top: 0;
+  display: grid;
+  grid-template-columns: minmax(420px, 44%) minmax(520px, 56%);
+  gap: 18px;
+  overflow: hidden;
+}
+
+.watermark-preview-panel,
+.watermark-options-panel {
+  min-height: 0;
+  height: 100%;
+}
+
+.watermark-preview-panel {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.watermark-preview-stage {
+  flex: 1 1 auto;
+  min-height: 330px;
+  max-height: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.watermark-preview-stage canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.watermark-options-panel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 14px;
+}
+
+.watermark-manual-grid {
+  max-height: 230px;
+}
+
+.watermark-footer {
+  position: relative;
+  z-index: 12;
+  min-height: 74px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 22px;
+  border-top: 1px solid #cbd5e1;
+  background: #fff;
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, .08);
+}
+
+.watermark-footer-info {
+  display: grid;
+  gap: 3px;
+  min-width: 220px;
+}
+
+.watermark-footer-info > span:first-child {
+  color: #64748b;
+  font-size: .9rem;
+}
+
+.watermark-footer-summary {
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.watermark-footer-summary[data-state="warning"] {
+  color: #b45309;
+}
+
+.watermark-footer-summary[data-state="empty"] {
+  color: #64748b;
+}
+
+.watermark-footer-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#watermark-save {
+  min-width: 230px;
+  min-height: 46px;
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .watermark-dialog {
+    width: 96vw;
+    height: 95vh;
+    max-height: 95vh;
+  }
+
+  .watermark-layout {
+    grid-template-columns: minmax(360px, 43%) minmax(460px, 57%);
+  }
+}
+
+@media (max-width: 850px) {
+  .watermark-body {
+    overflow-y: auto;
+    display: block;
+    padding-bottom: 16px;
+  }
+
+  .watermark-layout {
+    height: auto;
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+
+  .watermark-preview-panel,
+  .watermark-options-panel {
+    height: auto;
+    overflow: visible;
+  }
+
+  .watermark-preview-stage {
+    min-height: 360px;
+  }
+
+  .watermark-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .watermark-footer-actions,
+  #watermark-save {
+    width: 100%;
+  }
+}
+
+
+/* Coherencia visual con Numeración PDF Pro V1.2f */
+.watermark-dialog {
+  width: min(72vw, 1100px);
+  height: min(88vh, 870px);
+  max-height: 88vh;
+  border-radius: 18px;
+}
+
+.watermark-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.watermark-header {
+  flex: 0 0 auto;
+  padding: 14px 16px;
+}
+
+.watermark-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: block;
+  padding: 14px 16px 16px;
+  scrollbar-gutter: stable;
+}
+
+.watermark-document {
+  margin-bottom: 14px;
+}
+
+.watermark-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, .78fr) minmax(520px, 1.22fr);
+  gap: 14px;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.watermark-preview-panel,
+.watermark-options-panel {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.watermark-preview-stage {
+  min-height: 420px;
+  max-height: 500px;
+  flex: none;
+}
+
+.watermark-options-panel {
+  padding-right: 14px;
+}
+
+.watermark-manual-panel {
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.watermark-manual-heading {
+  margin-bottom: 8px;
+}
+
+.watermark-manual-grid {
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 6px;
+  max-height: 155px;
+  padding: 2px 4px 2px 2px;
+}
+
+.watermark-page-chip {
+  min-height: 32px;
+  border-radius: 8px;
+  border-color: #0f172a;
+  background: #0f172a;
+  color: #fff;
+  font-size: .92rem;
+}
+
+.watermark-page-chip:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+}
+
+.watermark-page-chip.is-selected {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+
+.watermark-page-chip:not(.is-selected) {
+  background: #fff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.watermark-page-chip.is-current {
+  outline: 3px solid rgba(14, 165, 233, .45);
+  outline-offset: 1px;
+}
+
+.watermark-selection-tools {
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.watermark-selection-tools .secondary-button {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.watermark-preview-nav {
+  margin-top: 10px;
+  grid-template-columns: 34px 34px minmax(120px, 150px) 34px 34px;
+  gap: 6px;
+}
+
+.watermark-preview-nav .secondary-button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.watermark-preview-page-wrap {
+  gap: 6px;
+}
+
+.watermark-preview-page-wrap input {
+  min-height: 34px;
+}
+
+.watermark-footer {
+  flex: 0 0 auto;
+  position: relative;
+  bottom: auto;
+  z-index: 20;
+  min-height: 66px;
+  padding: 10px 16px;
+  background: #fff;
+  border-top: 1px solid #cbd5e1;
+  box-shadow: 0 -6px 18px rgba(15, 23, 42, .08);
+}
+
+.watermark-footer-actions {
+  flex-wrap: nowrap;
+}
+
+#watermark-save {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1;
+  min-width: 220px;
+  min-height: 42px;
+}
+
+#watermark-save:disabled {
+  opacity: .48;
+}
+
+@media (max-width: 1200px) {
+  .watermark-dialog {
+    width: min(86vw, 1100px);
+  }
+}
+
+@media (max-width: 900px) {
+  .watermark-dialog {
+    width: 96vw;
+    height: 94vh;
+    max-height: 94vh;
+  }
+
+  .watermark-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .watermark-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .watermark-footer-actions {
+    flex-wrap: wrap;
+  }
+
+  #watermark-save {
+    width: 100%;
+  }
+}
+
+
+/* Pie inferior garantizado y compactación V1.2g */
+.watermark-dialog {
+  width: min(72vw, 1100px);
+  height: min(88vh, 870px);
+  max-height: 88vh;
+  overflow: hidden !important;
+}
+
+.watermark-shell {
+  position: relative !important;
+  display: block !important;
+  width: 100%;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.watermark-header {
+  position: absolute !important;
+  inset: 0 0 auto 0;
+  height: 72px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px !important;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 30;
+}
+
+.watermark-header .eyebrow {
+  margin: 0 0 3px !important;
+  font-size: .72rem;
+}
+
+.watermark-header h2 {
+  margin: 0 !important;
+  font-size: 1.34rem !important;
+  line-height: 1.15;
+}
+
+.watermark-body {
+  position: absolute !important;
+  top: 72px;
+  right: 0;
+  bottom: 68px;
+  left: 0;
+  display: block !important;
+  min-height: 0 !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 10px 14px 14px !important;
+  scrollbar-gutter: stable;
+}
+
+.watermark-footer {
+  position: absolute !important;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 68px;
+  min-height: 68px;
+  display: flex !important;
+  visibility: visible !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 !important;
+  padding: 9px 16px !important;
+  background: #fff !important;
+  border-top: 1px solid #cbd5e1;
+  box-shadow: 0 -7px 20px rgba(15, 23, 42, .1);
+  z-index: 40;
+}
+
+.watermark-document {
+  min-height: 54px !important;
+  padding: 9px 12px !important;
+  margin: 0 0 10px !important;
+  border-radius: 12px !important;
+}
+
+.watermark-document-info {
+  gap: 1px !important;
+}
+
+.watermark-document-info strong {
+  font-size: .95rem !important;
+}
+
+.watermark-document-info span {
+  font-size: .84rem !important;
+}
+
+.watermark-document-actions {
+  gap: 7px !important;
+}
+
+.watermark-document-actions .secondary-button {
+  min-height: 34px !important;
+  padding: 6px 11px !important;
+  font-size: .84rem !important;
+}
+
+.watermark-layout {
+  gap: 12px !important;
+}
+
+.watermark-preview-panel,
+.watermark-options-panel {
+  padding: 12px !important;
+  border-radius: 13px !important;
+}
+
+.watermark-preview-panel h3,
+.watermark-options-panel h3,
+.watermark-section h3 {
+  margin: 0 0 8px !important;
+  font-size: 1.03rem !important;
+  line-height: 1.2;
+}
+
+.watermark-section + .watermark-section {
+  margin-top: 12px !important;
+  padding-top: 12px !important;
+}
+
+.watermark-grid {
+  gap: 8px 10px !important;
+}
+
+.watermark-field {
+  gap: 4px !important;
+  font-size: .86rem !important;
+}
+
+.watermark-field input,
+.watermark-field select {
+  min-height: 34px !important;
+  padding: 5px 9px !important;
+  border-radius: 8px !important;
+  font-size: .88rem !important;
+}
+
+.watermark-selection-options {
+  margin-top: 8px !important;
+  font-size: .88rem;
+}
+
+.watermark-manual-panel {
+  margin-top: 8px !important;
+  padding: 8px !important;
+}
+
+.watermark-manual-heading {
+  margin-bottom: 6px !important;
+  font-size: .85rem !important;
+}
+
+.watermark-selection-tools {
+  margin: 6px 0 !important;
+}
+
+.watermark-selection-tools .secondary-button {
+  min-height: 30px !important;
+  padding: 4px 9px !important;
+  font-size: .78rem !important;
+}
+
+.watermark-manual-grid {
+  max-height: 145px !important;
+}
+
+.watermark-summary {
+  margin: 7px 0 0 !important;
+  font-size: .85rem !important;
+}
+
+.watermark-preview-stage {
+  min-height: 390px !important;
+  max-height: 455px !important;
+}
+
+.watermark-preview-nav {
+  margin-top: 8px !important;
+}
+
+.watermark-preview-counter,
+.watermark-note {
+  font-size: .84rem !important;
+}
+
+.watermark-status {
+  margin: 10px 0 0 !important;
+  padding: 8px 10px !important;
+  font-size: .85rem !important;
+}
+
+.watermark-checks {
+  margin-top: 8px !important;
+  font-size: .88rem;
+}
+
+.watermark-footer-info {
+  gap: 1px !important;
+}
+
+.watermark-footer-info > span:first-child {
+  font-size: .78rem !important;
+}
+
+.watermark-footer-summary {
+  font-size: .9rem !important;
+}
+
+.watermark-footer-actions {
+  display: flex !important;
+  visibility: visible !important;
+  align-items: center;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+.watermark-footer-actions button {
+  min-height: 38px !important;
+  padding: 7px 12px !important;
+  font-size: .84rem !important;
+}
+
+#watermark-save {
+  display: inline-flex !important;
+  visibility: visible !important;
+  min-width: 205px !important;
+  min-height: 40px !important;
+}
+
+@media (max-width: 900px) {
+  .watermark-header {
+    height: 68px;
+    min-height: 68px;
+  }
+
+  .watermark-body {
+    top: 68px;
+    bottom: 118px;
+  }
+
+  .watermark-footer {
+    height: 118px;
+    min-height: 118px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .watermark-footer-actions {
+    flex-wrap: wrap !important;
+  }
 }

@@ -1638,10 +1638,15 @@
                   <div class="watermark-preview-stage">
                     <canvas id="watermark-preview-canvas" aria-label="Vista previa de la página real del PDF"></canvas>
                   </div>
-                  <div class="watermark-preview-nav" aria-label="Navegación de la vista previa">
+                                    <div class="watermark-preview-nav" aria-label="Navegación de la vista previa">
+                    <button class="secondary-button" id="watermark-preview-first" type="button" aria-label="Primera página" disabled>&#171;</button>
                     <button class="secondary-button" id="watermark-preview-prev" type="button" aria-label="Página anterior" disabled>&#8592;</button>
-                    <input id="watermark-preview-page" type="number" min="1" value="1" aria-label="Página de vista previa" disabled />
+                    <label class="watermark-preview-page-wrap">
+                      <span>Ir a página</span>
+                      <input id="watermark-preview-page" type="number" min="1" value="1" aria-label="Ir a página" disabled />
+                    </label>
                     <button class="secondary-button" id="watermark-preview-next" type="button" aria-label="Página siguiente" disabled>&#8594;</button>
+                    <button class="secondary-button" id="watermark-preview-last" type="button" aria-label="Última página" disabled>&#187;</button>
                   </div>
                   <span class="watermark-preview-counter" id="watermark-preview-counter">Sin documento</span>
                   <p class="watermark-note">La vista previa usa la página real. La copia se crea localmente y el original no se modifica.</p>
@@ -1670,6 +1675,7 @@
                           <option value="odd">Páginas impares</option>
                           <option value="even">Páginas pares</option>
                           <option value="range">Rango personalizado</option>
+                          <option value="manual">Selección manual</option>
                         </select>
                       </label>
                       <label class="watermark-field watermark-field-wide" id="watermark-expression-field" hidden>
@@ -1677,6 +1683,24 @@
                         <input id="watermark-expression" type="text" placeholder="1-5, 8, 12-16" disabled />
                       </label>
                     </div>
+                    <div class="watermark-selection-options">
+                      <label><input id="watermark-skip-cover" type="checkbox" /> Omitir portada</label>
+                    </div>
+
+                    <section class="watermark-manual-panel" id="watermark-manual-panel" hidden>
+                      <div class="watermark-manual-heading">
+                        <strong>Elegir páginas concretas</strong>
+                        <span>La lista se desplaza sin mover toda la herramienta.</span>
+                      </div>
+                      <div class="watermark-selection-tools">
+                        <button class="secondary-button" id="watermark-select-all" type="button" disabled>Seleccionar todas</button>
+                        <button class="secondary-button" id="watermark-select-none" type="button" disabled>Limpiar</button>
+                        <button class="secondary-button" id="watermark-select-invert" type="button" disabled>Invertir</button>
+                      </div>
+                      <div class="watermark-manual-grid" id="watermark-manual-grid"
+                           role="group" aria-label="Selección manual de páginas"></div>
+                    </section>
+
                     <p class="watermark-summary" id="watermark-selection-summary">Ningún documento preparado.</p>
                   </section>
 
@@ -1715,7 +1739,10 @@
             </div>
 
             <footer class="watermark-footer">
-              <span>Procesamiento completamente local y privado.</span>
+              <div class="watermark-footer-info">
+                <span>Procesamiento completamente local y privado.</span>
+                <strong class="watermark-footer-summary" id="watermark-footer-summary" data-state="empty">Carga un PDF para comenzar</strong>
+              </div>
               <div class="watermark-footer-actions">
                 <button class="secondary-button" id="watermark-reset" type="button">Restablecer</button>
                 <button class="secondary-button" type="button" data-watermark-close>Cancelar</button>
