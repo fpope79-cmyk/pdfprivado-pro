@@ -1610,6 +1610,7 @@
 
         <!-- PDFPRIVADO_WATERMARK_DIALOG_V1 -->
         <input id="watermark-file-input" type="file" accept=".pdf,application/pdf" hidden />
+        <input id="watermark-image-input" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" hidden />
         <dialog class="watermark-dialog" id="watermark-dialog" aria-labelledby="watermark-title">
           <div class="watermark-shell">
             <header class="watermark-header">
@@ -1655,12 +1656,79 @@
                 <section class="watermark-options-panel">
                   <section class="watermark-section">
                     <h3>Contenido</h3>
+                    <div class="watermark-type-switch" role="radiogroup" aria-label="Tipo de marca de agua">
+                      <label class="watermark-type-option is-active">
+                        <input id="watermark-type-text" name="watermark-type" type="radio" value="text" checked />
+                        <span>Texto</span>
+                      </label>
+                      <label class="watermark-type-option">
+                        <input id="watermark-type-image" name="watermark-type" type="radio" value="image" />
+                        <span>Imagen o logotipo</span>
+                      </label>
+                    </div>
                     <div class="watermark-grid">
-                      <label class="watermark-field watermark-field-wide">
+                                            <label class="watermark-field watermark-field-wide" id="watermark-text-field">
                         <span>Texto</span>
                         <input id="watermark-text" type="text" maxlength="160" value="CONFIDENCIAL" />
                       </label>
-                      <label class="watermark-field">
+
+                      <section class="watermark-image-panel watermark-field-wide" id="watermark-image-panel" hidden>
+                        <div class="watermark-image-picker">
+                          <div class="watermark-image-info">
+                            <strong id="watermark-image-name">Ninguna imagen seleccionada</strong>
+                            <span id="watermark-image-meta">PNG o JPG local. El archivo no sale del equipo.</span>
+                          </div>
+                          <div class="watermark-image-actions">
+                            <label class="secondary-button watermark-file-label" id="watermark-choose-image" for="watermark-image-input" role="button" tabindex="0">Elegir imagen</label>
+                            <button class="secondary-button" id="watermark-remove-image" type="button" disabled>Quitar</button>
+                          </div>
+                        </div>
+                        <div class="watermark-grid watermark-image-settings">
+                          <label class="watermark-field">
+                            <span>Escala respecto a la página (%)</span>
+                            <input id="watermark-image-scale" type="number" min="2" max="100" value="24" />
+                          </label>
+                          <label class="watermark-field">
+                            <span>Ajuste</span>
+                            <select id="watermark-image-fit">
+                              <option value="width" selected>Por ancho de página</option>
+                              <option value="height">Por alto de página</option>
+                            </select>
+                          </label>
+                        </div>
+                        <div class="watermark-grid watermark-image-layout-panel" id="watermark-image-layout-panel">
+                          <label class="watermark-field">
+                            <span>Distribución</span>
+                            <select id="watermark-image-layout">
+                              <option value="single" selected>Logotipo único</option>
+                              <option value="tile-diagonal">Mosaico diagonal</option>
+                              <option value="tile-grid">Mosaico recto</option>
+                            </select>
+                          </label>
+                          <button class="secondary-button watermark-tile-toggle" id="watermark-image-tile-toggle"
+                                  type="button" aria-expanded="false" aria-controls="watermark-image-tile-controls" hidden>
+                            Configurar mosaico
+                          </button>
+
+                        </div>
+
+                        <div class="watermark-grid watermark-image-tile-controls" id="watermark-image-tile-controls" hidden role="dialog" aria-label="Ajustes de mosaico">
+                          <label class="watermark-field">
+                            <span>Separación horizontal</span>
+                            <input id="watermark-image-gap-x" type="number" min="0" max="400" value="80" />
+                          </label>
+                          <label class="watermark-field">
+                            <span>Separación vertical</span>
+                            <input id="watermark-image-gap-y" type="number" min="0" max="400" value="80" />
+                          </label>
+                          <label class="watermark-field" id="watermark-image-row-offset-field">
+                            <span>Desplazamiento alterno (%)</span>
+                            <input id="watermark-image-row-offset" type="number" min="0" max="100" value="50" />
+                          </label>
+                        </div>
+
+                      </section>
+                      <label class="watermark-field" id="watermark-preset-field">
                         <span>Preset</span>
                         <select id="watermark-preset">
                           <option value="confidential">Confidencial diagonal</option>
@@ -1721,14 +1789,14 @@
                           <option value="bottom-right">Inferior derecha</option>
                         </select>
                       </label>
-                      <label class="watermark-field"><span>Tamaño</span><input id="watermark-font-size" type="number" min="8" max="180" value="54" /></label>
-                      <label class="watermark-field"><span>Color</span><input id="watermark-color" type="color" value="#b91c1c" /></label>
+                      <label class="watermark-field" id="watermark-font-size-field"><span>Tamaño</span><input id="watermark-font-size" type="number" min="8" max="180" value="54" /></label>
+                      <label class="watermark-field" id="watermark-color-field"><span>Color</span><input id="watermark-color" type="color" value="#b91c1c" /></label>
                       <label class="watermark-field"><span>Opacidad (%)</span><input id="watermark-opacity" type="number" min="3" max="100" value="18" /></label>
                       <label class="watermark-field"><span>Rotación</span><input id="watermark-rotation" type="number" min="-180" max="180" value="-35" /></label>
                       <label class="watermark-field"><span>Margen horizontal</span><input id="watermark-margin-x" type="number" min="0" value="24" /></label>
                       <label class="watermark-field"><span>Margen vertical</span><input id="watermark-margin-y" type="number" min="0" value="24" /></label>
                     </div>
-                    <div class="watermark-checks">
+                    <div class="watermark-checks" id="watermark-text-checks">
                       <label><input id="watermark-bold" type="checkbox" checked /> Negrita</label>
                     </div>
                   </section>

@@ -839,3 +839,167 @@
     flex-wrap: wrap !important;
   }
 }
+
+/* Imagen o logotipo V1.3 */
+.watermark-type-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.watermark-type-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #334155;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.watermark-type-option:has(input:checked) {
+  border-color: #0f766e;
+  background: #ccfbf1;
+  color: #115e59;
+}
+
+.watermark-type-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.watermark-image-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.watermark-image-panel[hidden] {
+  display: none !important;
+}
+
+.watermark-image-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.watermark-image-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.watermark-image-info strong,
+.watermark-image-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watermark-image-info span {
+  color: #64748b;
+  font-size: .82rem;
+}
+
+.watermark-image-actions {
+  display: flex;
+  gap: 7px;
+  flex: none;
+}
+
+.watermark-image-settings {
+  margin-top: 0;
+}
+
+.watermark-file-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.watermark-file-label:focus-visible {
+  outline: 3px solid rgba(14, 165, 233, .45);
+  outline-offset: 2px;
+}
+
+.watermark-file-label[aria-disabled="true"] {
+  opacity: .48;
+  pointer-events: none;
+}
+
+.watermark-image-layout-panel,
+.watermark-image-tile-controls {
+  margin-top: 8px;
+}
+
+.watermark-image-tile-controls {
+  padding-top: 6px;
+  border-top: 1px dashed #dbe4ef;
+}
+
+.watermark-image-tile-controls[hidden] {
+  display: none !important;
+}
+
+/* V1.4b: modo imagen limpio y ajustes de mosaico sin desplazamiento */
+#watermark-text-field[hidden],
+#watermark-preset-field[hidden],
+#watermark-font-size-field[hidden],
+#watermark-color-field[hidden],
+#watermark-text-checks[hidden],
+.watermark-field[hidden],
+.watermark-checks[hidden] {
+  display: none !important;
+}
+
+.watermark-image-panel {
+  position: relative;
+}
+
+.watermark-image-layout-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.watermark-tile-toggle {
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.watermark-tile-toggle[hidden] {
+  display: none !important;
+}
+
+.watermark-image-tile-controls {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% - 4px);
+  right: 10px;
+  width: min(430px, calc(100% - 20px));
+  padding: 12px;
+  margin: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, .18);
+}
+
+.watermark-image-tile-controls[hidden] {
+  display: none !important;
+}

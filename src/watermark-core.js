@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_CORE_V1_2 */
+/* PDFPRIVADO_WATERMARK_CORE_V1_4_LAYOUTS */
 export const WATERMARK_POSITIONS = Object.freeze({
   "top-left": { vertical: "top", horizontal: "left" },
   "top-center": { vertical: "top", horizontal: "center" },
@@ -172,6 +172,120 @@ export async function applyTextWatermark(sourceBytes, options = {}) {
       opacity,
       rotate: degrees(rotation),
     });
+    applied += 1;
+  }
+
+  pdf.setCreator("PDFPrivado Pro");
+  pdf.setProducer("PDFPrivado Pro");
+  const bytes = await pdf.save({ addDefaultPage: false, useObjectStreams: true });
+  return { bytes, pageCount: pages.length, applied, selectedCount: selected.size };
+}
+
+
+export function resolveImageWatermarkSize(page, imageWidth, imageHeight, options = {}) {
+  const { width: pageWidth, height: pageHeight } = page.getSize();
+  const sourceWidth = Math.max(1, Number(imageWidth) || 1);
+  const sourceHeight = Math.max(1, Number(imageHeight) || 1);
+  const scalePercent = clamp(options.imageScale, 2, 100) / 100;
+  const fit = options.imageFit === "height" ? "height" : "width";
+
+  let width;
+  let height;
+  if (fit === "height") {
+    height = pageHeight * scalePercent;
+    width = height * (sourceWidth / sourceHeight);
+  } else {
+    width = pageWidth * scalePercent;
+    height = width * (sourceHeight / sourceWidth);
+  }
+
+  const maxScale = Math.min(1, pageWidth / width, pageHeight / height);
+  return {
+    width: width * maxScale,
+    height: height * maxScale,
+  };
+}
+
+
+export function resolveImageTilePlacements(page, imageWidth, imageHeight, options = {}) {
+  const layout = String(options.imageLayout || "single");
+  const size = resolveImageWatermarkSize(page, imageWidth, imageHeight, options);
+
+  if (layout === "single") {
+    const placement = resolveWatermarkPlacement(page, size.width, size.height, options);
+    return [{ x: placement.x, y: placement.y, width: size.width, height: size.height }];
+  }
+
+  const { width: pageWidth, height: pageHeight } = page.getSize();
+  const gapX = clamp(options.imageGapX, 0, 400);
+  const gapY = clamp(options.imageGapY, 0, 400);
+  const rowOffset = clamp(options.imageRowOffset, 0, 100) / 100;
+  const stepX = Math.max(8, size.width + gapX);
+  const stepY = Math.max(8, size.height + gapY);
+  const placements = [];
+
+  for (let row = 0, y = pageHeight - size.height; y >= -size.height; row += 1, y -= stepY) {
+    const rowShift = layout === "tile-diagonal" && row % 2 === 1 ? stepX * rowOffset : 0;
+    for (let x = -size.width - rowShift; x <= pageWidth + size.width; x += stepX) {
+      placements.push({
+        x,
+        y,
+        width: size.width,
+        height: size.height,
+      });
+    }
+  }
+
+  return placements;
+}
+
+export async function applyImageWatermark(sourceBytes, imageBytes, imageMime, options = {}) {
+  if (!window.PDFLib?.PDFDocument) throw new Error("El motor PDF local no está disponible.");
+  if (!(imageBytes instanceof Uint8Array) || imageBytes.byteLength === 0) {
+    throw new Error("Selecciona una imagen PNG o JPG.");
+  }
+
+  const { PDFDocument, degrees } = window.PDFLib;
+  const pdf = await PDFDocument.load(sourceBytes.slice(), {
+    ignoreEncryption: false,
+    updateMetadata: false,
+  });
+
+  const mime = String(imageMime || "").toLowerCase();
+  let image;
+  if (mime === "image/png") image = await pdf.embedPng(imageBytes);
+  else if (mime === "image/jpeg" || mime === "image/jpg") image = await pdf.embedJpg(imageBytes);
+  else throw new Error("Formato de imagen no compatible. Usa PNG o JPG.");
+
+  const pages = pdf.getPages();
+  const selected = selectedPagesForMode(
+    options.pageMode,
+    pages.length,
+    options.pageExpression,
+    options.manualPages,
+    options.skipCover
+  );
+  const opacity = clamp(options.opacity, 0.03, 1);
+  const rotation = clamp(options.rotation, -180, 180);
+  let applied = 0;
+
+  for (const [index, page] of pages.entries()) {
+    const pageNumber = index + 1;
+    if (!selected.has(pageNumber)) continue;
+
+    const placements = resolveImageTilePlacements(page, image.width, image.height, options);
+
+    for (const placement of placements) {
+      page.drawImage(image, {
+        x: placement.x,
+        y: placement.y,
+        width: placement.width,
+        height: placement.height,
+        opacity,
+        rotate: degrees(rotation),
+      });
+    }
+
     applied += 1;
   }
 

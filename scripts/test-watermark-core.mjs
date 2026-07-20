@@ -4,6 +4,7 @@ import {
   parseHexColor,
   parsePageExpression,
   selectedPagesForMode,
+  resolveImageWatermarkSize,
   rotatedTextBounds,
   resolveWatermarkPlacement,
 } from "../src/watermark-core.js";
@@ -46,3 +47,14 @@ assert.deepEqual(
   [2, 4]
 );
 console.log("OK watermark-core V1.2 selección avanzada y geometría");
+
+const imagePage = { getSize: () => ({ width: 600, height: 800 }) };
+assert.deepEqual(
+  resolveImageWatermarkSize(imagePage, 1000, 500, { imageScale: 25, imageFit: "width" }),
+  { width: 150, height: 75 }
+);
+assert.deepEqual(
+  resolveImageWatermarkSize(imagePage, 500, 1000, { imageScale: 25, imageFit: "height" }),
+  { width: 100, height: 200 }
+);
+console.log("OK watermark imagen V1.3: escala proporcional");
