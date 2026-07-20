@@ -130,3 +130,854 @@
 .page-numbering-presets {
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2B */
+.page-numbering-mode-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 22px 14px;
+  border-bottom: 1px solid #dbe3ee;
+}
+.page-numbering-mode-tab {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #334155;
+  padding: 9px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.page-numbering-mode-tab.is-active {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+.page-numbering-batch {
+  padding: 20px 22px 0;
+  overflow: auto;
+  min-height: 0;
+}
+.page-numbering-batch-toolbar,
+.page-numbering-batch-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+.page-numbering-batch-toolbar h3,
+.page-numbering-batch-toolbar p {
+  margin: 0;
+}
+.page-numbering-batch-toolbar p {
+  margin-top: 5px;
+  color: #64748b;
+}
+.page-numbering-batch-actions,
+.page-numbering-batch-footer .page-numbering-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.page-numbering-batch-settings {
+  margin: 18px 0 12px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.page-numbering-batch-settings p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: .85rem;
+}
+.page-numbering-batch-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.page-numbering-batch-item {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #fff;
+}
+.page-numbering-batch-item.is-dragging {
+  opacity: .55;
+}
+.page-numbering-batch-item.is-error {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+.page-numbering-batch-handle {
+  cursor: grab;
+  color: #64748b;
+  font-weight: 900;
+}
+.page-numbering-batch-order {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 900;
+  color: #0f766e;
+}
+.page-numbering-batch-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.page-numbering-batch-copy strong,
+.page-numbering-batch-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-numbering-batch-copy span {
+  color: #64748b;
+  font-size: .84rem;
+}
+.page-numbering-batch-state {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  font-size: .75rem;
+  font-weight: 900;
+}
+.page-numbering-batch-empty,
+.page-numbering-batch-summary {
+  color: #64748b;
+}
+.page-numbering-batch-progress-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin: 14px 0;
+}
+.page-numbering-batch-progress-wrap progress {
+  width: 100%;
+}
+.page-numbering-batch-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 18px -22px 0;
+  padding: 14px 22px;
+  border-top: 1px solid #dbe3ee;
+  background: rgba(255, 255, 255, .96);
+}
+@media (max-width: 820px) {
+  .page-numbering-batch-item {
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+  }
+  .page-numbering-batch-state,
+  .page-numbering-batch-item > button {
+    grid-column: 4;
+  }
+  .page-numbering-batch-toolbar,
+  .page-numbering-batch-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+/* PDFPRIVADO_PAGE_NUMBERING_TABS_LAYOUT_V2D */
+.page-numbering-shell {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.page-numbering-mode-tabs {
+  position: relative;
+  z-index: 3;
+  min-height: 58px;
+  align-items: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background: #ffffff;
+  overflow: visible;
+}
+
+.page-numbering-mode-tab {
+  min-height: 38px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.page-numbering-body[data-page-numbering-panel="single"],
+.page-numbering-batch[data-page-numbering-panel="batch"] {
+  min-height: 0;
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2E */
+[data-page-numbering-panel][hidden] {
+  display: none !important;
+}
+
+.page-numbering-shell {
+  overflow: hidden;
+}
+
+.page-numbering-batch {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  overflow: hidden;
+  height: 100%;
+  padding-bottom: 0;
+}
+
+.page-numbering-batch-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-numbering-batch-files {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-numbering-batch-list {
+  height: 100%;
+  max-height: none;
+  overflow: auto;
+  align-content: start;
+}
+
+.page-numbering-batch-item {
+  cursor: pointer;
+}
+
+.page-numbering-batch-item.is-selected {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, .14);
+  background: #f0fdfa;
+}
+
+.page-numbering-batch-preview {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.page-numbering-batch-preview-heading div {
+  display: grid;
+  gap: 3px;
+}
+
+.page-numbering-batch-preview-heading span {
+  color: #64748b;
+  font-size: .84rem;
+}
+
+.page-numbering-batch-preview-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  contain: layout paint;
+}
+
+.page-numbering-batch-preview-stage canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+}
+
+.page-numbering-batch-preview-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-numbering-batch-preview-nav input {
+  width: 72px;
+  text-align: center;
+}
+
+.page-numbering-batch-bottom {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #dbe3ee;
+  background: #f8fafc;
+}
+
+.page-numbering-batch-current {
+  margin: 0;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.page-numbering-batch-summary {
+  margin: 0;
+}
+
+.page-numbering-batch-footer {
+  position: static;
+  margin: 0 -22px;
+  padding: 14px 22px;
+  flex: 0 0 auto;
+}
+
+.page-numbering-batch-status {
+  max-height: 84px;
+  overflow: auto;
+}
+
+@media (max-width: 980px) {
+  .page-numbering-batch-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .page-numbering-batch-preview {
+    min-height: 420px;
+  }
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2F */
+.page-numbering-batch-config {
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.page-numbering-batch-config-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+}
+
+.page-numbering-batch-config-heading h4,
+.page-numbering-batch-config-heading p {
+  margin: 0;
+}
+
+.page-numbering-batch-config-heading p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: .84rem;
+  line-height: 1.4;
+}
+
+.page-numbering-batch-config-body {
+  max-height: 340px;
+  overflow: auto;
+  padding: 14px;
+  border-top: 1px solid #dbe3ee;
+  background: #f8fafc;
+}
+
+.page-numbering-batch-config-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.page-numbering-batch-config-action {
+  display: flex;
+  align-items: end;
+}
+
+.page-numbering-batch-config-action button {
+  width: 100%;
+  min-height: 40px;
+}
+
+.page-numbering-batch-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.page-numbering-batch-config-note {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: .84rem;
+}
+
+@media (max-width: 1100px) {
+  .page-numbering-batch-config-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .page-numbering-batch-config-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-numbering-batch-config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2G */
+.page-numbering-batch {
+  grid-template-rows:
+    auto
+    auto
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+}
+
+.page-numbering-batch-config {
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.page-numbering-batch-workspace {
+  min-height: 180px;
+}
+
+.page-numbering-batch-bottom {
+  flex: 0 0 auto;
+}
+
+.page-numbering-batch-footer {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 4;
+  background: #ffffff;
+}
+
+.page-numbering-batch[data-page-numbering-panel="batch"] {
+  min-height: 0;
+  height: 100%;
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2H */
+.page-numbering-batch {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+}
+
+.page-numbering-batch-toolbar,
+.page-numbering-batch-settings,
+.page-numbering-batch-bottom,
+.page-numbering-batch-footer {
+  grid-column: 1 / -1;
+}
+
+.page-numbering-batch-config {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: stretch;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.page-numbering-batch-workspace {
+  grid-column: 1;
+  grid-row: 3;
+  min-width: 0;
+  min-height: 0;
+}
+
+.page-numbering-batch:not(.is-config-open) .page-numbering-batch-config {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  border: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.page-numbering-batch.is-config-open {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  column-gap: 14px;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+  grid-column: 1;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-config {
+  grid-column: 2;
+  position: relative;
+  width: auto;
+  height: auto;
+  overflow: hidden;
+  opacity: 1;
+  pointer-events: auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.page-numbering-batch-config-heading {
+  padding: 12px;
+}
+
+.page-numbering-batch-config-body {
+  max-height: none;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding: 12px;
+}
+
+.page-numbering-batch-config-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.page-numbering-batch-config .page-numbering-field-wide {
+  grid-column: 1 / -1;
+}
+
+.page-numbering-batch-workspace {
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr);
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, .82fr);
+}
+
+.page-numbering-batch-bottom {
+  grid-row: 4;
+}
+
+.page-numbering-batch-footer {
+  grid-row: 5;
+}
+
+@media (max-width: 1120px) {
+  .page-numbering-batch.is-config-open {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 340px);
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, .72fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .page-numbering-batch.is-config-open {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows:
+      auto
+      auto
+      minmax(220px, auto)
+      minmax(0, 1fr)
+      auto
+      auto;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-config {
+    grid-column: 1;
+    grid-row: 3;
+    max-height: 300px;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-bottom {
+    grid-row: 5;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-footer {
+    grid-row: 6;
+  }
+}
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2I */
+.page-numbering-batch {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows:
+    auto
+    auto
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+}
+
+.page-numbering-batch:not(.is-config-open) .page-numbering-batch-config {
+  position: relative;
+  grid-column: 1;
+  grid-row: 3;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  border: 1px solid #dbe3ee;
+  pointer-events: auto;
+  opacity: 1;
+  display: block;
+}
+
+.page-numbering-batch:not(.is-config-open) .page-numbering-batch-config-body {
+  display: none !important;
+}
+
+.page-numbering-batch:not(.is-config-open) .page-numbering-batch-workspace {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.page-numbering-batch.is-config-open {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  grid-template-rows:
+    auto
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-config {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.page-numbering-batch:not(.is-config-open) .page-numbering-batch-bottom {
+  grid-row: 5;
+}
+
+.page-numbering-batch:not(.is-config-open) .page-numbering-batch-footer {
+  grid-row: 6;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-bottom {
+  grid-column: 1 / -1;
+  grid-row: 4;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-footer {
+  grid-column: 1 / -1;
+  grid-row: 5;
+}
+
+@media (max-width: 900px) {
+  .page-numbering-batch.is-config-open {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows:
+      auto
+      auto
+      minmax(220px, auto)
+      minmax(0, 1fr)
+      auto
+      auto;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-config {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-bottom {
+    grid-row: 5;
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-footer {
+    grid-row: 6;
+  }
+}
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2J */
+.page-numbering-header {
+  padding: 12px 18px;
+}
+
+.page-numbering-header p {
+  margin-bottom: 2px;
+  font-size: .72rem;
+}
+
+.page-numbering-header h2 {
+  font-size: 1.28rem;
+}
+
+.page-numbering-mode-tabs {
+  min-height: 46px;
+  padding: 6px 18px;
+}
+
+.page-numbering-mode-tab {
+  min-height: 34px;
+  padding: 7px 12px;
+}
+
+.page-numbering-batch {
+  padding: 12px 16px 0;
+  gap: 8px;
+}
+
+.page-numbering-batch-toolbar {
+  gap: 10px;
+}
+
+.page-numbering-batch-toolbar h3 {
+  font-size: 1rem;
+}
+
+.page-numbering-batch-toolbar p {
+  margin-top: 2px;
+  font-size: .82rem;
+}
+
+.page-numbering-batch-settings {
+  margin: 6px 0 4px;
+  padding: 10px 12px;
+}
+
+.page-numbering-batch-settings .page-numbering-field {
+  gap: 3px;
+}
+
+.page-numbering-batch-settings input {
+  min-height: 34px;
+  padding: 6px 9px;
+}
+
+.page-numbering-batch-settings p {
+  margin-top: 5px;
+  font-size: .78rem;
+}
+
+.page-numbering-batch-workspace {
+  grid-template-columns: minmax(220px, .72fr) minmax(300px, 1.08fr);
+  gap: 10px;
+}
+
+.page-numbering-batch.is-config-open {
+  grid-template-columns: minmax(0, 1.62fr) minmax(340px, 1fr);
+  column-gap: 10px;
+}
+
+.page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+  grid-template-columns: minmax(210px, .68fr) minmax(280px, 1.02fr);
+  gap: 10px;
+}
+
+.page-numbering-batch-item {
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
+  gap: 7px;
+  padding: 8px;
+}
+
+.page-numbering-batch-copy strong {
+  font-size: .88rem;
+}
+
+.page-numbering-batch-copy span {
+  font-size: .76rem;
+}
+
+.page-numbering-batch-item > button {
+  padding: 7px 9px;
+}
+
+.page-numbering-batch-preview {
+  padding: 10px;
+  gap: 8px;
+}
+
+.page-numbering-batch-preview-stage {
+  padding: 8px;
+}
+
+.page-numbering-batch-config-heading {
+  padding: 10px;
+}
+
+.page-numbering-batch-config-heading p {
+  font-size: .78rem;
+}
+
+.page-numbering-batch-config-body {
+  padding: 10px;
+}
+
+.page-numbering-batch-config-grid {
+  gap: 8px;
+}
+
+.page-numbering-batch-config .page-numbering-field > span {
+  font-size: .78rem;
+}
+
+.page-numbering-batch-config .page-numbering-field input,
+.page-numbering-batch-config .page-numbering-field select {
+  min-height: 34px;
+  padding: 6px 8px;
+}
+
+.page-numbering-batch-bottom {
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.page-numbering-batch-footer {
+  padding: 10px 16px;
+  margin: 0 -16px;
+}
+
+@media (max-width: 1120px) {
+  .page-numbering-batch.is-config-open {
+    grid-template-columns: minmax(0, 1.48fr) minmax(320px, 1fr);
+  }
+
+  .page-numbering-batch.is-config-open .page-numbering-batch-workspace {
+    grid-template-columns: minmax(190px, .62fr) minmax(250px, 1fr);
+  }
+}
+
+
+/* PDFPRIVADO_PAGE_NUMBERING_V2K */
+.page-numbering-batch-config-action {
+  display: none !important;
+}
+
+.page-numbering-batch-preset-field {
+  grid-column: 1 / -1;
+}
