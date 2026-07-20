@@ -17,9 +17,11 @@
     <link rel="stylesheet" href="/protection.css" />
     <link rel="stylesheet" href="/metadata.css" />
     <link rel="stylesheet" href="/page-numbering.css" />
+    <link rel="stylesheet" href="/watermark.css" />
     <script src="/protection.js" defer></script>
     <script type="module" src="/metadata.js" defer></script>
     <script type="module" src="/page-numbering.js" defer></script>
+    <script type="module" src="/watermark.js" defer></script>
     <!-- PDFPRIVADO_PROTECTION_PRO_V1 -->
       <link rel="stylesheet" href="metadata-batch.css" />
 </head>
@@ -74,6 +76,7 @@
             <span class="app-menu-separator" role="separator"></span>
             <button type="button" role="menuitem" data-open-tool="protection"><span>Protección PDF</span></button>
             <button type="button" role="menuitem" data-open-tool="page-numbering"><span>Numeración PDF Pro</span></button>
+            <button type="button" role="menuitem" data-open-tool="watermark"><span>Marca de agua PDF Pro</span></button>
             <button type="button" role="menuitem" data-open-tool="metadata"><span>Metadatos PDF Pro</span></button>
           </div>
         </div>
@@ -224,6 +227,26 @@
                 <span class="tool-card-footer">
                   <span class="tool-card-status" id="page-numbering-card-status">Abrir herramienta premium</span>
                   <span class="tool-card-arrow" aria-hidden="true">â†’</span>
+                </span>
+              </button>
+              <button
+                class="tool-card tool-card-button tool-card-active"
+                type="button"
+                data-open-tool="watermark"
+                aria-describedby="watermark-tool-description watermark-card-status"
+              >
+                <span class="tool-card-topline">
+                  <span class="tool-number">04</span>
+                  <span class="available-label">Premium</span>
+                </span>
+                <h3>Marca de agua PDF Pro</h3>
+                <p id="watermark-tool-description">
+                  Añade marcas de texto profesionales con selección de páginas,
+                  posiciones, rotación, color, opacidad y vista previa local.
+                </p>
+                <span class="tool-card-footer">
+                  <span class="tool-card-status" id="watermark-card-status">Abrir herramienta premium</span>
+                  <span class="tool-card-arrow" aria-hidden="true">&#8594;</span>
                 </span>
               </button>
 
@@ -1584,7 +1607,125 @@
     </div>
 
     <!-- PDFPRIVADO_PAGE_NUMBERING_PREMIUM_V1 -->
-    <dialog class="page-numbering-dialog" id="page-numbering-dialog" aria-labelledby="page-numbering-title">
+
+        <!-- PDFPRIVADO_WATERMARK_DIALOG_V1 -->
+        <input id="watermark-file-input" type="file" accept=".pdf,application/pdf" hidden />
+        <dialog class="watermark-dialog" id="watermark-dialog" aria-labelledby="watermark-title">
+          <div class="watermark-shell">
+            <header class="watermark-header">
+              <div>
+                <p class="eyebrow">Herramienta premium local</p>
+                <h2 id="watermark-title">Marca de agua PDF Pro</h2>
+              </div>
+              <button class="secondary-button" type="button" data-watermark-close>Cerrar</button>
+            </header>
+
+            <div class="watermark-body">
+              <section class="watermark-document">
+                <div class="watermark-document-info">
+                  <strong id="watermark-file-name">Ningún documento seleccionado</strong>
+                  <span id="watermark-file-meta">Elige un PDF local.</span>
+                </div>
+                <div class="watermark-document-actions">
+                  <button class="secondary-button" id="watermark-choose-file" type="button">Elegir PDF</button>
+                  <button class="secondary-button" id="watermark-remove-file" type="button" disabled>Quitar</button>
+                </div>
+              </section>
+
+              <div class="watermark-layout">
+                <section class="watermark-preview-panel" aria-labelledby="watermark-preview-title">
+                  <h3 id="watermark-preview-title">Vista previa</h3>
+                  <div class="watermark-preview-stage">
+                    <canvas id="watermark-preview-canvas" aria-label="Vista previa de la página real del PDF"></canvas>
+                  </div>
+                  <div class="watermark-preview-nav" aria-label="Navegación de la vista previa">
+                    <button class="secondary-button" id="watermark-preview-prev" type="button" aria-label="Página anterior" disabled>&#8592;</button>
+                    <input id="watermark-preview-page" type="number" min="1" value="1" aria-label="Página de vista previa" disabled />
+                    <button class="secondary-button" id="watermark-preview-next" type="button" aria-label="Página siguiente" disabled>&#8594;</button>
+                  </div>
+                  <span class="watermark-preview-counter" id="watermark-preview-counter">Sin documento</span>
+                  <p class="watermark-note">La vista previa usa la página real. La copia se crea localmente y el original no se modifica.</p>
+                </section>
+
+                <section class="watermark-options-panel">
+                  <section class="watermark-section">
+                    <h3>Contenido</h3>
+                    <div class="watermark-grid">
+                      <label class="watermark-field watermark-field-wide">
+                        <span>Texto</span>
+                        <input id="watermark-text" type="text" maxlength="160" value="CONFIDENCIAL" />
+                      </label>
+                      <label class="watermark-field">
+                        <span>Preset</span>
+                        <select id="watermark-preset">
+                          <option value="confidential">Confidencial diagonal</option>
+                          <option value="draft">Borrador diagonal</option>
+                          <option value="internal">Uso interno al pie</option>
+                        </select>
+                      </label>
+                      <label class="watermark-field">
+                        <span>Selección</span>
+                        <select id="watermark-page-mode">
+                          <option value="all">Todas las páginas</option>
+                          <option value="odd">Páginas impares</option>
+                          <option value="even">Páginas pares</option>
+                          <option value="range">Rango personalizado</option>
+                        </select>
+                      </label>
+                      <label class="watermark-field watermark-field-wide" id="watermark-expression-field" hidden>
+                        <span>Rango</span>
+                        <input id="watermark-expression" type="text" placeholder="1-5, 8, 12-16" disabled />
+                      </label>
+                    </div>
+                    <p class="watermark-summary" id="watermark-selection-summary">Ningún documento preparado.</p>
+                  </section>
+
+                  <section class="watermark-section">
+                    <h3>Diseño</h3>
+                    <div class="watermark-grid">
+                      <label class="watermark-field">
+                        <span>Posición</span>
+                        <select id="watermark-position">
+                          <option value="top-left">Superior izquierda</option>
+                          <option value="top-center">Superior centro</option>
+                          <option value="top-right">Superior derecha</option>
+                          <option value="middle-left">Centro izquierda</option>
+                          <option value="center" selected>Centro</option>
+                          <option value="middle-right">Centro derecha</option>
+                          <option value="bottom-left">Inferior izquierda</option>
+                          <option value="bottom-center">Inferior centro</option>
+                          <option value="bottom-right">Inferior derecha</option>
+                        </select>
+                      </label>
+                      <label class="watermark-field"><span>Tamaño</span><input id="watermark-font-size" type="number" min="8" max="180" value="54" /></label>
+                      <label class="watermark-field"><span>Color</span><input id="watermark-color" type="color" value="#b91c1c" /></label>
+                      <label class="watermark-field"><span>Opacidad (%)</span><input id="watermark-opacity" type="number" min="3" max="100" value="18" /></label>
+                      <label class="watermark-field"><span>Rotación</span><input id="watermark-rotation" type="number" min="-180" max="180" value="-35" /></label>
+                      <label class="watermark-field"><span>Margen horizontal</span><input id="watermark-margin-x" type="number" min="0" value="24" /></label>
+                      <label class="watermark-field"><span>Margen vertical</span><input id="watermark-margin-y" type="number" min="0" value="24" /></label>
+                    </div>
+                    <div class="watermark-checks">
+                      <label><input id="watermark-bold" type="checkbox" checked /> Negrita</label>
+                    </div>
+                  </section>
+
+                  <p class="watermark-status" id="watermark-status" role="status" aria-live="polite" hidden></p>
+                </section>
+              </div>
+            </div>
+
+            <footer class="watermark-footer">
+              <span>Procesamiento completamente local y privado.</span>
+              <div class="watermark-footer-actions">
+                <button class="secondary-button" id="watermark-reset" type="button">Restablecer</button>
+                <button class="secondary-button" type="button" data-watermark-close>Cancelar</button>
+                <button class="primary-button" id="watermark-save" type="button" disabled>Guardar copia con marca</button>
+              </div>
+            </footer>
+          </div>
+        </dialog>
+
+        <dialog class="page-numbering-dialog" id="page-numbering-dialog" aria-labelledby="page-numbering-title">
       <div class="page-numbering-shell">
         <header class="page-numbering-header">
           <div>

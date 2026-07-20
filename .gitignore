@@ -28,3 +28,4 @@ _backup-*/
 
 # Copias locales de parches PDFPrivado
 .pdfprivado-backups/
+.patch-backups/
