@@ -1665,13 +1665,19 @@
                         <input id="watermark-type-image" name="watermark-type" type="radio" value="image" />
                         <span>Imagen o logotipo</span>
                       </label>
+                      <label class="watermark-type-option">
+                        <input id="watermark-type-combined" name="watermark-type" type="radio" value="combined" />
+                        <span>Texto + imagen</span>
+                      </label>
                     </div>
-                    <div class="watermark-grid">
-                                            <label class="watermark-field watermark-field-wide" id="watermark-text-field">
+<div class="watermark-grid">
+                                            <div class="watermark-combined-block-title" id="watermark-combined-text-title" hidden>Configuración de texto</div>
+                      <label class="watermark-field watermark-field-wide" id="watermark-text-field">
                         <span>Texto</span>
                         <input id="watermark-text" type="text" maxlength="160" value="CONFIDENCIAL" />
                       </label>
 
+                      <div class="watermark-combined-block-title" id="watermark-combined-image-title" hidden>Configuración de imagen o logotipo</div>
                       <section class="watermark-image-panel watermark-field-wide" id="watermark-image-panel" hidden>
                         <div class="watermark-image-picker">
                           <div class="watermark-image-info">

@@ -1003,3 +1003,63 @@
 .watermark-image-tile-controls[hidden] {
   display: none !important;
 }
+
+.watermark-combined-note {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed #b7d7f5;
+  background: #f3f8fd;
+  color: #35526f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.watermark-combined-note[hidden] {
+  display: none !important;
+}
+
+/* V1.5b: selector compacto de tres modos y caja híbrida */
+.watermark-type-switch {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+}
+
+.watermark-type-option {
+  min-height: 31px !important;
+  padding: 4px 7px !important;
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+  line-height: 1.15 !important;
+  text-align: center;
+}
+
+.watermark-combined-block-title {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding: 7px 9px;
+  border-left: 3px solid #0f766e;
+  border-radius: 6px;
+  background: #f0fdfa;
+  color: #115e59;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.watermark-combined-block-title[hidden] {
+  display: none !important;
+}
+
+#watermark-type-combined:checked ~ span {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .watermark-type-option {
+    font-size: 11.5px !important;
+    padding-inline: 5px !important;
+  }
+}

@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_UI_V1_4B_COMPACT_LAYOUTS */
+/* PDFPRIVADO_WATERMARK_UI_V1_5B_COMBINED_REAL */
 import {
   applyImageWatermark,
   applyTextWatermark,
@@ -16,6 +16,9 @@ const els = {
   imageInput: $("#watermark-image-input"),
   typeText: $("#watermark-type-text"),
   typeImage: $("#watermark-type-image"),
+  typeCombined: $("#watermark-type-combined"),
+  combinedTextTitle: $("#watermark-combined-text-title"),
+  combinedImageTitle: $("#watermark-combined-image-title"),
   textField: $("#watermark-text-field"),
   imagePanel: $("#watermark-image-panel"),
   chooseImage: $("#watermark-choose-image"),
@@ -110,7 +113,9 @@ function setStatus(message = "", type = "info") {
 }
 
 function currentMarkType() {
-  return els.typeImage?.checked ? "image" : "text";
+  if (els.typeCombined?.checked) return "combined";
+  if (els.typeImage?.checked) return "image";
+  return "text";
 }
 function options() {
   return {
@@ -212,25 +217,42 @@ function setManualPages(mode) {
 function refresh() {
   const opts = options();
   const rangeMode = opts.pageMode === "range";
-  const imageMode = opts.markType === "image";
+  const textOnly = opts.markType === "text";
+  const imageOnly = opts.markType === "image";
+  const combined = opts.markType === "combined";
+  const textActive = textOnly || combined;
+  const imageActive = imageOnly || combined;
+
   const textField = els.textField || els.text?.closest(".watermark-field");
   const presetField = els.presetField || els.preset?.closest(".watermark-field");
   const fontSizeField = els.fontSizeField || els.fontSize?.closest(".watermark-field");
   const colorField = els.colorField || els.color?.closest(".watermark-field");
   const textChecks = els.textChecks || els.bold?.closest(".watermark-checks");
-  if (textField) textField.hidden = imageMode;
-  if (els.imagePanel) els.imagePanel.hidden = !imageMode;
-  if (presetField) presetField.hidden = imageMode;
-  if (fontSizeField) fontSizeField.hidden = imageMode;
-  if (colorField) colorField.hidden = imageMode;
-  if (textChecks) textChecks.hidden = imageMode;
+
+  if (textField) textField.hidden = !textActive;
+  if (presetField) presetField.hidden = !textActive;
+  if (fontSizeField) fontSizeField.hidden = !textActive;
+  if (colorField) colorField.hidden = !textActive;
+  if (textChecks) textChecks.hidden = !textActive;
+  if (els.imagePanel) els.imagePanel.hidden = !imageActive;
+  if (els.combinedTextTitle) els.combinedTextTitle.hidden = !combined;
+  if (els.combinedImageTitle) els.combinedImageTitle.hidden = !combined;
+
   els.expression.disabled = !rangeMode || state.busy;
   if (els.expressionField) els.expressionField.hidden = !rangeMode;
   if (els.manualPanel) els.manualPanel.hidden = !state.pageCount;
   els.choose.disabled = state.busy;
   els.remove.disabled = state.busy || !state.file;
+
   const selected = state.pageCount ? currentSelection() : new Set();
-  const contentReady = imageMode ? Boolean(state.imageBytes) : Boolean(opts.text.trim());
+  const textReady = Boolean(opts.text.trim());
+  const imageReady = Boolean(state.imageBytes);
+  const contentReady = combined
+    ? textReady && imageReady
+    : imageOnly
+      ? imageReady
+      : textReady;
+
   els.save.disabled = state.busy || !state.file || !contentReady || selected.size === 0;
   if (els.chooseImage) els.chooseImage.disabled = state.busy;
   if (els.removeImage) els.removeImage.disabled = state.busy || !state.imageBytes;
@@ -245,20 +267,20 @@ function refresh() {
   els.previewPage.max = String(Math.max(1, state.pageCount));
 
   if (state.pageCount) {
-    const selected = currentSelection();
-    if (selected.size === 0) {
+    const selectedNow = currentSelection();
+    if (selectedNow.size === 0) {
       els.selectionSummary.textContent = "No hay páginas seleccionadas. Elige al menos una para poder guardar.";
       els.selectionSummary.dataset.state = "warning";
     } else {
       const coverText = opts.skipCover ? " · portada omitida" : "";
-      els.selectionSummary.textContent = `${selected.size} de ${state.pageCount} páginas recibirán la marca${coverText}.`;
+      els.selectionSummary.textContent = `${selectedNow.size} de ${state.pageCount} páginas recibirán la marca${coverText}.`;
       els.selectionSummary.dataset.state = "ready";
     }
     if (els.footerSummary) {
-      els.footerSummary.textContent = selected.size
-        ? `${selected.size} página${selected.size === 1 ? "" : "s"} seleccionada${selected.size === 1 ? "" : "s"}`
+      els.footerSummary.textContent = selectedNow.size
+        ? `${selectedNow.size} página${selectedNow.size === 1 ? "" : "s"} seleccionada${selectedNow.size === 1 ? "" : "s"}`
         : "Ninguna página seleccionada";
-      els.footerSummary.dataset.state = selected.size ? "ready" : "warning";
+      els.footerSummary.dataset.state = selectedNow.size ? "ready" : "warning";
     }
     els.previewCounter.textContent = `Página ${state.previewPage} de ${state.pageCount}`;
   } else {
@@ -270,6 +292,7 @@ function refresh() {
       els.footerSummary.dataset.state = "empty";
     }
   }
+
   updateManualGridState();
 }
 
@@ -424,9 +447,32 @@ function removeWatermarkImage() {
   schedulePreview();
 }
 
+function syncWatermarkCombinedMode() {
+  const opts = options();
+  const textOnly = opts.markType === "text";
+  const imageOnly = opts.markType === "image";
+  const combined = opts.markType === "combined";
+  const textActive = textOnly || combined;
+  const imageActive = imageOnly || combined;
+
+  const textField = els.textField || els.text?.closest(".watermark-field");
+  const presetField = els.presetField || els.preset?.closest(".watermark-field");
+  const fontSizeField = els.fontSizeField || els.fontSize?.closest(".watermark-field");
+  const colorField = els.colorField || els.color?.closest(".watermark-field");
+  const textChecks = els.textChecks || els.bold?.closest(".watermark-checks");
+
+  if (textField) textField.hidden = !textActive;
+  if (presetField) presetField.hidden = !textActive;
+  if (fontSizeField) fontSizeField.hidden = !textActive;
+  if (colorField) colorField.hidden = !textActive;
+  if (textChecks) textChecks.hidden = !textActive;
+
+  if (els.imagePanel) els.imagePanel.hidden = !imageActive;
+  if (els.combinedNote) els.combinedNote.hidden = !combined;
+}
 function syncWatermarkImageLayoutMode() {
   const opts = options();
-  const imageMode = opts.markType === "image";
+  const imageMode = opts.markType === "image" || opts.markType === "combined";
   const tileMode = imageMode && opts.imageLayout !== "single";
   const diagonalMode = imageMode && opts.imageLayout === "tile-diagonal";
   const popoverOpen = Boolean(els.imageTileToggle?.getAttribute("aria-expanded") === "true");
@@ -455,25 +501,33 @@ function syncWatermarkImageLayoutMode() {
   }
 }
 function syncWatermarkImageMode() {
-  const imageMode = Boolean(els.typeImage?.checked);
-
-  const textField = els.textField || els.text?.closest(".watermark-field");
-  const presetField = els.presetField || els.preset?.closest(".watermark-field");
-  const fontSizeField = els.fontSizeField || els.fontSize?.closest(".watermark-field");
-  const colorField = els.colorField || els.color?.closest(".watermark-field");
-  const textChecks = els.textChecks || els.bold?.closest(".watermark-checks");
-  if (textField) textField.hidden = imageMode;
-  if (els.imagePanel) els.imagePanel.hidden = !imageMode;
-  if (presetField) presetField.hidden = imageMode;
-  if (fontSizeField) fontSizeField.hidden = imageMode;
-  if (colorField) colorField.hidden = imageMode;
-  if (textChecks) textChecks.hidden = imageMode;
+  const opts = options();
+  const textOnly = opts.markType === "text";
+  const imageOnly = opts.markType === "image";
+  const combined = opts.markType === "combined";
+  const textActive = textOnly || combined;
+  const imageActive = imageOnly || combined;
 
   document.querySelectorAll(".watermark-type-option").forEach((option) => {
     const input = option.querySelector('input[name="watermark-type"]');
     option.classList.toggle("is-active", Boolean(input?.checked));
   });
 
+  const textField = els.textField || els.text?.closest(".watermark-field");
+  const presetField = els.presetField || els.preset?.closest(".watermark-field");
+  const fontSizeField = els.fontSizeField || els.fontSize?.closest(".watermark-field");
+  const colorField = els.colorField || els.color?.closest(".watermark-field");
+  const textChecks = els.textChecks || els.bold?.closest(".watermark-checks");
+
+  if (textField) textField.hidden = !textActive;
+  if (presetField) presetField.hidden = !textActive;
+  if (fontSizeField) fontSizeField.hidden = !textActive;
+  if (colorField) colorField.hidden = !textActive;
+  if (textChecks) textChecks.hidden = !textActive;
+  if (els.imagePanel) els.imagePanel.hidden = !imageActive;
+  if (els.combinedNote) els.combinedNote.hidden = !combined;
+
+  syncWatermarkImageLayoutMode();
   refresh();
   schedulePreview();
 }
@@ -481,6 +535,7 @@ function syncWatermarkImageMode() {
 function resetOptions() {
   els.typeText.checked = true;
   els.typeImage.checked = false;
+  if (els.typeCombined) els.typeCombined.checked = false;
   els.text.value = "CONFIDENCIAL";
   els.pageMode.value = "all";
   els.expression.value = "";
@@ -535,15 +590,13 @@ function drawWatermarkPreview(context, baseViewport, viewport, ratio) {
 
   const scale = viewport.width / baseViewport.width;
   const pageProxy = { getSize: () => ({ width: baseViewport.width, height: baseViewport.height }) };
+  const drawText = opts.markType === "text" || opts.markType === "combined";
+  const drawImage = opts.markType === "image" || opts.markType === "combined";
+
   context.save();
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-  if (opts.markType === "image") {
-    if (!state.imageElement) {
-      context.restore();
-      return;
-    }
-
+  if (drawImage && state.imageElement) {
     const placements = resolveImageTilePlacements(
       pageProxy,
       state.imageElement.naturalWidth,
@@ -564,33 +617,31 @@ function drawWatermarkPreview(context, baseViewport, viewport, ratio) {
       context.drawImage(state.imageElement, 0, -height, width, height);
       context.restore();
     }
-
-    context.restore();
-    return;
+    context.globalAlpha = 1;
   }
 
-  if (!opts.text.trim()) {
+  if (drawText && opts.text.trim()) {
+    const fontSizePdf = Math.max(8, Math.min(180, opts.fontSize));
+    const fontSizeCanvas = fontSizePdf * scale;
+    context.font = `${opts.bold ? "700" : "400"} ${fontSizeCanvas}px Helvetica, Arial, sans-serif`;
+    context.textBaseline = "alphabetic";
+
+    const textWidthCanvas = context.measureText(opts.text.trim()).width;
+    const textHeightCanvas = fontSizeCanvas * 0.86;
+    const textWidthPdf = textWidthCanvas / scale;
+    const textHeightPdf = textHeightCanvas / scale;
+    const placement = resolveWatermarkPlacement(pageProxy, textWidthPdf, textHeightPdf, opts);
+
+    const x = placement.x * scale;
+    const y = viewport.height - placement.y * scale;
+    context.save();
+    context.translate(x, y);
+    context.rotate(-opts.rotation * Math.PI / 180);
+    context.fillStyle = hexToCss(opts.color, opts.opacity);
+    context.fillText(opts.text.trim(), 0, 0);
     context.restore();
-    return;
   }
 
-  const fontSizePdf = Math.max(8, Math.min(180, opts.fontSize));
-  const fontSizeCanvas = fontSizePdf * scale;
-  context.font = `${opts.bold ? "700" : "400"} ${fontSizeCanvas}px Helvetica, Arial, sans-serif`;
-  context.textBaseline = "alphabetic";
-
-  const textWidthCanvas = context.measureText(opts.text.trim()).width;
-  const textHeightCanvas = fontSizeCanvas * 0.86;
-  const textWidthPdf = textWidthCanvas / scale;
-  const textHeightPdf = textHeightCanvas / scale;
-  const placement = resolveWatermarkPlacement(pageProxy, textWidthPdf, textHeightPdf, opts);
-
-  const x = placement.x * scale;
-  const y = viewport.height - placement.y * scale;
-  context.translate(x, y);
-  context.rotate(-opts.rotation * Math.PI / 180);
-  context.fillStyle = hexToCss(opts.color, opts.opacity);
-  context.fillText(opts.text.trim(), 0, 0);
   context.restore();
 }
 
@@ -677,11 +728,30 @@ async function saveWatermark() {
 
   try {
     const opts = options();
-    const result = opts.markType === "image"
-      ? await applyImageWatermark(state.bytes, state.imageBytes, state.imageMime, opts)
-      : await applyTextWatermark(state.bytes, opts);
+    let result;
+
+    if (opts.markType === "combined") {
+      const textResult = await applyTextWatermark(state.bytes, opts);
+      result = await applyImageWatermark(
+        textResult.bytes,
+        state.imageBytes,
+        state.imageMime,
+        opts
+      );
+    } else if (opts.markType === "image") {
+      result = await applyImageWatermark(
+        state.bytes,
+        state.imageBytes,
+        state.imageMime,
+        opts
+      );
+    } else {
+      result = await applyTextWatermark(state.bytes, opts);
+    }
+
     downloadBytes(result.bytes, state.file?.name);
-    setStatus(`Marca aplicada correctamente en ${result.applied} páginas.`, "success");
+    const label = opts.markType === "combined" ? "Texto e imagen aplicados" : "Marca aplicada";
+    setStatus(`${label} correctamente en ${result.applied} páginas.`, "success");
   } catch (error) {
     setStatus(error?.message || "No se pudo crear la copia con marca de agua.", "error");
   } finally {
@@ -749,6 +819,7 @@ refresh();
 /* PDFPRIVADO_WATERMARK_IMAGE_EVENTS_V1_3G */
 els.typeText?.addEventListener("change", syncWatermarkImageMode);
 els.typeImage?.addEventListener("change", syncWatermarkImageMode);
+els.typeCombined?.addEventListener("change", syncWatermarkImageMode);
 
 els.imageInput?.addEventListener("change", () => {
   const file = els.imageInput?.files?.[0];
@@ -768,6 +839,7 @@ els.removeImage?.addEventListener("click", removeWatermarkImage);
   });
 });
 
+syncWatermarkCombinedMode();
 syncWatermarkImageMode();
 /* PDFPRIVADO_WATERMARK_NATIVE_IMAGE_PICKER_V1_3J */
 els.chooseImage?.addEventListener("keydown", (event) => {
