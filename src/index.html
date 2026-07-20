@@ -1732,6 +1732,42 @@
                             <input id="watermark-image-row-offset" type="number" min="0" max="100" value="50" />
                           </label>
                         </div>
+                        <section class="watermark-image-design-panel" id="watermark-image-design-panel">
+                          <div class="watermark-mini-heading">Diseño de imagen</div>
+                          <div class="watermark-grid">
+                            <label class="watermark-field">
+                              <span>Posición</span>
+                              <select id="watermark-image-position">
+                                <option value="top-left">Superior izquierda</option>
+                                <option value="top-center">Superior centro</option>
+                                <option value="top-right">Superior derecha</option>
+                                <option value="center-left">Centro izquierda</option>
+                                <option value="center" selected>Centro</option>
+                                <option value="center-right">Centro derecha</option>
+                                <option value="bottom-left">Inferior izquierda</option>
+                                <option value="bottom-center">Inferior centro</option>
+                                <option value="bottom-right">Inferior derecha</option>
+                              </select>
+                            </label>
+                            <label class="watermark-field">
+                              <span>Opacidad (%)</span>
+                              <input id="watermark-image-opacity" type="number" min="3" max="100" value="18" />
+                            </label>
+                            <label class="watermark-field">
+                              <span>Rotación</span>
+                              <input id="watermark-image-rotation" type="number" min="-180" max="180" value="0" />
+                            </label>
+                            <label class="watermark-field">
+                              <span>Margen horizontal</span>
+                              <input id="watermark-image-margin-x" type="number" min="0" value="24" />
+                            </label>
+                            <label class="watermark-field">
+                              <span>Margen vertical</span>
+                              <input id="watermark-image-margin-y" type="number" min="0" value="24" />
+                            </label>
+                          </div>
+                        </section>
+
 
                       </section>
                       <label class="watermark-field" id="watermark-preset-field">
@@ -1779,7 +1815,7 @@
                   </section>
 
                   <section class="watermark-section">
-                    <h3>Diseño</h3>
+                    <h3 id="watermark-text-design-title">Diseño de texto</h3>
                     <div class="watermark-grid">
                       <label class="watermark-field">
                         <span>Posición</span>

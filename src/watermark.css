@@ -1063,3 +1063,23 @@
     padding-inline: 5px !important;
   }
 }
+
+/* V1.6a: diseño independiente para imagen */
+.watermark-image-design-panel {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #dbe4ef;
+}
+
+.watermark-image-design-panel[hidden] {
+  display: none !important;
+}
+
+.watermark-mini-heading {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}

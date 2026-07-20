@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_UI_V1_5B_COMBINED_REAL */
+/* PDFPRIVADO_WATERMARK_UI_V1_6A_INDEPENDENT_DESIGN */
 import {
   applyImageWatermark,
   applyTextWatermark,
@@ -33,6 +33,13 @@ const els = {
   imageGapX: $("#watermark-image-gap-x"),
   imageGapY: $("#watermark-image-gap-y"),
   imageRowOffset: $("#watermark-image-row-offset"),
+  imageDesignPanel: $("#watermark-image-design-panel"),
+  imagePosition: $("#watermark-image-position"),
+  imageOpacity: $("#watermark-image-opacity"),
+  imageRotation: $("#watermark-image-rotation"),
+  imageMarginX: $("#watermark-image-margin-x"),
+  imageMarginY: $("#watermark-image-margin-y"),
+  textDesignTitle: $("#watermark-text-design-title"),
   presetField: $("#watermark-preset-field"),
   fontSizeField: $("#watermark-font-size-field"),
   colorField: $("#watermark-color-field"),
@@ -139,9 +146,24 @@ function options() {
     imageGapX: Number(els.imageGapX?.value || 80),
     imageGapY: Number(els.imageGapY?.value || 80),
     imageRowOffset: Number(els.imageRowOffset?.value || 50),
+    imagePosition: els.imagePosition?.value || "center",
+    imageOpacity: Number(els.imageOpacity?.value || 18) / 100,
+    imageRotation: Number(els.imageRotation?.value || 0),
+    imageMarginX: Number(els.imageMarginX?.value || 24),
+    imageMarginY: Number(els.imageMarginY?.value || 24),
   };
 }
 
+function imageOptionsFrom(opts) {
+  return {
+    ...opts,
+    position: opts.imagePosition,
+    opacity: opts.imageOpacity,
+    rotation: opts.imageRotation,
+    marginX: opts.imageMarginX,
+    marginY: opts.imageMarginY,
+  };
+}
 function currentSelection() {
   const opts = options();
   return selectedPagesForMode(
@@ -235,6 +257,8 @@ function refresh() {
   if (colorField) colorField.hidden = !textActive;
   if (textChecks) textChecks.hidden = !textActive;
   if (els.imagePanel) els.imagePanel.hidden = !imageActive;
+  if (els.imageDesignPanel) els.imageDesignPanel.hidden = !imageActive;
+  if (els.textDesignTitle) els.textDesignTitle.hidden = !textActive;
   if (els.combinedTextTitle) els.combinedTextTitle.hidden = !combined;
   if (els.combinedImageTitle) els.combinedImageTitle.hidden = !combined;
 
@@ -468,6 +492,8 @@ function syncWatermarkCombinedMode() {
   if (textChecks) textChecks.hidden = !textActive;
 
   if (els.imagePanel) els.imagePanel.hidden = !imageActive;
+  if (els.imageDesignPanel) els.imageDesignPanel.hidden = !imageActive;
+  if (els.textDesignTitle) els.textDesignTitle.hidden = !textActive;
   if (els.combinedNote) els.combinedNote.hidden = !combined;
 }
 function syncWatermarkImageLayoutMode() {
@@ -525,6 +551,8 @@ function syncWatermarkImageMode() {
   if (colorField) colorField.hidden = !textActive;
   if (textChecks) textChecks.hidden = !textActive;
   if (els.imagePanel) els.imagePanel.hidden = !imageActive;
+  if (els.imageDesignPanel) els.imageDesignPanel.hidden = !imageActive;
+  if (els.textDesignTitle) els.textDesignTitle.hidden = !textActive;
   if (els.combinedNote) els.combinedNote.hidden = !combined;
 
   syncWatermarkImageLayoutMode();
@@ -557,6 +585,11 @@ function resetOptions() {
   if (els.imageGapX) els.imageGapX.value = "80";
   if (els.imageGapY) els.imageGapY.value = "80";
   if (els.imageRowOffset) els.imageRowOffset.value = "50";
+  if (els.imagePosition) els.imagePosition.value = "center";
+  if (els.imageOpacity) els.imageOpacity.value = "18";
+  if (els.imageRotation) els.imageRotation.value = "0";
+  if (els.imageMarginX) els.imageMarginX.value = "24";
+  if (els.imageMarginY) els.imageMarginY.value = "24";
   setStatus("Configuración restablecida.", "info");
   refresh();
   schedulePreview();
@@ -586,6 +619,7 @@ function hexToCss(hex, opacity) {
 
 function drawWatermarkPreview(context, baseViewport, viewport, ratio) {
   const opts = options();
+  const imageOpts = imageOptionsFrom(opts);
   if (!currentSelection().has(state.previewPage)) return;
 
   const scale = viewport.width / baseViewport.width;
@@ -601,10 +635,10 @@ function drawWatermarkPreview(context, baseViewport, viewport, ratio) {
       pageProxy,
       state.imageElement.naturalWidth,
       state.imageElement.naturalHeight,
-      opts
+      imageOpts
     );
 
-    context.globalAlpha = Math.max(.03, Math.min(1, opts.opacity));
+    context.globalAlpha = Math.max(.03, Math.min(1, imageOpts.opacity));
     for (const placement of placements) {
       const x = placement.x * scale;
       const y = viewport.height - placement.y * scale;
@@ -613,7 +647,7 @@ function drawWatermarkPreview(context, baseViewport, viewport, ratio) {
 
       context.save();
       context.translate(x, y);
-      context.rotate(-opts.rotation * Math.PI / 180);
+      context.rotate(-imageOpts.rotation * Math.PI / 180);
       context.drawImage(state.imageElement, 0, -height, width, height);
       context.restore();
     }
@@ -728,6 +762,7 @@ async function saveWatermark() {
 
   try {
     const opts = options();
+    const imageOpts = imageOptionsFrom(opts);
     let result;
 
     if (opts.markType === "combined") {
@@ -736,14 +771,14 @@ async function saveWatermark() {
         textResult.bytes,
         state.imageBytes,
         state.imageMime,
-        opts
+        imageOpts
       );
     } else if (opts.markType === "image") {
       result = await applyImageWatermark(
         state.bytes,
         state.imageBytes,
         state.imageMime,
-        opts
+        imageOpts
       );
     } else {
       result = await applyTextWatermark(state.bytes, opts);
@@ -810,6 +845,7 @@ els.previewPage?.addEventListener("change", () => {
   els.text, els.pageMode, els.expression, els.position, els.fontSize,
   els.color, els.opacity, els.rotation, els.marginX, els.marginY, els.bold, els.skipCover,
   els.imageScale, els.imageFit,
+  els.imagePosition, els.imageOpacity, els.imageRotation, els.imageMarginX, els.imageMarginY,
 ].forEach((control) => {
   control?.addEventListener("input", () => { refresh(); schedulePreview(); });
   control?.addEventListener("change", () => { refresh(); schedulePreview(); });
