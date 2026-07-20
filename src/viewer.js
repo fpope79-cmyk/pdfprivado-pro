@@ -8757,6 +8757,31 @@ window.PDFPrivadoProtectionBridge = Object.freeze({
     setFeedback(message, "success");
   },
 });
+/* PDFPRIVADO_CONVERT_EXPORT_CONTEXT_BRIDGE_V1 */
+window.PDFPrivadoConvertExportBridge = Object.freeze({
+  getCurrentOcrRecords() {
+    const pages = [];
+
+    for (let pageNumber = 1; pageNumber <= state.pageCount; pageNumber += 1) {
+      const entry = entryAt(pageNumber);
+      const key = ocrRecordKey(entry);
+      const record = key ? state.ocr.records.get(key) : null;
+
+      if (!record?.text) continue;
+
+      pages.push({
+        pageNumber,
+        text: record.text,
+        language: record.language || null,
+        languageLabel: record.languageLabel || null,
+        words: Array.isArray(record.words) ? record.words.length : 0,
+        confidence: Number.isFinite(record.confidence) ? record.confidence : null,
+      });
+    }
+
+    return pages;
+  },
+});
 function pathFileName(path) {
   return String(path || "documento.pdf").split(/[\\/]/).pop() || "documento.pdf";
 }

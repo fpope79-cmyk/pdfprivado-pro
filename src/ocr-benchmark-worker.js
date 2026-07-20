@@ -4,7 +4,7 @@ const { createWorker, OEM, PSM } = Tesseract;
 const WORKER_PATH = new URL("./vendor/tesseract/worker.min.js", import.meta.url).href;
 const CORE_PATH = new URL("./vendor/tesseract/core", import.meta.url).href.replace(/\/$/, "");
 const LANG_PATH = new URL("./vendor/tesseract/lang", import.meta.url).href.replace(/\/$/, "");
-const MAXIMUM_POOL_SIZE = 2;
+const MAXIMUM_POOL_SIZE = 4;
 
 function normalizeLanguages(value) {
   const raw = Array.isArray(value) ? value : String(value || "").split("+");
