@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_UI_V1_6A_INDEPENDENT_DESIGN */
+/* PDFPRIVADO_WATERMARK_UI_V1_8D_QUICK_ROW_REORDER */
 import {
   applyImageWatermark,
   applyTextWatermark,
@@ -80,6 +80,14 @@ const els = {
   save: $("#watermark-save"),
   reset: $("#watermark-reset"),
   preset: $("#watermark-preset"),
+  customPresetList: $("#watermark-custom-preset-list"),
+  customPresetSave: $("#watermark-custom-preset-save"),
+  customPresetUpdate: $("#watermark-custom-preset-update"),
+  customPresetDelete: $("#watermark-custom-preset-delete"),
+  modeQuick: $("#watermark-mode-quick"),
+  modeAdvanced: $("#watermark-mode-advanced"),
+  textAdvancedToggle: $("#watermark-text-advanced-toggle"),
+  imageAdvancedToggle: $("#watermark-image-advanced-toggle"),
 };
 
 const state = {
@@ -99,6 +107,426 @@ const state = {
   imageUrl: "",
 };
 
+const WATERMARK_UX_STORAGE_KEY = "pdfprivado.watermark.ux.v1";
+
+function readWatermarkUxState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(WATERMARK_UX_STORAGE_KEY) || "{}");
+    return {
+      mode: parsed.mode === "advanced" ? "advanced" : "quick",
+      textOpen: Boolean(parsed.textOpen),
+      imageOpen: Boolean(parsed.imageOpen),
+    };
+  } catch {
+    return { mode: "quick", textOpen: false, imageOpen: false };
+  }
+}
+
+const watermarkUxState = readWatermarkUxState();
+
+function saveWatermarkUxState() {
+  try {
+    localStorage.setItem(WATERMARK_UX_STORAGE_KEY, JSON.stringify(watermarkUxState));
+  } catch {}
+}
+
+function setAdvancedFieldVisibility(selector, visible) {
+  document.querySelectorAll(selector).forEach((element) => {
+    const field = element.matches(".watermark-field, .watermark-checks")
+      ? element
+      : element.closest(".watermark-field, .watermark-checks");
+    if (field) field.hidden = !visible;
+  });
+}
+
+function markWatermarkCompactField(control, className) {
+  const field = control?.closest(".watermark-field");
+  if (field) field.classList.add(className);
+}
+
+function moveWatermarkNode(node, target) {
+  if (!node || !target) return;
+  if (node.parentElement !== target) target.append(node);
+}
+
+function ensureWatermarkImageQuickRows() {
+  const imagePanel = els.imagePanel;
+  if (!imagePanel) return;
+
+  const scaleField = els.imageScale?.closest(".watermark-field");
+  const positionField = els.imagePosition?.closest(".watermark-field");
+  const opacityField = els.imageOpacity?.closest(".watermark-field");
+  const layoutField = els.imageLayout?.closest(".watermark-field");
+  const imageAdvancedToggle = els.imageAdvancedToggle;
+  const tileToggle = els.imageTileToggle;
+  const tileControls = els.imageTileControls;
+
+  const primaryRow = $("#watermark-image-primary-row");
+  const secondaryRow = $("#watermark-image-secondary-row");
+
+  if (!primaryRow || !secondaryRow) return;
+
+  moveWatermarkNode(scaleField, primaryRow);
+  moveWatermarkNode(positionField, primaryRow);
+  moveWatermarkNode(opacityField, primaryRow);
+
+  moveWatermarkNode(layoutField, secondaryRow);
+  if (imageAdvancedToggle) {
+    imageAdvancedToggle.classList.add("watermark-image-secondary-advanced-toggle");
+    imageAdvancedToggle.textContent = "Más opciones de imagen";
+    moveWatermarkNode(imageAdvancedToggle, secondaryRow);
+  }
+
+  if (tileToggle) {
+    tileToggle.classList.add("watermark-image-tile-toggle-row");
+    tileToggle.textContent = "Opciones de mosaico";
+    if (tileToggle.parentElement !== imagePanel) {
+      imagePanel.append(tileToggle);
+    }
+  }
+
+  if (tileControls) {
+    tileControls.classList.add("watermark-inline-tile-controls");
+    if (tileControls.parentElement !== imagePanel) {
+      imagePanel.append(tileControls);
+    }
+  }
+
+  if (scaleField) scaleField.classList.add("watermark-image-primary-scale");
+  if (positionField) positionField.classList.add("watermark-image-primary-position");
+  if (opacityField) opacityField.classList.add("watermark-image-primary-opacity");
+  if (layoutField) layoutField.classList.add("watermark-image-secondary-layout");
+}
+
+function ensureWatermarkImagePrimaryLayout() {
+  const imagePanel = els.imagePanel;
+  if (!imagePanel) return;
+
+  const scaleField = els.imageScale?.closest(".watermark-field");
+  const positionField = els.imagePosition?.closest(".watermark-field");
+  const opacityField = els.imageOpacity?.closest(".watermark-field");
+  const layoutField = els.imageLayout?.closest(".watermark-field");
+  const tileToggle = els.imageTileToggle;
+  const tileControls = els.imageTileControls;
+
+  const originalLayoutPanel = layoutField?.closest(".watermark-image-layout-panel") || layoutField?.closest(".watermark-grid");
+
+  let primaryRow = $("#watermark-image-primary-row");
+  if (!primaryRow) {
+    primaryRow = document.createElement("div");
+    primaryRow.id = "watermark-image-primary-row";
+    primaryRow.className = "watermark-grid watermark-image-primary-row";
+    imagePanel.append(primaryRow);
+  }
+
+  let secondaryRow = $("#watermark-image-secondary-row");
+  if (!secondaryRow) {
+    secondaryRow = document.createElement("div");
+    secondaryRow.id = "watermark-image-secondary-row";
+    secondaryRow.className = "watermark-grid watermark-image-secondary-row";
+    imagePanel.append(secondaryRow);
+  }
+
+  moveWatermarkNode(scaleField, primaryRow);
+  moveWatermarkNode(positionField, primaryRow);
+  moveWatermarkNode(opacityField, primaryRow);
+
+  moveWatermarkNode(layoutField, secondaryRow);
+  moveWatermarkNode(tileToggle, secondaryRow);
+
+  if (tileControls) {
+    tileControls.classList.add("watermark-inline-tile-controls");
+    if (tileControls.parentElement !== imagePanel) {
+      imagePanel.append(tileControls);
+    }
+  }
+
+  if (scaleField) scaleField.classList.add("watermark-image-primary-scale");
+  if (positionField) positionField.classList.add("watermark-image-primary-position");
+  if (opacityField) opacityField.classList.add("watermark-image-primary-opacity");
+  if (layoutField) layoutField.classList.add("watermark-image-secondary-layout");
+  if (tileToggle) {
+    tileToggle.classList.add("watermark-image-secondary-toggle");
+    tileToggle.textContent = "Opciones de mosaico";
+  }
+
+  if (originalLayoutPanel) {
+    originalLayoutPanel.classList.add("watermark-image-layout-panel-migrated");
+  }
+}
+
+function applyCompactWatermarkLayoutHints() {
+  els.imagePanel?.classList.add("watermark-panel-compact");
+  els.imageDesignPanel?.classList.add("watermark-panel-compact");
+  markWatermarkCompactField(els.imageScale, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.imageFit, "watermark-field-compact-wide");
+  markWatermarkCompactField(els.imageLayout, "watermark-field-compact-wide");
+  markWatermarkCompactField(els.imagePosition, "watermark-field-compact-wide");
+  markWatermarkCompactField(els.imageOpacity, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.imageRotation, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.imageMarginX, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.imageMarginY, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.position, "watermark-field-compact-wide");
+  markWatermarkCompactField(els.opacity, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.fontSize, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.color, "watermark-field-compact-wide");
+  markWatermarkCompactField(els.rotation, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.marginX, "watermark-field-compact-narrow");
+  markWatermarkCompactField(els.marginY, "watermark-field-compact-narrow");
+}
+
+function applyWatermarkProgressiveUi() {
+  const advancedMode = watermarkUxState.mode === "advanced";
+  const textVisible = advancedMode || watermarkUxState.textOpen;
+  const imageVisible = advancedMode || watermarkUxState.imageOpen;
+
+  if (els.modeQuick) els.modeQuick.checked = !advancedMode;
+  if (els.modeAdvanced) els.modeAdvanced.checked = advancedMode;
+
+  setAdvancedFieldVisibility("[data-watermark-text-advanced]", textVisible);
+  setAdvancedFieldVisibility("[data-watermark-text-advanced-control]", textVisible);
+  setAdvancedFieldVisibility("#watermark-text-checks", textVisible);
+
+  setAdvancedFieldVisibility("[data-watermark-image-advanced-control]", imageVisible);
+
+  if (els.textAdvancedToggle) {
+    els.textAdvancedToggle.hidden = advancedMode;
+    els.textAdvancedToggle.setAttribute("aria-expanded", String(textVisible));
+    els.textAdvancedToggle.textContent = textVisible
+      ? "Ocultar opciones de texto"
+      : "Más opciones de texto";
+  }
+
+  if (els.imageAdvancedToggle) {
+    els.imageAdvancedToggle.hidden = advancedMode;
+    els.imageAdvancedToggle.setAttribute("aria-expanded", String(imageVisible));
+    els.imageAdvancedToggle.textContent = imageVisible
+      ? "Ocultar opciones de imagen"
+      : "Más opciones de imagen";
+  }
+
+  els.dialog?.classList.toggle("watermark-quick-mode", !advancedMode);
+  els.dialog?.classList.toggle("watermark-advanced-mode", advancedMode);
+}
+const WATERMARK_PRESET_DB_NAME = "pdfprivado-pro";
+const WATERMARK_PRESET_DB_VERSION = 1;
+const WATERMARK_PRESET_STORE = "watermark-presets";
+
+function openWatermarkPresetDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(WATERMARK_PRESET_DB_NAME, WATERMARK_PRESET_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(WATERMARK_PRESET_STORE)) {
+        db.createObjectStore(WATERMARK_PRESET_STORE, { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("No se pudo abrir el almacenamiento local."));
+  });
+}
+
+async function watermarkPresetTransaction(mode, action) {
+  const db = await openWatermarkPresetDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(WATERMARK_PRESET_STORE, mode);
+      const store = transaction.objectStore(WATERMARK_PRESET_STORE);
+      let request;
+      try {
+        request = action(store);
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("No se pudo completar la operación local."));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+function listWatermarkPresets() {
+  return watermarkPresetTransaction("readonly", (store) => store.getAll());
+}
+
+function getWatermarkPreset(id) {
+  return watermarkPresetTransaction("readonly", (store) => store.get(id));
+}
+
+function putWatermarkPreset(preset) {
+  return watermarkPresetTransaction("readwrite", (store) => store.put(preset));
+}
+
+function deleteWatermarkPresetRecord(id) {
+  return watermarkPresetTransaction("readwrite", (store) => store.delete(id));
+}
+
+function createPresetId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  return `watermark-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function serializeWatermarkPreset(name, existingId = "") {
+  const opts = options();
+  return {
+    id: existingId || createPresetId(),
+    name: String(name || "").trim(),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    options: {
+      ...opts,
+      manualPages: [...opts.manualPages],
+    },
+    image: state.imageBytes
+      ? {
+          name: state.imageFile?.name || "logotipo",
+          mime: state.imageMime,
+          bytes: state.imageBytes.slice(),
+        }
+      : null,
+  };
+}
+
+async function restorePresetImage(imageRecord) {
+  removeWatermarkImage();
+  if (!imageRecord?.bytes?.byteLength) return;
+
+  const blob = new Blob([imageRecord.bytes], { type: imageRecord.mime || "image/png" });
+  const file = new File([blob], imageRecord.name || "logotipo.png", {
+    type: imageRecord.mime || "image/png",
+  });
+  await loadWatermarkImage(file);
+}
+
+function setControlValue(control, value) {
+  if (!control || value === undefined || value === null) return;
+  if (control.type === "checkbox" || control.type === "radio") {
+    control.checked = Boolean(value);
+  } else {
+    control.value = String(value);
+  }
+}
+
+async function applyWatermarkPresetRecord(record) {
+  if (!record?.options) return;
+  const opts = record.options;
+
+  if (opts.markType === "combined" && els.typeCombined) els.typeCombined.checked = true;
+  else if (opts.markType === "image" && els.typeImage) els.typeImage.checked = true;
+  else if (els.typeText) els.typeText.checked = true;
+
+  setControlValue(els.text, opts.text);
+  setControlValue(els.pageMode, opts.pageMode);
+  setControlValue(els.expression, opts.pageExpression);
+  setControlValue(els.skipCover, opts.skipCover);
+  setControlValue(els.position, opts.position);
+  setControlValue(els.fontSize, opts.fontSize);
+  setControlValue(els.color, opts.color);
+  setControlValue(els.opacity, Math.round(Number(opts.opacity || .18) * 100));
+  setControlValue(els.rotation, opts.rotation);
+  setControlValue(els.marginX, opts.marginX);
+  setControlValue(els.marginY, opts.marginY);
+  setControlValue(els.bold, opts.bold);
+  setControlValue(els.imageScale, opts.imageScale);
+  setControlValue(els.imageFit, opts.imageFit);
+  setControlValue(els.imageLayout, opts.imageLayout);
+  setControlValue(els.imageGapX, opts.imageGapX);
+  setControlValue(els.imageGapY, opts.imageGapY);
+  setControlValue(els.imageRowOffset, opts.imageRowOffset);
+  setControlValue(els.imagePosition, opts.imagePosition);
+  setControlValue(els.imageOpacity, Math.round(Number(opts.imageOpacity || .18) * 100));
+  setControlValue(els.imageRotation, opts.imageRotation);
+  setControlValue(els.imageMarginX, opts.imageMarginX);
+  setControlValue(els.imageMarginY, opts.imageMarginY);
+
+  state.manualPages = new Set(
+    Array.isArray(opts.manualPages)
+      ? opts.manualPages.filter((page) => Number.isInteger(page) && page >= 1 && page <= state.pageCount)
+      : Array.from({ length: state.pageCount }, (_, index) => index + 1)
+  );
+
+  await restorePresetImage(record.image);
+  syncWatermarkImageMode();
+  syncWatermarkImageLayoutMode();
+  updateManualGridState();
+  refresh();
+  schedulePreview();
+}
+
+async function refreshWatermarkPresetList(selectedId = "") {
+  if (!els.customPresetList) return;
+  const records = await listWatermarkPresets();
+  records.sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }));
+
+  els.customPresetList.replaceChildren();
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = records.length ? "Selecciona un preset" : "No hay presets guardados";
+  els.customPresetList.append(empty);
+
+  for (const record of records) {
+    const option = document.createElement("option");
+    option.value = record.id;
+    option.textContent = record.name;
+    els.customPresetList.append(option);
+  }
+
+  els.customPresetList.value = selectedId && records.some((record) => record.id === selectedId)
+    ? selectedId
+    : "";
+
+  const selected = Boolean(els.customPresetList.value);
+  if (els.customPresetUpdate) els.customPresetUpdate.disabled = !selected || state.busy;
+  if (els.customPresetDelete) els.customPresetDelete.disabled = !selected || state.busy;
+}
+
+async function saveNewWatermarkPreset() {
+  if (state.busy) return;
+  const proposed = window.prompt("Nombre del nuevo preset:");
+  const name = String(proposed || "").trim();
+  if (!name) return;
+
+  const records = await listWatermarkPresets();
+  if (records.some((record) => record.name.toLocaleLowerCase("es") === name.toLocaleLowerCase("es"))) {
+    setStatus("Ya existe un preset con ese nombre. Selecciónalo y pulsa Actualizar.", "error");
+    return;
+  }
+
+  const preset = serializeWatermarkPreset(name);
+  await putWatermarkPreset(preset);
+  await refreshWatermarkPresetList(preset.id);
+  setStatus(`Preset “${name}” guardado únicamente en este equipo.`, "success");
+}
+
+async function updateSelectedWatermarkPreset() {
+  const id = els.customPresetList?.value;
+  if (!id || state.busy) return;
+  const existing = await getWatermarkPreset(id);
+  if (!existing) {
+    await refreshWatermarkPresetList();
+    return;
+  }
+
+  const preset = serializeWatermarkPreset(existing.name, existing.id);
+  preset.createdAt = existing.createdAt || Date.now();
+  await putWatermarkPreset(preset);
+  await refreshWatermarkPresetList(id);
+  setStatus(`Preset “${existing.name}” actualizado.`, "success");
+}
+
+async function deleteSelectedWatermarkPreset() {
+  const id = els.customPresetList?.value;
+  if (!id || state.busy) return;
+  const existing = await getWatermarkPreset(id);
+  if (!existing) return;
+
+  if (!window.confirm(`¿Eliminar el preset “${existing.name}”?`)) return;
+  await deleteWatermarkPresetRecord(id);
+  await refreshWatermarkPresetList();
+  setStatus("Preset eliminado del almacenamiento local.", "success");
+}
 const PRESETS = Object.freeze({
   confidential: { text: "CONFIDENCIAL", position: "center", fontSize: 54, color: "#b91c1c", opacity: 18, rotation: -35, marginX: 24, marginY: 24, bold: true },
   draft: { text: "BORRADOR", position: "center", fontSize: 58, color: "#475569", opacity: 16, rotation: -35, marginX: 24, marginY: 24, bold: true },
@@ -264,7 +692,7 @@ function refresh() {
 
   els.expression.disabled = !rangeMode || state.busy;
   if (els.expressionField) els.expressionField.hidden = !rangeMode;
-  if (els.manualPanel) els.manualPanel.hidden = !state.pageCount;
+  if (els.manualPanel) els.manualPanel.hidden = !state.pageCount || opts.pageMode !== "manual";
   els.choose.disabled = state.busy;
   els.remove.disabled = state.busy || !state.file;
 
@@ -918,3 +1346,81 @@ document.addEventListener("keydown", (event) => {
   els.imageTileToggle.setAttribute("aria-expanded", "false");
   syncWatermarkImageLayoutMode();
 });
+/* PDFPRIVADO_WATERMARK_CUSTOM_PRESETS_V1_7A */
+els.customPresetList?.addEventListener("change", async () => {
+  const id = els.customPresetList.value;
+  if (!id) {
+    refresh();
+    return;
+  }
+
+  try {
+    const record = await getWatermarkPreset(id);
+    if (record) {
+      await applyWatermarkPresetRecord(record);
+      setStatus(`Preset “${record.name}” aplicado.`, "success");
+    }
+  } catch (error) {
+    setStatus(error?.message || "No se pudo cargar el preset.", "error");
+  } finally {
+    refresh();
+  }
+});
+
+els.customPresetSave?.addEventListener("click", () => {
+  void saveNewWatermarkPreset().catch((error) => {
+    setStatus(error?.message || "No se pudo guardar el preset.", "error");
+  });
+});
+
+els.customPresetUpdate?.addEventListener("click", () => {
+  void updateSelectedWatermarkPreset().catch((error) => {
+    setStatus(error?.message || "No se pudo actualizar el preset.", "error");
+  });
+});
+
+els.customPresetDelete?.addEventListener("click", () => {
+  void deleteSelectedWatermarkPreset().catch((error) => {
+    setStatus(error?.message || "No se pudo eliminar el preset.", "error");
+  });
+});
+
+void refreshWatermarkPresetList().catch(() => {
+  setStatus("Los presets locales no están disponibles en este entorno.", "error");
+});
+/* PDFPRIVADO_WATERMARK_PROGRESSIVE_UX_V1_8A */
+els.modeQuick?.addEventListener("change", () => {
+  if (!els.modeQuick.checked) return;
+  watermarkUxState.mode = "quick";
+  saveWatermarkUxState();
+  applyWatermarkProgressiveUi();
+});
+
+els.modeAdvanced?.addEventListener("change", () => {
+  if (!els.modeAdvanced.checked) return;
+  watermarkUxState.mode = "advanced";
+  saveWatermarkUxState();
+  applyWatermarkProgressiveUi();
+});
+
+els.textAdvancedToggle?.addEventListener("click", () => {
+  watermarkUxState.textOpen = !watermarkUxState.textOpen;
+  saveWatermarkUxState();
+  applyWatermarkProgressiveUi();
+});
+
+els.imageAdvancedToggle?.addEventListener("click", () => {
+  watermarkUxState.imageOpen = !watermarkUxState.imageOpen;
+  saveWatermarkUxState();
+  applyWatermarkProgressiveUi();
+});
+
+applyWatermarkProgressiveUi();
+
+/* PDFPRIVADO_WATERMARK_COMPACT_DENSITY_V1_8B */
+applyCompactWatermarkLayoutHints();
+
+/* PDFPRIVADO_WATERMARK_ULTRACOMPACT_QUICK_V1_8C */
+ensureWatermarkImagePrimaryLayout();
+
+ensureWatermarkImageQuickRows();
