@@ -17,8 +17,10 @@ assert.deepEqual([...selectedPagesForMode("even", 6)], [2, 4, 6]);
 assert.deepEqual([...selectedPagesForMode("odd", 6)], [1, 3, 5]);
 
 const bounds = rotatedTextBounds(100, 20, -35);
-assert.ok(bounds.width > 100);
-assert.ok(bounds.height > 20);
+// Una caja rotada puede reducir su ancho exterior aunque aumente su altura.
+// Para 100 x 20 a -35 grados, la envolvente esperada es ~93,39 x 73,74.
+assert.ok(bounds.width > 93 && bounds.width < 94);
+assert.ok(bounds.height > 73 && bounds.height < 74);
 
 const page = { getSize: () => ({ width: 595, height: 842 }) };
 for (const position of ["top-left", "top-center", "top-right", "middle-left", "center", "middle-right", "bottom-left", "bottom-center", "bottom-right"]) {

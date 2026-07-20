@@ -1,4 +1,4 @@
-/* PDFPRIVADO_WATERMARK_UI_V1_8D_QUICK_ROW_REORDER */
+/* PDFPRIVADO_WATERMARK_UI_V1_8E_AUDIT_CLEANUP */
 import {
   applyImageWatermark,
   applyTextWatermark,
@@ -1237,7 +1237,7 @@ els.choose?.addEventListener("click", () => els.fileInput?.click());
 els.fileInput?.addEventListener("change", () => loadFile(els.fileInput.files?.[0]));
 
 
-els.removeImage?.addEventListener("click", removeWatermarkImage);
+
 
 
 els.remove?.addEventListener("click", removeFile);

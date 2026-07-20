@@ -1620,8 +1620,7 @@
               </div>
               <button class="secondary-button" type="button" data-watermark-close>Cerrar</button>
             </header>
-
-            <div class="watermark-body">
+<div class="watermark-body">
               <section class="watermark-document">
                 <div class="watermark-document-info">
                   <strong id="watermark-file-name">Ningún documento seleccionado</strong>
@@ -1670,6 +1669,29 @@
                         <span>Texto + imagen</span>
                       </label>
                     </div>
+                    <section class="watermark-custom-presets" id="watermark-custom-presets" aria-label="Presets personalizados">
+              <label class="watermark-custom-preset-select">
+                <span>Cargar preset</span>
+                <select id="watermark-custom-preset-list">
+                  <option value="">Selecciona un preset</option>
+                </select>
+              </label>
+              <div class="watermark-custom-preset-actions">
+                <button class="secondary-button" id="watermark-custom-preset-save" type="button">Guardar como</button>
+                <button class="secondary-button" id="watermark-custom-preset-update" type="button" disabled>Actualizar</button>
+                <button class="secondary-button danger-subtle" id="watermark-custom-preset-delete" type="button" disabled>Eliminar</button>
+              </div>
+            </section>
+                    <div class="watermark-ux-mode" id="watermark-ux-mode" role="radiogroup" aria-label="Nivel de opciones">
+                      <label class="watermark-ux-mode-option">
+                        <input id="watermark-mode-quick" name="watermark-ux-mode" type="radio" value="quick" checked />
+                        <span>Vista rápida</span>
+                      </label>
+                      <label class="watermark-ux-mode-option">
+                        <input id="watermark-mode-advanced" name="watermark-ux-mode" type="radio" value="advanced" />
+                        <span>Vista avanzada</span>
+                      </label>
+                    </div>
 <div class="watermark-grid">
                                             <div class="watermark-combined-block-title" id="watermark-combined-text-title" hidden>Configuración de texto</div>
                       <label class="watermark-field watermark-field-wide" id="watermark-text-field">
@@ -1696,7 +1718,7 @@
                           </label>
                           <label class="watermark-field">
                             <span>Ajuste</span>
-                            <select id="watermark-image-fit">
+                            <select id="watermark-image-fit" data-watermark-image-advanced-control>
                               <option value="width" selected>Por ancho de página</option>
                               <option value="height">Por alto de página</option>
                             </select>
@@ -1734,6 +1756,9 @@
                         </div>
                         <section class="watermark-image-design-panel" id="watermark-image-design-panel">
                           <div class="watermark-mini-heading">Diseño de imagen</div>
+                          <button class="watermark-advanced-toggle" id="watermark-image-advanced-toggle" type="button" aria-expanded="false">
+                            Más opciones de imagen
+                          </button>
                           <div class="watermark-grid">
                             <label class="watermark-field">
                               <span>Posición</span>
@@ -1755,15 +1780,15 @@
                             </label>
                             <label class="watermark-field">
                               <span>Rotación</span>
-                              <input id="watermark-image-rotation" type="number" min="-180" max="180" value="0" />
+                              <input id="watermark-image-rotation" data-watermark-image-advanced-control type="number" min="-180" max="180" value="0" />
                             </label>
                             <label class="watermark-field">
                               <span>Margen horizontal</span>
-                              <input id="watermark-image-margin-x" type="number" min="0" value="24" />
+                              <input id="watermark-image-margin-x" data-watermark-image-advanced-control type="number" min="0" value="24" />
                             </label>
                             <label class="watermark-field">
                               <span>Margen vertical</span>
-                              <input id="watermark-image-margin-y" type="number" min="0" value="24" />
+                              <input id="watermark-image-margin-y" data-watermark-image-advanced-control type="number" min="0" value="24" />
                             </label>
                           </div>
                         </section>
@@ -1816,6 +1841,9 @@
 
                   <section class="watermark-section">
                     <h3 id="watermark-text-design-title">Diseño de texto</h3>
+                    <button class="watermark-advanced-toggle" id="watermark-text-advanced-toggle" type="button" aria-expanded="false">
+                      Más opciones de texto
+                    </button>
                     <div class="watermark-grid">
                       <label class="watermark-field">
                         <span>Posición</span>
@@ -1831,12 +1859,12 @@
                           <option value="bottom-right">Inferior derecha</option>
                         </select>
                       </label>
-                      <label class="watermark-field" id="watermark-font-size-field"><span>Tamaño</span><input id="watermark-font-size" type="number" min="8" max="180" value="54" /></label>
-                      <label class="watermark-field" id="watermark-color-field"><span>Color</span><input id="watermark-color" type="color" value="#b91c1c" /></label>
+                      <label class="watermark-field" id="watermark-font-size-field" data-watermark-text-advanced><span>Tamaño</span><input id="watermark-font-size" type="number" min="8" max="180" value="54" /></label>
+                      <label class="watermark-field" id="watermark-color-field" data-watermark-text-advanced><span>Color</span><input id="watermark-color" type="color" value="#b91c1c" /></label>
                       <label class="watermark-field"><span>Opacidad (%)</span><input id="watermark-opacity" type="number" min="3" max="100" value="18" /></label>
-                      <label class="watermark-field"><span>Rotación</span><input id="watermark-rotation" type="number" min="-180" max="180" value="-35" /></label>
-                      <label class="watermark-field"><span>Margen horizontal</span><input id="watermark-margin-x" type="number" min="0" value="24" /></label>
-                      <label class="watermark-field"><span>Margen vertical</span><input id="watermark-margin-y" type="number" min="0" value="24" /></label>
+                      <label class="watermark-field"><span>Rotación</span><input id="watermark-rotation" data-watermark-text-advanced-control type="number" min="-180" max="180" value="-35" /></label>
+                      <label class="watermark-field"><span>Margen horizontal</span><input id="watermark-margin-x" data-watermark-text-advanced-control type="number" min="0" value="24" /></label>
+                      <label class="watermark-field"><span>Margen vertical</span><input id="watermark-margin-y" data-watermark-text-advanced-control type="number" min="0" value="24" /></label>
                     </div>
                     <div class="watermark-checks" id="watermark-text-checks">
                       <label><input id="watermark-bold" type="checkbox" checked /> Negrita</label>
