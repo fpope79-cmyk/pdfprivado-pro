@@ -56,6 +56,16 @@ const els = {
   status: $("#page-numbering-status"),
   save: $("#page-numbering-save"),
   reset: $("#page-numbering-reset"),
+  template: $("#page-numbering-template"),
+  presetSelect: $("#page-numbering-preset-select"),
+  presetName: $("#page-numbering-preset-name"),
+  presetApply: $("#page-numbering-preset-apply"),
+  presetSave: $("#page-numbering-preset-save"),
+  presetOverwrite: $("#page-numbering-preset-overwrite"),
+  presetDelete: $("#page-numbering-preset-delete"),
+  presetExport: $("#page-numbering-preset-export"),
+  presetImport: $("#page-numbering-preset-import"),
+  presetFile: $("#page-numbering-preset-file"),
 };
 
 const state = {
@@ -70,7 +80,190 @@ const state = {
   previewSerial: 0,
   previewTimer: null,
   previewTask: null,
+  customPresets: [],
 };
+
+const PRESET_STORAGE_KEY = "pdfprivado.page-numbering.presets.v2";
+const BUILTIN_PRESETS = Object.freeze([
+  { id: "builtin-page-total", name: "Página X de N", builtIn: true, values: { format: "page-total", position: "bottom-center", fontSize: 11, opacity: 90, marginX: 24, marginY: 20 } },
+  { id: "builtin-legal", name: "Numeración jurídica", builtIn: true, values: { format: "custom-template", template: "Folio {numero} de {total}", position: "top-right", bold: true, fontSize: 10, marginX: 28, marginY: 24 } },
+  { id: "builtin-roman", name: "Preliminares romanos", builtIn: true, values: { format: "roman-lower", position: "bottom-center", fontSize: 11, opacity: 85 } },
+  { id: "builtin-file-page", name: "Expediente y página", builtIn: true, values: { format: "custom-template", template: "{nombre} · pág. {pagina}/{total}", position: "bottom-right", fontSize: 9, opacity: 75 } },
+  { id: "builtin-discreet", name: "Pie discreto", builtIn: true, values: { format: "number", position: "bottom-center", fontSize: 8, color: "#64748b", opacity: 60, marginY: 14 } },
+]);
+
+function safePresetValues(values = {}) {
+  const allowed = [
+    "pageMode", "pageExpression", "position", "marginX", "marginY",
+    "initialNumber", "restartPage", "skipCover", "format", "digits",
+    "template", "prefix", "suffix", "fontSize", "color", "opacity",
+    "bold", "background", "backgroundColor", "backgroundOpacity",
+    "border", "borderWidth", "paddingX", "paddingY",
+  ];
+  return Object.fromEntries(
+    allowed.filter((key) => Object.prototype.hasOwnProperty.call(values, key))
+      .map((key) => [key, values[key]])
+  );
+}
+
+function loadCustomPresets() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) || "[]");
+    state.customPresets = Array.isArray(parsed)
+      ? parsed.filter((item) => item && typeof item.name === "string" && item.values)
+          .map((item) => ({ id: String(item.id || `custom-${Date.now()}`), name: item.name.slice(0, 60), builtIn: false, values: safePresetValues(item.values) }))
+      : [];
+  } catch {
+    state.customPresets = [];
+  }
+}
+
+function saveCustomPresets() {
+  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(state.customPresets));
+}
+
+function allPresets() {
+  return [...BUILTIN_PRESETS, ...state.customPresets];
+}
+
+function renderPresetSelect(selectedId = "") {
+  const current = selectedId || els.presetSelect.value;
+  els.presetSelect.replaceChildren();
+  const builtInGroup = document.createElement("optgroup");
+  builtInGroup.label = "Incluidos";
+  for (const preset of BUILTIN_PRESETS) builtInGroup.append(new Option(preset.name, preset.id));
+  const customGroup = document.createElement("optgroup");
+  customGroup.label = "Mis presets";
+  if (state.customPresets.length === 0) {
+    const empty = new Option("Todavía no hay presets personalizados", "");
+    empty.disabled = true;
+    customGroup.append(empty);
+  } else {
+    for (const preset of state.customPresets) customGroup.append(new Option(preset.name, preset.id));
+  }
+  els.presetSelect.append(builtInGroup, customGroup);
+  const exists = allPresets().some((preset) => preset.id === current);
+  els.presetSelect.value = exists ? current : BUILTIN_PRESETS[0].id;
+  updatePresetButtons();
+}
+
+function currentPreset() {
+  return allPresets().find((preset) => preset.id === els.presetSelect.value) || null;
+}
+
+function currentPresetValues() {
+  const value = options();
+  delete value.manualPages;
+  delete value.fileName;
+  return safePresetValues(value);
+}
+
+function setControlValue(element, value) {
+  if (!element || value === undefined) return;
+  if (element.type === "checkbox") element.checked = Boolean(value);
+  else element.value = String(value);
+}
+
+function applyPresetValues(values = {}) {
+  const map = {
+    pageMode: els.pageMode, pageExpression: els.expression, position: els.position,
+    marginX: els.marginX, marginY: els.marginY, initialNumber: els.initialNumber,
+    restartPage: els.restartPage, skipCover: els.skipCover, format: els.format,
+    digits: els.digits, template: els.template, prefix: els.prefix, suffix: els.suffix,
+    fontSize: els.fontSize, color: els.color, opacity: els.opacity, bold: els.bold,
+    background: els.background, backgroundColor: els.backgroundColor,
+    backgroundOpacity: els.backgroundOpacity, border: els.border,
+    borderWidth: els.borderWidth, paddingX: els.paddingX, paddingY: els.paddingY,
+  };
+  for (const [key, element] of Object.entries(map)) setControlValue(element, values[key]);
+  updateControls();
+  schedulePreview();
+}
+
+function applySelectedPreset() {
+  const preset = currentPreset();
+  if (!preset) return;
+  applyPresetValues(preset.values);
+  els.presetName.value = preset.builtIn ? "" : preset.name;
+  setStatus(`Preset aplicado: ${preset.name}.`, "success");
+}
+
+function createCustomPreset() {
+  const name = els.presetName.value.trim();
+  if (!name) {
+    setStatus("Escribe un nombre para guardar el preset.", "warning");
+    els.presetName.focus();
+    return;
+  }
+  const preset = { id: `custom-${Date.now()}-${Math.random()}`, name: name.slice(0, 60), builtIn: false, values: currentPresetValues() };
+  state.customPresets.push(preset);
+  saveCustomPresets();
+  renderPresetSelect(preset.id);
+  setStatus(`Preset guardado localmente: ${preset.name}.`, "success");
+}
+
+function overwriteCustomPreset() {
+  const preset = currentPreset();
+  if (!preset || preset.builtIn) {
+    setStatus("Selecciona un preset personalizado para sobrescribirlo.", "warning");
+    return;
+  }
+  const name = els.presetName.value.trim();
+  if (name) preset.name = name.slice(0, 60);
+  preset.values = currentPresetValues();
+  saveCustomPresets();
+  renderPresetSelect(preset.id);
+  setStatus(`Preset actualizado: ${preset.name}.`, "success");
+}
+
+function deleteCustomPreset() {
+  const preset = currentPreset();
+  if (!preset || preset.builtIn) {
+    setStatus("Los presets incluidos no pueden eliminarse.", "warning");
+    return;
+  }
+  state.customPresets = state.customPresets.filter((item) => item.id !== preset.id);
+  saveCustomPresets();
+  renderPresetSelect();
+  els.presetName.value = "";
+  setStatus(`Preset eliminado: ${preset.name}.`, "info");
+}
+
+function exportCustomPresets() {
+  const payload = { type: "PDFPrivadoPageNumberingPresets", version: 2, exportedAt: new Date().toISOString(), presets: state.customPresets.map(({ id, name, values }) => ({ id, name, values })) };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "PDFPrivado-presets-numeracion-v2.json";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  setStatus(`${state.customPresets.length} presets personalizados exportados.`, "success");
+}
+
+async function importPresetFile(file) {
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (parsed?.type !== "PDFPrivadoPageNumberingPresets" || !Array.isArray(parsed.presets)) throw new Error("El JSON no pertenece a Numeración PDF Pro.");
+    const imported = parsed.presets.filter((item) => item && typeof item.name === "string" && item.values)
+      .map((item) => ({ id: `custom-${Date.now()}-${Math.random()}`, name: item.name.slice(0, 60), builtIn: false, values: safePresetValues(item.values) }));
+    state.customPresets.push(...imported);
+    saveCustomPresets();
+    renderPresetSelect(imported.at(-1)?.id);
+    setStatus(`${imported.length} presets importados correctamente.`, "success");
+  } catch (error) {
+    setStatus(error?.message || "No se pudieron importar los presets.", "error");
+  }
+}
+
+function updatePresetButtons() {
+  const preset = currentPreset();
+  const editable = Boolean(preset && !preset.builtIn);
+  els.presetOverwrite.disabled = state.busy || !editable;
+  els.presetDelete.disabled = state.busy || !editable;
+  els.presetApply.disabled = state.busy || !preset;
+  els.presetExport.disabled = state.busy || state.customPresets.length === 0;
+}
 
 function formatBytes(bytes) {
   const value = Number(bytes) || 0;
@@ -108,6 +301,7 @@ function options() {
     skipCover: els.skipCover.checked,
     format: els.format.value,
     digits: Number(els.digits.value),
+    template: els.template.value,
     prefix: els.prefix.value,
     suffix: els.suffix.value,
     fontSize: Number(els.fontSize.value),
@@ -121,6 +315,7 @@ function options() {
     borderWidth: Number(els.borderWidth.value),
     paddingX: Number(els.paddingX.value),
     paddingY: Number(els.paddingY.value),
+    fileName: state.info?.name || "Documento.pdf",
   };
 }
 
@@ -145,6 +340,7 @@ function updateControls() {
   els.expression.disabled = state.busy || els.pageMode.value !== "range";
   els.manualGrid.hidden = els.pageMode.value !== "manual";
   els.digits.disabled = els.format.value !== "padded";
+  els.template.disabled = els.format.value !== "custom-template";
   els.backgroundColor.disabled = !els.background.checked;
   els.backgroundOpacity.disabled = !els.background.checked;
   els.border.disabled = !els.background.checked;
@@ -154,6 +350,7 @@ function updateControls() {
   els.selectionSummary.textContent = ready
     ? `${selected.size} de ${state.info.pages} páginas recibirán numeración`
     : "Ningún documento preparado";
+  updatePresetButtons();
 }
 
 async function bridge() {
@@ -172,7 +369,7 @@ async function destroyPreviewDocument() {
 
 async function loadBytes(bytes, info, source) {
   if (!(bytes instanceof Uint8Array)) throw new Error("No se recibieron bytes PDF válidos.");
-  setBusy(true, "Analizando el documento y preparando la vista previaâ€¦");
+  setBusy(true, "Analizando el documento y preparando la vista previa…");
   try {
     await destroyPreviewDocument();
     const loadingTask = pdfjsLib.getDocument({
@@ -416,6 +613,7 @@ function resetOptions() {
   els.skipCover.checked = false;
   els.format.value = "page-total";
   els.digits.value = "3";
+  els.template.value = "{numero}";
   els.prefix.value = "";
   els.suffix.value = "";
   els.fontSize.value = "11";
@@ -466,7 +664,7 @@ async function writeResult(target, bytes) {
 
 async function saveNumberedPdf() {
   if (!state.bytes || !state.info || state.busy) return;
-  setBusy(true, "Aplicando numeración profesional y verificando la copiaâ€¦");
+  setBusy(true, "Aplicando numeración profesional y verificando la copia…");
   try {
     const stem = state.info.name.replace(/\.pdf$/i, "") || "Documento";
     const target = await chooseSaveTarget(`${stem}_numerado.pdf`);
@@ -511,6 +709,24 @@ els.chooseFile.addEventListener("click", chooseLocalFile);
 els.removeFile.addEventListener("click", clearDocument);
 els.reset.addEventListener("click", resetOptions);
 els.save.addEventListener("click", saveNumberedPdf);
+els.presetApply.addEventListener("click", applySelectedPreset);
+els.presetSave.addEventListener("click", createCustomPreset);
+els.presetOverwrite.addEventListener("click", overwriteCustomPreset);
+els.presetDelete.addEventListener("click", deleteCustomPreset);
+els.presetExport.addEventListener("click", exportCustomPresets);
+els.presetImport.addEventListener("click", () => {
+  els.presetFile.value = "";
+  els.presetFile.click();
+});
+els.presetFile.addEventListener("change", () => {
+  const file = els.presetFile.files?.[0];
+  if (file) void importPresetFile(file);
+});
+els.presetSelect.addEventListener("change", () => {
+  const preset = currentPreset();
+  els.presetName.value = preset && !preset.builtIn ? preset.name : "";
+  updatePresetButtons();
+});
 els.previewPrev.addEventListener("click", () => { state.previewPage -= 1; void renderPreview(); });
 els.previewNext.addEventListener("click", () => { state.previewPage += 1; void renderPreview(); });
 els.previewPage.addEventListener("change", () => { state.previewPage = Number(els.previewPage.value); void renderPreview(); });
@@ -531,5 +747,7 @@ dialog.addEventListener("cancel", (event) => {
   closeDialog();
 });
 
+loadCustomPresets();
+renderPresetSelect();
 resetOptions();
 updateControls();

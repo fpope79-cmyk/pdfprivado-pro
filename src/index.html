@@ -1666,7 +1666,7 @@
               </section>
 
               <section class="page-numbering-section">
-                <h3>Formato profesional</h3>
+                <h3>Formato profesional V2</h3>
                 <div class="page-numbering-grid">
                   <label class="page-numbering-field"><span>Formato</span>
                     <select id="page-numbering-format">
@@ -1674,12 +1674,26 @@
                       <option value="page">Página 1</option>
                       <option value="page-total" selected>Página 1 de N</option>
                       <option value="padded">001, 002, 003</option>
+                      <option value="roman-upper">I, II, III</option>
+                      <option value="roman-lower">i, ii, iii</option>
+                      <option value="alpha-upper">A, B, C… AA</option>
+                      <option value="alpha-lower">a, b, c… aa</option>
+                      <option value="custom-template">Plantilla con variables</option>
                     </select>
                   </label>
                   <label class="page-numbering-field"><span>Dígitos con ceros</span><input id="page-numbering-digits" type="number" min="2" max="8" value="3" disabled /></label>
-                  <label class="page-numbering-field"><span>Prefijo</span><input id="page-numbering-prefix" type="text" maxlength="40" /></label>
-                  <label class="page-numbering-field"><span>Sufijo</span><input id="page-numbering-suffix" type="text" maxlength="40" /></label>
+                  <label class="page-numbering-field page-numbering-field-wide"><span>Plantilla personalizada</span>
+                    <input id="page-numbering-template" type="text" maxlength="160" value="{numero}" disabled />
+                  </label>
+                  <label class="page-numbering-field"><span>Prefijo</span><input id="page-numbering-prefix" type="text" maxlength="80" /></label>
+                  <label class="page-numbering-field"><span>Sufijo</span><input id="page-numbering-suffix" type="text" maxlength="80" /></label>
                 </div>
+                <p class="page-numbering-variable-help">
+                  Variables disponibles:
+                  <code>{numero}</code>, <code>{total}</code>, <code>{pagina}</code>,
+                  <code>{nombre}</code>, <code>{fecha}</code> y <code>{hora}</code>.
+                  También pueden utilizarse dentro del prefijo y del sufijo.
+                </p>
               </section>
 
               <section class="page-numbering-section">
@@ -1701,6 +1715,30 @@
                   <label class="page-numbering-field"><span>Relleno horizontal</span><input id="page-numbering-padding-x" type="number" min="0" max="40" value="5" disabled /></label>
                   <label class="page-numbering-field"><span>Relleno vertical</span><input id="page-numbering-padding-y" type="number" min="0" max="30" value="3" disabled /></label>
                 </div>
+              </section>
+
+              <section class="page-numbering-section page-numbering-presets">
+                <h3>Presets profesionales</h3>
+                <div class="page-numbering-grid">
+                  <label class="page-numbering-field"><span>Configuración guardada</span>
+                    <select id="page-numbering-preset-select"></select>
+                  </label>
+                  <label class="page-numbering-field"><span>Nombre del preset</span>
+                    <input id="page-numbering-preset-name" type="text" maxlength="60" placeholder="Mi configuración" />
+                  </label>
+                </div>
+                <div class="page-numbering-preset-actions">
+                  <button class="secondary-button" id="page-numbering-preset-apply" type="button">Aplicar</button>
+                  <button class="secondary-button" id="page-numbering-preset-save" type="button">Guardar nuevo</button>
+                  <button class="secondary-button" id="page-numbering-preset-overwrite" type="button">Sobrescribir</button>
+                  <button class="secondary-button" id="page-numbering-preset-delete" type="button">Eliminar</button>
+                  <button class="secondary-button" id="page-numbering-preset-export" type="button">Exportar JSON</button>
+                  <button class="secondary-button" id="page-numbering-preset-import" type="button">Importar JSON</button>
+                  <input id="page-numbering-preset-file" type="file" accept=".json,application/json" hidden />
+                </div>
+                <p class="page-numbering-preset-note">
+                  Los presets personalizados se guardan únicamente en este equipo. No se envían a ningún servidor.
+                </p>
               </section>
 
               <progress class="page-numbering-progress" id="page-numbering-progress" max="100" value="0" hidden></progress>

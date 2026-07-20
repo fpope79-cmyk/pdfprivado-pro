@@ -58,14 +58,78 @@ export function numberingValueForPage(pageNumber, options) {
   return initialNumber + Math.max(0, pageNumber - restartPage);
 }
 
-export function formatPageLabel(pageNumber, totalPages, options) {
-  const value = numberingValueForPage(pageNumber, options);
+export function toRoman(value) {
+  let number = Math.max(1, Math.floor(Number(value) || 1));
+  const parts = [
+    [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
+    [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+    [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+  ];
+  let result = "";
+  for (const [amount, symbol] of parts) {
+    while (number >= amount) {
+      result += symbol;
+      number -= amount;
+    }
+  }
+  return result;
+}
+
+export function toAlphabetic(value) {
+  let number = Math.max(1, Math.floor(Number(value) || 1));
+  let result = "";
+  while (number > 0) {
+    number -= 1;
+    result = String.fromCharCode(65 + (number % 26)) + result;
+    number = Math.floor(number / 26);
+  }
+  return result;
+}
+
+export function sequenceValue(value, options = {}) {
+  const format = options.format || "number";
   const digits = Math.max(1, Number(options.digits) || 1);
-  const number = options.format === "padded" ? String(value).padStart(digits, "0") : String(value);
-  let body = number;
-  if (options.format === "page") body = `Página ${number}`;
-  if (options.format === "page-total") body = `Página ${number} de ${totalPages}`;
-  return `${options.prefix || ""}${body}${options.suffix || ""}`;
+  if (format === "padded") return String(value).padStart(digits, "0");
+  if (format === "roman-upper") return toRoman(value);
+  if (format === "roman-lower") return toRoman(value).toLowerCase();
+  if (format === "alpha-upper") return toAlphabetic(value);
+  if (format === "alpha-lower") return toAlphabetic(value).toLowerCase();
+  return String(value);
+}
+
+export function templateVariables(pageNumber, totalPages, options = {}) {
+  const value = numberingValueForPage(pageNumber, options);
+  const number = sequenceValue(value, options);
+  const now = options.now instanceof Date ? options.now : new Date();
+  const fileName = String(options.fileName || "Documento.pdf").replace(/\.pdf$/i, "");
+  return {
+    numero: number,
+    total: String(totalPages),
+    pagina: String(pageNumber),
+    nombre: fileName,
+    fecha: now.toLocaleDateString("es-ES"),
+    hora: now.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
+export function applyTemplate(template, variables) {
+  return String(template || "").replace(
+    /\{(numero|total|pagina|nombre|fecha|hora)\}/g,
+    (_, key) => variables[key] ?? ""
+  );
+}
+
+export function formatPageLabel(pageNumber, totalPages, options) {
+  const variables = templateVariables(pageNumber, totalPages, options);
+  let body = variables.numero;
+  if (options.format === "page") body = `Página ${variables.numero}`;
+  if (options.format === "page-total") body = `Página ${variables.numero} de ${totalPages}`;
+  if (options.format === "custom-template") {
+    body = applyTemplate(options.template || "{numero}", variables);
+  }
+  const prefix = applyTemplate(options.prefix || "", variables);
+  const suffix = applyTemplate(options.suffix || "", variables);
+  return `${prefix}${body}${suffix}`;
 }
 
 export function resolvePlacement(page, textWidth, textHeight, options) {
