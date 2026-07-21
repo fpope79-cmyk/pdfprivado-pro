@@ -25,6 +25,13 @@ import {
   writeOcrCacheRecord,
 } from "./ocr-cache.js";
 import { reconstructOcrText } from "./ocr-text-layout.js";
+import { OCR_LANGUAGE_MANIFEST } from "./ocr-language-manifest.js";
+import { createOcrLanguageStorage } from "./ocr-language-storage.js";
+import {
+  cancelExternalOcrRuntime,
+  isExternalOcrCancelledError,
+  recognizeExternalOcrImage,
+} from "./ocr-external-runtime.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -83,6 +90,9 @@ if (!els.view) {
     persistentCache: new Map(),
     cacheHits: 0,
     balancedOcrPool: null,
+    installedOcrLanguages: new Map(),
+    externalOcrModels: [],
+    usesExternalOcr: false,
     adaptive: {
       fastAccepted: 0,
       balancedRetried: 0,
@@ -93,6 +103,7 @@ if (!els.view) {
 
   const SETTINGS_KEY = "pdfprivado.convertExport.v3";
   const NATIVE_TEXT_MINIMUM = 8;
+  const ocrLanguageStorage = createOcrLanguageStorage();
 
   function selectedLayoutMode() {
     return (
@@ -112,16 +123,167 @@ if (!els.view) {
   }
 
   function selectedOcrLanguages() {
-    const primary = ["spa", "eng"].includes(els.ocrPrimary?.value)
+    const availableCodes = new Set(
+      [...els.ocrPrimary.options]
+        .map((option) => option.value)
+        .filter(Boolean)
+    );
+
+    const primary = availableCodes.has(els.ocrPrimary?.value)
       ? els.ocrPrimary.value
       : "spa";
-    const secondary = ["spa", "eng"].includes(els.ocrSecondary?.value)
+    const secondary = availableCodes.has(els.ocrSecondary?.value)
       ? els.ocrSecondary.value
       : "";
 
     return secondary && secondary !== primary
       ? [primary, secondary]
       : [primary];
+  }
+
+  function languageDefinition(code) {
+    return OCR_LANGUAGE_MANIFEST.find(
+      (language) => language.code === code
+    ) || null;
+  }
+
+  function savedOcrLanguageSelection() {
+    try {
+      const value = JSON.parse(
+        localStorage.getItem(SETTINGS_KEY) || "{}"
+      );
+      return {
+        primary: String(value.ocrPrimary || ""),
+        secondary: String(value.ocrSecondary || ""),
+      };
+    } catch {
+      return { primary: "", secondary: "" };
+    }
+  }
+
+  function createLanguageOption(language, value = language.code) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = language.label;
+    option.dataset.optional = language.installed ? "false" : "true";
+    return option;
+  }
+
+  async function refreshOcrLanguageOptions() {
+    const previous = {
+      primary: els.ocrPrimary?.value || "",
+      secondary: els.ocrSecondary?.value || "",
+    };
+    const saved = savedOcrLanguageSelection();
+
+    const installedOptional = await ocrLanguageStorage.list();
+    state.installedOcrLanguages = new Map(
+      installedOptional.map((record) => [record.code, record])
+    );
+
+    const available = OCR_LANGUAGE_MANIFEST.filter(
+      (language) =>
+        language.installed ||
+        state.installedOcrLanguages.has(language.code)
+    );
+
+    els.ocrPrimary.replaceChildren(
+      ...available.map((language) =>
+        createLanguageOption(language)
+      )
+    );
+
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "Ninguno";
+
+    els.ocrSecondary.replaceChildren(
+      none,
+      ...available.map((language) =>
+        createLanguageOption(language)
+      )
+    );
+
+    const availableCodes = new Set(
+      available.map((language) => language.code)
+    );
+
+    const primaryCandidate = [
+      previous.primary,
+      saved.primary,
+      "spa",
+    ].find((code) => availableCodes.has(code));
+
+    els.ocrPrimary.value = primaryCandidate || "spa";
+
+    const secondaryCandidate = [
+      previous.secondary,
+      saved.secondary,
+    ].find(
+      (code) =>
+        code &&
+        availableCodes.has(code) &&
+        code !== els.ocrPrimary.value
+    );
+
+    els.ocrSecondary.value = secondaryCandidate || "";
+    updateOcrLanguageUi();
+  }
+
+  async function readBundledOcrModel(code) {
+    const language = languageDefinition(code);
+    if (!language?.installed) return null;
+
+    const response = await fetch(
+      new URL(
+        `./vendor/tesseract/lang/${language.file}`,
+        import.meta.url
+      )
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `No se pudo abrir el modelo OCR local ${language.label}.`
+      );
+    }
+
+    return {
+      code,
+      bytes: new Uint8Array(await response.arrayBuffer()),
+    };
+  }
+
+  async function prepareExternalOcrModels(languageCodes) {
+    const models = [];
+
+    for (const code of languageCodes) {
+      const language = languageDefinition(code);
+
+      if (!language) {
+        throw new Error(`El idioma OCR ${code} no existe.`);
+      }
+
+      if (language.installed) {
+        const bundled = await readBundledOcrModel(code);
+        models.push(bundled);
+        continue;
+      }
+
+      const verified = await ocrLanguageStorage.readVerified(code);
+
+      if (!verified) {
+        throw new Error(
+          `${language.label} no está instalado en este equipo.`
+        );
+      }
+
+      models.push({
+        code,
+        bytes: verified.bytes,
+      });
+    }
+
+    return models;
   }
 
   function updateOcrLanguageUi() {
@@ -246,13 +408,20 @@ if (!els.view) {
       if (["auto", "native", "ocr"].includes(value.textMode)) {
         els.textMode.value = value.textMode;
       }
-      if (els.ocrPrimary && ["spa", "eng"].includes(value.ocrPrimary)) {
+      if (
+        els.ocrPrimary &&
+        [...els.ocrPrimary.options].some(
+          (option) => option.value === value.ocrPrimary
+        )
+      ) {
         els.ocrPrimary.value = value.ocrPrimary;
       }
 
       if (
         els.ocrSecondary &&
-        ["", "spa", "eng"].includes(value.ocrSecondary) &&
+        [...els.ocrSecondary.options].some(
+          (option) => option.value === value.ocrSecondary
+        ) &&
         value.ocrSecondary !== els.ocrPrimary?.value
       ) {
         els.ocrSecondary.value = value.ocrSecondary;
@@ -640,7 +809,8 @@ if (!els.view) {
     pageTotal,
     workerPool,
     profile,
-    languageCodes = ["spa"]
+    languageCodes = ["spa"],
+    externalModels = null
   ) {
     let rendered = null;
     let preparedCanvas = null;
@@ -684,13 +854,24 @@ if (!els.view) {
 
       preparedCanvas = cropCanvasForOcr(rendered.canvas, ink);
 
-      const recognize = workerPool
-        ? (image, options) => workerPool.recognize(image, options)
-        : (image, options) =>
-            recognizeOcrImage(image, languageCodes, {
-              parameters: profile.tesseract,
-              ...options,
-            });
+      const recognize = externalModels
+        ? (image, options) =>
+            recognizeExternalOcrImage(
+              image,
+              languageCodes,
+              externalModels,
+              {
+                parameters: profile.tesseract,
+                ...options,
+              }
+            )
+        : workerPool
+          ? (image, options) => workerPool.recognize(image, options)
+          : (image, options) =>
+              recognizeOcrImage(image, languageCodes, {
+                parameters: profile.tesseract,
+                ...options,
+              });
 
       const result = await recognize(preparedCanvas, {
         onProgress(message) {
@@ -813,6 +994,13 @@ if (!els.view) {
     const textMode = els.textMode.value;
     const languageCodes = selectedOcrLanguages();
     const languageKey = languageCodes.join("+");
+    const usesExternalOcr = languageCodes.some(
+      (code) => !languageDefinition(code)?.installed
+    );
+    state.usesExternalOcr = usesExternalOcr;
+    state.externalOcrModels = usesExternalOcr
+      ? await prepareExternalOcrModels(languageCodes)
+      : [];
     const fastProfile = resolveOcrProfile("fast");
     const balancedProfile = resolveOcrProfile("balanced");
     const records = new Array(resolved.pages.length);
@@ -835,7 +1023,7 @@ if (!els.view) {
         resolved.pages.length
       );
 
-      if (textMode !== "native") {
+      if (textMode !== "native" && !usesExternalOcr) {
         state.ocrPool = await createOcrBenchmarkWorkerPool({
           languages: languageCodes,
           parameters: fastProfile.tesseract,
@@ -908,7 +1096,10 @@ if (!els.view) {
                 resolved.pages.length,
                 state.ocrPool,
                 fastProfile,
-                languageCodes
+                languageCodes,
+                usesExternalOcr
+                  ? state.externalOcrModels
+                  : null
               );
 
               const quality = ocrRecordQuality(fast.record);
@@ -987,7 +1178,9 @@ if (!els.view) {
 
       const fastWorkers = textMode === "native"
         ? Math.min(2, resolved.pages.length)
-        : resolveAdaptiveWorkerCount(resolved.pages.length);
+        : usesExternalOcr
+          ? 1
+          : resolveAdaptiveWorkerCount(resolved.pages.length);
 
       await Promise.all(
         Array.from(
@@ -1008,12 +1201,14 @@ if (!els.view) {
           `Revisando ${retryQueue.length} páginas de baja confianza…`
         );
 
-        state.balancedOcrPool =
-          await createOcrBenchmarkWorkerPool({
-            languages: languageCodes,
-            parameters: balancedProfile.tesseract,
-            size: Math.min(2, retryQueue.length),
-          });
+        if (!usesExternalOcr) {
+          state.balancedOcrPool =
+            await createOcrBenchmarkWorkerPool({
+              languages: languageCodes,
+              parameters: balancedProfile.tesseract,
+              size: Math.min(2, retryQueue.length),
+            });
+        }
 
         let retryCursor = 0;
 
@@ -1034,7 +1229,10 @@ if (!els.view) {
                 resolved.pages.length,
                 state.balancedOcrPool,
                 balancedProfile,
-                languageCodes
+                languageCodes,
+                usesExternalOcr
+                  ? state.externalOcrModels
+                  : null
               );
 
               const balancedText = reconstructOcrText(
@@ -1090,7 +1288,11 @@ if (!els.view) {
 
         await Promise.all(
           Array.from(
-            { length: Math.min(2, retryQueue.length) },
+            {
+              length: usesExternalOcr
+                ? 1
+                : Math.min(2, retryQueue.length),
+            },
             () => processRetry()
           )
         );
@@ -1152,7 +1354,8 @@ if (!els.view) {
       if (
         state.cancelled ||
         error?.name === "AbortError" ||
-        isOcrCancelledError(error)
+        isOcrCancelledError(error) ||
+        isExternalOcrCancelledError(error)
       ) {
         setStatus("Análisis cancelado.", "info");
       } else {
@@ -1175,6 +1378,8 @@ if (!els.view) {
         pools.map((pool) => destroyOcrPoolSafely(pool))
       );
 
+      state.externalOcrModels = [];
+      state.usesExternalOcr = false;
       setBusy(false);
     }
   }
@@ -1265,6 +1470,15 @@ if (!els.view) {
     showOnly(els.view);
     document.title =
       "Convertir y exportar | PDFPrivado Pro";
+
+    try {
+      await refreshOcrLanguageOptions();
+    } catch (error) {
+      console.warn(
+        "No se pudo actualizar la lista local de idiomas OCR.",
+        error
+      );
+    }
 
     let reused = false;
 
@@ -1405,6 +1619,7 @@ if (!els.view) {
         Promise.resolve(pool?.cancel?.())
       ),
       Promise.resolve(cancelOcrEngine()),
+      Promise.resolve(cancelExternalOcrRuntime()),
     ]);
   });
 
@@ -1535,7 +1750,16 @@ if (!els.view) {
     },
     true
   );
-  restoreSettings();
-  resetResult();
-  setBusy(false);
+  void refreshOcrLanguageOptions()
+    .catch((error) => {
+      console.warn(
+        "No se pudo cargar la lista local de idiomas OCR.",
+        error
+      );
+    })
+    .finally(() => {
+      restoreSettings();
+      resetResult();
+      setBusy(false);
+    });
 }
