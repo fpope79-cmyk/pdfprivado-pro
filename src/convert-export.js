@@ -26,7 +26,10 @@ import {
 } from "./ocr-cache.js";
 import { reconstructOcrText } from "./ocr-text-layout.js";
 import { OCR_LANGUAGE_MANIFEST } from "./ocr-language-manifest.js";
-import { createOcrLanguageStorage } from "./ocr-language-storage.js";
+import {
+  getGlobalOcrLanguageStorage,
+  onGlobalOcrLanguagesChanged,
+} from "./ocr-language-global-manager.js";
 import {
   cancelExternalOcrRuntime,
   isExternalOcrCancelledError,
@@ -57,6 +60,7 @@ const els = {
   ocrLanguageGroup: $("#convert-export-ocr-languages"),
   ocrPrimary: $("#convert-export-ocr-primary"),
   ocrSecondary: $("#convert-export-ocr-secondary"),
+  ocrLanguageSummary: $("#convert-export-language-summary"),
   layoutModes: $$('[name="convert-export-layout-mode"]'),
   headings: $("#convert-export-page-headings"),
   analyze: $("#convert-export-analyze"),
@@ -103,7 +107,7 @@ if (!els.view) {
 
   const SETTINGS_KEY = "pdfprivado.convertExport.v3";
   const NATIVE_TEXT_MINIMUM = 8;
-  const ocrLanguageStorage = createOcrLanguageStorage();
+  const ocrLanguageStorage = getGlobalOcrLanguageStorage();
 
   function selectedLayoutMode() {
     return (
@@ -228,6 +232,10 @@ if (!els.view) {
 
     els.ocrSecondary.value = secondaryCandidate || "";
     updateOcrLanguageUi();
+    if (els.ocrLanguageSummary) {
+      const count = available.length;
+      els.ocrLanguageSummary.textContent = `${count} ${count === 1 ? "idioma OCR disponible" : "idiomas OCR disponibles"} en este equipo.`;
+    }
   }
 
   async function readBundledOcrModel(code) {
@@ -1750,6 +1758,15 @@ if (!els.view) {
     },
     true
   );
+  onGlobalOcrLanguagesChanged(() => {
+    void refreshOcrLanguageOptions().catch((error) => {
+      console.warn(
+        "No se pudo actualizar la lista global de idiomas OCR.",
+        error
+      );
+    });
+  });
+
   void refreshOcrLanguageOptions()
     .catch((error) => {
       console.warn(

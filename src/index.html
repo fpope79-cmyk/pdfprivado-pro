@@ -349,7 +349,7 @@
                     <option value="ocr">Forzar OCR local en todas las páginas</option>
                   </select>
                 </label>
-                <div class="convert-export-control-row" id="convert-export-ocr-languages">
+                <div class="convert-export-control-row convert-export-ocr-language-row" id="convert-export-ocr-languages">
                   <label class="convert-export-field">
                     <span>Idioma OCR principal</span>
                     <select id="convert-export-ocr-primary">
@@ -366,6 +366,14 @@
                       <option value="eng">Ingles</option>
                     </select>
                   </label>
+
+                  <div class="convert-export-language-manager-field">
+                    <span>Idiomas OCR</span>
+                    <button class="secondary-button" type="button" data-open-ocr-language-manager>
+                      Gestor de idiomas
+                    </button>
+                    <span id="convert-export-language-summary" class="visually-hidden">Idiomas OCR instalados en este equipo.</span>
+                  </div>
                 </div>
                 <div class="convert-export-control-row">
                 <fieldset class="convert-export-layout-field">
@@ -949,59 +957,13 @@
                       </div>
                     </div>
                   </details>
-                  <details class="viewer-ocr-language-admin">
-                    <summary>
-                      <span class="viewer-ocr-language-admin-heading">
-                        <strong>Idiomas OCR</strong>
-                        <small id="viewer-ocr-language-admin-summary">2 instalados · 13 disponibles como paquetes offline</small>
-                      </span>
-                      <span class="viewer-ocr-language-admin-chevron" aria-hidden="true">⌄</span>
-                    </summary>
-
-                    <div class="viewer-ocr-language-admin-body">
-                      <div class="viewer-ocr-language-admin-intro">
-                        <strong>Modelos locales y bajo control</strong>
-                        <p>Los idiomas adicionales solo se guardan cuando el usuario importa e instala expresamente un paquete offline. No habrá descargas automáticas.</p>
-                      </div>
-
-                      <div class="viewer-ocr-language-group">
-                        <div class="viewer-ocr-language-group-heading">
-                          <strong>Instalados</strong>
-                          <span>Base y paquetes locales</span>
-                        </div>
-                        <div class="viewer-ocr-language-list" id="viewer-ocr-language-installed-list"></div>
-                      </div>
-
-                      <div class="viewer-ocr-language-group">
-                        <div class="viewer-ocr-language-group-heading">
-                          <strong>Disponibles</strong>
-                          <span>Instalación opcional</span>
-                        </div>
-                        <div class="viewer-ocr-language-list viewer-ocr-language-list-scroll" id="viewer-ocr-language-available-list"></div>
-                      </div>
-
-                      <button class="secondary-button viewer-ocr-language-import-preview" id="viewer-ocr-language-import-preview" type="button" disabled>Seleccionar y validar paquete offline</button>
-
-                      <section class="viewer-ocr-language-package-preview" id="viewer-ocr-language-package-preview" data-kind="neutral" hidden aria-live="polite">
-                        <div class="viewer-ocr-language-package-preview-heading">
-                          <strong id="viewer-ocr-language-package-title">Paquete sin seleccionar</strong>
-                          <span id="viewer-ocr-language-package-code">—</span>
-                        </div>
-                        <dl>
-                          <div><dt>Archivo</dt><dd id="viewer-ocr-language-package-file">—</dd></div>
-                          <div><dt>Tamaño</dt><dd id="viewer-ocr-language-package-size">—</dd></div>
-                          <div><dt>SHA-256</dt><dd id="viewer-ocr-language-package-hash">—</dd></div>
-                        </dl>
-                        <p id="viewer-ocr-language-package-message">Selecciona un paquete para comprobar su idioma, tamaño e integridad.</p>
-                        <pre class="viewer-ocr-language-runtime-text" id="viewer-ocr-language-runtime-text" dir="auto" hidden></pre>
-                        <div class="viewer-ocr-language-package-actions">
-                          <button class="primary-button" id="viewer-ocr-language-install" type="button" hidden disabled>Instalar localmente</button>
-                        </div>
-                      </section>
-
-                      <p class="viewer-ocr-language-admin-note">Los paquetes instalados permanecen en este equipo y pueden desinstalarse. El OCR normal admite un idioma principal y un segundo idioma opcional, con un máximo de dos idiomas instalados simultáneamente.</p>
-                    </div>
-                  </details><div class="viewer-ocr-preview-heading">
+                  <section class="viewer-ocr-language-access" aria-labelledby="viewer-ocr-language-access-title">
+                    <strong id="viewer-ocr-language-access-title">Gestor de idiomas</strong>
+                    <span id="viewer-ocr-language-admin-summary" class="visually-hidden">2 instalados · 13 disponibles como paquetes offline</span>
+                    <button class="secondary-button" type="button" data-open-ocr-language-manager>
+                      Abrir
+                    </button>
+                  </section><div class="viewer-ocr-preview-heading">
                     <strong>Texto reconocido</strong>
                     <span id="viewer-ocr-summary">Sin OCR</span>
                   </div>
@@ -2919,5 +2881,68 @@
       </div>
     </dialog>
       <script src="metadata-batch-loader.js"></script>
-</body>
+
+
+    <div class="ocr-language-manager-overlay" id="ocr-language-manager-overlay" hidden>
+      <section class="ocr-language-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="ocr-language-manager-title">
+        <header class="ocr-language-manager-header">
+          <div>
+            <p class="eyebrow">Configuración global</p>
+            <h2 id="ocr-language-manager-title">Idiomas OCR</h2>
+            <p>Administra una sola colección de modelos para OCR, PDF buscable y Convertir y exportar.</p>
+          </div>
+          <button class="secondary-button" id="ocr-language-manager-close" type="button" aria-label="Cerrar gestor de idiomas OCR">Cerrar</button>
+        </header>
+
+        <div class="ocr-language-manager-intro">
+          <strong>Modelos locales y bajo control</strong>
+          <p>Los idiomas adicionales solo se guardan cuando importas e instalas expresamente un paquete offline. No se realizan descargas automáticas.</p>
+        </div>
+
+        <div class="ocr-language-manager-columns">
+          <section class="ocr-language-manager-column" aria-labelledby="ocr-language-installed-title">
+            <div class="viewer-ocr-language-group-heading">
+              <strong id="ocr-language-installed-title">Instalados</strong>
+              <span>Base y paquetes locales</span>
+            </div>
+            <div class="viewer-ocr-language-list ocr-language-manager-list" id="viewer-ocr-language-installed-list"></div>
+          </section>
+
+          <section class="ocr-language-manager-column" aria-labelledby="ocr-language-available-title">
+            <div class="viewer-ocr-language-group-heading">
+              <strong id="ocr-language-available-title">Disponibles</strong>
+              <span>Instalación opcional</span>
+            </div>
+            <div class="viewer-ocr-language-list ocr-language-manager-list" id="viewer-ocr-language-available-list"></div>
+          </section>
+        </div>
+
+        <section class="ocr-language-manager-import">
+          <button class="secondary-button viewer-ocr-language-import-preview" id="viewer-ocr-language-import-preview" type="button" disabled>
+            Seleccionar y validar paquete offline
+          </button>
+
+          <section class="viewer-ocr-language-package-preview" id="viewer-ocr-language-package-preview" data-kind="neutral" hidden aria-live="polite">
+            <div class="viewer-ocr-language-package-preview-heading">
+              <strong id="viewer-ocr-language-package-title">Paquete sin seleccionar</strong>
+              <span id="viewer-ocr-language-package-code">—</span>
+            </div>
+            <dl>
+              <div><dt>Archivo</dt><dd id="viewer-ocr-language-package-file">—</dd></div>
+              <div><dt>Tamaño</dt><dd id="viewer-ocr-language-package-size">—</dd></div>
+              <div><dt>SHA-256</dt><dd id="viewer-ocr-language-package-hash">—</dd></div>
+            </dl>
+            <p id="viewer-ocr-language-package-message">Selecciona un paquete para comprobar su idioma, tamaño e integridad.</p>
+            <pre class="viewer-ocr-language-runtime-text" id="viewer-ocr-language-runtime-text" dir="auto" hidden></pre>
+            <div class="viewer-ocr-language-package-actions">
+              <button class="primary-button" id="viewer-ocr-language-install" type="button" hidden disabled>Instalar localmente</button>
+            </div>
+          </section>
+        </section>
+
+        <p class="viewer-ocr-language-admin-note">Los paquetes permanecen en este equipo y pueden desinstalarse. Cada operación OCR admite un idioma principal y un segundo idioma opcional.</p>
+      </section>
+    </div>
+
+  </body>
 </html>

@@ -58,9 +58,10 @@ import {
   ocrLanguagePackageFileName,
 } from "./ocr-language-package.js";
 import {
-  createIndexedDbOcrLanguageDriver,
-  createOcrLanguageStorage,
-} from "./ocr-language-storage.js";
+  announceGlobalOcrLanguageChange,
+  getGlobalOcrLanguageStorage,
+  onGlobalOcrLanguagesChanged,
+} from "./ocr-language-global-manager.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -2158,12 +2159,20 @@ function renderOcrLanguageAdmin() {
   }
 }
 
-async function refreshInstalledOcrLanguagePackages() {
+async function refreshInstalledOcrLanguagePackages({
+  announce = false,
+  action = "refresh",
+  code = "",
+} = {}) {
   ocrLanguagePackages.installed = ocrLanguagePackages.storage
     ? [...(await ocrLanguagePackages.storage.list())]
     : [];
   renderOcrLanguageAdmin();
   rebuildOcrLanguageSelectors();
+
+  if (announce) {
+    announceGlobalOcrLanguageChange({ action, code });
+  }
 }
 
 async function selectAndValidateOcrLanguagePackage() {
@@ -2274,7 +2283,11 @@ async function installPendingOcrLanguagePackage() {
 
   try {
     const installed = await ocrLanguagePackages.storage.install(pending);
-    await refreshInstalledOcrLanguagePackages();
+    await refreshInstalledOcrLanguagePackages({
+      announce: true,
+      action: "install",
+      code: installed.code,
+    });
     showOcrLanguagePackagePreview({
       kind: "success",
       title: `${installed.label} · instalado localmente`,
@@ -2489,7 +2502,11 @@ async function removeInstalledOcrLanguagePackage(code) {
   setOcrLanguagePackageBusy(true, "Procesando…");
   try {
     const removed = await ocrLanguagePackages.storage.remove(code);
-    await refreshInstalledOcrLanguagePackages();
+    await refreshInstalledOcrLanguagePackages({
+      announce: true,
+      action: "remove",
+      code,
+    });
     if (ocrLanguagePackages.pending?.inspection?.code === code) {
       ocrLanguagePackages.pending = null;
       if (ocrLanguageInstallButton) {
@@ -2538,9 +2555,7 @@ async function initializeOcrLanguagePackageManager() {
   }
 
   try {
-    ocrLanguagePackages.storage = createOcrLanguageStorage({
-      driver: createIndexedDbOcrLanguageDriver(),
-    });
+    ocrLanguagePackages.storage = getGlobalOcrLanguageStorage();
     await refreshInstalledOcrLanguagePackages();
   } catch (error) {
     ocrLanguagePackages.storage = null;
@@ -4187,6 +4202,8 @@ function showWorkspace(openPicker = false) {
   homeView.hidden = true;
   mergeView.hidden = true;
   splitView.hidden = true;
+  const convertExportView = document.querySelector("#convert-export-view");
+  if (convertExportView) convertExportView.hidden = true;
   viewerView.hidden = false;
   document.body.classList.add("viewer-active");
   updateResponsiveViewerLayout();
@@ -8328,7 +8345,10 @@ function initializeAppMenu() {
   }));
   appMenuTools.forEach((item) => item.addEventListener("click", () => {
     const tool = item.dataset.appTool;
-    if (!item.disabled && APP_TOOL_REGISTRY[tool]) activateTool(tool);
+    if (!item.disabled && APP_TOOL_REGISTRY[tool]) {
+      showWorkspace(false);
+      activateTool(tool);
+    }
     closeAppMenus();
   }));
   document.addEventListener("pointerdown", (event) => {
@@ -9945,6 +9965,20 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("pdfprivado:diagnostics-request-context", diagnosticContext);
 ocrLanguageImportPreviewButton?.addEventListener("click", selectAndValidateOcrLanguagePackage);
 ocrLanguageInstallButton?.addEventListener("click", installPendingOcrLanguagePackage);
+onGlobalOcrLanguagesChanged(async () => {
+  if (!ocrLanguagePackages.storage) return;
+
+  try {
+    await refreshInstalledOcrLanguagePackages();
+    updateOcrControls();
+  } catch (error) {
+    diagnostics()?.error?.(
+      error,
+      "actualizar-idiomas-ocr-globales",
+      { operation: "external-refresh" }
+    );
+  }
+});
 ocrLanguageInstalledList?.addEventListener("click", (event) => {
   const testButton = event.target.closest("[data-test-ocr-language]");
   if (testButton) {

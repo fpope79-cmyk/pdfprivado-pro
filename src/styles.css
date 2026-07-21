@@ -8489,3 +8489,219 @@ body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section {
   background: rgba(37, 99, 235, 0.11);
   outline: none;
 }
+
+/* Gestor global de idiomas OCR */
+.viewer-ocr-language-access,
+.convert-export-language-manager-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color, #d9e1ea);
+  border-radius: 12px;
+  background: var(--panel-soft, #f7fafc);
+}
+
+.viewer-ocr-language-access > div,
+.convert-export-language-manager-row > span {
+  min-width: 0;
+}
+
+.viewer-ocr-language-access strong,
+.viewer-ocr-language-access small {
+  display: block;
+}
+
+.viewer-ocr-language-access small,
+.convert-export-language-manager-row > span {
+  color: var(--muted-text, #5f6f82);
+  overflow-wrap: anywhere;
+}
+
+/* Ajuste compacto del acceso al gestor */
+.viewer-ocr-language-access {
+  padding: 10px 12px;
+}
+
+.viewer-ocr-language-access > strong {
+  min-width: 0;
+  font-size: 0.86rem;
+}
+
+.viewer-ocr-language-access > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.convert-export-ocr-language-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, auto);
+  align-items: end;
+  gap: 12px;
+}
+
+.convert-export-language-manager-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.convert-export-language-manager-field > span:first-child {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.convert-export-language-manager-field > button {
+  width: 100%;
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .convert-export-ocr-language-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .convert-export-language-manager-field {
+    grid-column: 1 / -1;
+  }
+}
+
+.ocr-language-manager-open {
+  overflow: hidden;
+}
+
+.ocr-language-manager-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(11, 20, 31, 0.62);
+  backdrop-filter: blur(4px);
+}
+
+.ocr-language-manager-overlay[hidden] {
+  display: none;
+}
+
+.ocr-language-manager-dialog {
+  width: min(1040px, 96vw);
+  max-height: min(820px, 92vh);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid #d6e0ea;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(8, 19, 33, 0.3);
+}
+
+.ocr-language-manager-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.ocr-language-manager-header h2,
+.ocr-language-manager-header p {
+  margin: 0;
+}
+
+.ocr-language-manager-header .eyebrow {
+  margin-bottom: 4px;
+}
+
+.ocr-language-manager-intro {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eef8ff;
+  color: #164466;
+}
+
+.ocr-language-manager-intro p {
+  margin: 4px 0 0;
+}
+
+.ocr-language-manager-columns {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  flex: 1 1 auto;
+}
+
+.ocr-language-manager-column {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid #dce5ee;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.ocr-language-manager-list {
+  min-height: 0;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.ocr-language-manager-dialog .viewer-ocr-language-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+}
+
+.ocr-language-manager-dialog .viewer-ocr-language-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ocr-language-manager-dialog .viewer-ocr-language-actions button {
+  width: auto;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.ocr-language-manager-import {
+  display: grid;
+  gap: 12px;
+}
+
+.ocr-language-manager-import > button {
+  justify-self: start;
+}
+
+@media (max-width: 760px) {
+  .ocr-language-manager-overlay {
+    padding: 10px;
+  }
+  .ocr-language-manager-dialog {
+    width: 100%;
+    max-height: 96vh;
+    padding: 16px;
+  }
+  .ocr-language-manager-columns {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+  .ocr-language-manager-list {
+    max-height: 260px;
+  }
+  .viewer-ocr-language-access,
+  .convert-export-language-manager-row,
+  .ocr-language-manager-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
