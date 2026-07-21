@@ -5,6 +5,7 @@ const WORKER_PATH = new URL("./vendor/tesseract/worker.min.js", import.meta.url)
 const CORE_PATH = new URL("./vendor/tesseract/core", import.meta.url).href.replace(/\/$/, "");
 const LANG_PATH = new URL("./vendor/tesseract/lang", import.meta.url).href.replace(/\/$/, "");
 const MAXIMUM_POOL_SIZE = 4;
+const WORKER_TERMINATION_TIMEOUT_MS = 1500;
 
 function normalizeLanguages(value) {
   const raw = Array.isArray(value) ? value : String(value || "").split("+");
@@ -20,7 +21,24 @@ function resolvePageSegMode(value) {
 }
 
 async function terminateWorker(worker) {
-  try { await worker?.terminate?.(); } catch { /* limpieza defensiva */ }
+  if (!worker?.terminate) return;
+
+  let timeoutId = null;
+
+  try {
+    await Promise.race([
+      Promise.resolve(worker.terminate()),
+      new Promise((resolve) => {
+        timeoutId = globalThis.setTimeout(resolve, WORKER_TERMINATION_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    // Cancelar nunca debe bloquear la interfaz.
+  } finally {
+    if (timeoutId !== null) {
+      globalThis.clearTimeout(timeoutId);
+    }
+  }
 }
 
 export async function createOcrBenchmarkWorkerPool({ languages, parameters = {}, size = 1 } = {}) {
@@ -85,7 +103,9 @@ export async function createOcrBenchmarkWorkerPool({ languages, parameters = {},
   async function cancel() {
     if (cancelled) return;
     cancelled = true;
-    for (const waiter of waiters.splice(0)) waiter.reject(new DOMException("OCR cancelado", "AbortError"));
+    for (const waiter of waiters.splice(0)) {
+      waiter.reject(new DOMException("OCR cancelado", "AbortError"));
+    }
     await Promise.allSettled(workers.map(terminateWorker));
     workers.length = 0;
     available.length = 0;

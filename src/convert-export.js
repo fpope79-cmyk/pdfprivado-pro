@@ -47,6 +47,9 @@ const els = {
   rangeField: $("#convert-export-range-field"),
   range: $("#convert-export-range"),
   textMode: $("#convert-export-text-mode"),
+  ocrLanguageGroup: $("#convert-export-ocr-languages"),
+  ocrPrimary: $("#convert-export-ocr-primary"),
+  ocrSecondary: $("#convert-export-ocr-secondary"),
   layoutModes: $$('[name="convert-export-layout-mode"]'),
   headings: $("#convert-export-page-headings"),
   analyze: $("#convert-export-analyze"),
@@ -107,6 +110,58 @@ if (!els.view) {
       input.checked = input.value === safeValue;
     }
   }
+
+  function selectedOcrLanguages() {
+    const primary = ["spa", "eng"].includes(els.ocrPrimary?.value)
+      ? els.ocrPrimary.value
+      : "spa";
+    const secondary = ["spa", "eng"].includes(els.ocrSecondary?.value)
+      ? els.ocrSecondary.value
+      : "";
+
+    return secondary && secondary !== primary
+      ? [primary, secondary]
+      : [primary];
+  }
+
+  function updateOcrLanguageUi() {
+    const nativeOnly = els.textMode.value === "native";
+    const disabled = state.busy || nativeOnly;
+
+    if (
+      els.ocrSecondary &&
+      els.ocrSecondary.value &&
+      els.ocrSecondary.value === els.ocrPrimary?.value
+    ) {
+      els.ocrSecondary.value = "";
+    }
+
+    if (els.ocrLanguageGroup) {
+      els.ocrLanguageGroup.hidden = nativeOnly;
+    }
+
+    if (els.ocrPrimary) {
+      els.ocrPrimary.disabled = disabled;
+
+      for (const option of els.ocrPrimary.options) {
+        option.disabled = Boolean(
+          option.value &&
+          option.value === els.ocrSecondary?.value
+        );
+      }
+    }
+
+    if (els.ocrSecondary) {
+      els.ocrSecondary.disabled = disabled;
+
+      for (const option of els.ocrSecondary.options) {
+        option.disabled = Boolean(
+          option.value &&
+          option.value === els.ocrPrimary?.value
+        );
+      }
+    }
+  }
   function closeAppMenus() {
     $$("[data-app-menu]").forEach((menu) => {
       const trigger = menu.querySelector(".app-menu-trigger");
@@ -140,7 +195,29 @@ if (!els.view) {
     els.scope.disabled = busy;
     els.range.disabled = busy;
     els.textMode.disabled = busy;
+    updateOcrLanguageUi();
     for (const input of els.layoutModes) input.disabled = busy;
+  }
+
+  async function destroyOcrPoolSafely(pool, timeoutMs = 1500) {
+    if (!pool) return;
+
+    let timeoutId = null;
+
+    try {
+      await Promise.race([
+        Promise.resolve(pool.destroy()),
+        new Promise((resolve) => {
+          timeoutId = window.setTimeout(resolve, timeoutMs);
+        }),
+      ]);
+    } catch (error) {
+      console.warn("No se pudo cerrar completamente un worker OCR.", error);
+    } finally {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    }
   }
 
   function saveSettings() {
@@ -149,6 +226,8 @@ if (!els.view) {
         format: els.format.value,
         scope: els.scope.value,
         textMode: els.textMode.value,
+        ocrPrimary: els.ocrPrimary?.value || "spa",
+        ocrSecondary: els.ocrSecondary?.value || "",
         headings: els.headings.checked,
         layoutMode: selectedLayoutMode(),
       }));
@@ -167,11 +246,23 @@ if (!els.view) {
       if (["auto", "native", "ocr"].includes(value.textMode)) {
         els.textMode.value = value.textMode;
       }
+      if (els.ocrPrimary && ["spa", "eng"].includes(value.ocrPrimary)) {
+        els.ocrPrimary.value = value.ocrPrimary;
+      }
+
+      if (
+        els.ocrSecondary &&
+        ["", "spa", "eng"].includes(value.ocrSecondary) &&
+        value.ocrSecondary !== els.ocrPrimary?.value
+      ) {
+        els.ocrSecondary.value = value.ocrSecondary;
+      }
       if (typeof value.headings === "boolean") {
         els.headings.checked = value.headings;
       }
     } catch {}
     updateScopeUi();
+    updateOcrLanguageUi();
   }
 
   function updateScopeUi() {
@@ -720,6 +811,8 @@ if (!els.view) {
 
     const started = performance.now();
     const textMode = els.textMode.value;
+    const languageCodes = selectedOcrLanguages();
+    const languageKey = languageCodes.join("+");
     const fastProfile = resolveOcrProfile("fast");
     const balancedProfile = resolveOcrProfile("balanced");
     const records = new Array(resolved.pages.length);
@@ -728,7 +821,7 @@ if (!els.view) {
     state.persistentCache = await readCachedPages({
       documentHash: state.documentHash,
       pages: resolved.pages,
-      languageKey: "spa",
+      languageKey,
       profileKey: "fast",
       rotation: 0,
       engineVersion: "tesseract-local-v1",
@@ -744,7 +837,7 @@ if (!els.view) {
 
       if (textMode !== "native") {
         state.ocrPool = await createOcrBenchmarkWorkerPool({
-          languages: ["spa"],
+          languages: languageCodes,
           parameters: fastProfile.tesseract,
           size: workerCount,
         });
@@ -815,7 +908,7 @@ if (!els.view) {
                 resolved.pages.length,
                 state.ocrPool,
                 fastProfile,
-                ["spa"]
+                languageCodes
               );
 
               const quality = ocrRecordQuality(fast.record);
@@ -834,7 +927,7 @@ if (!els.view) {
                   {
                     documentHash: state.documentHash,
                     pageNumber,
-                    languageKey: "spa",
+                    languageKey,
                     profileKey: "fast",
                     rotation: 0,
                     engineVersion: "tesseract-local-v1",
@@ -858,7 +951,7 @@ if (!els.view) {
               source,
               width: viewport.width,
               height: viewport.height,
-              language: source === "ocr" ? "spa" : null,
+              language: source === "ocr" ? languageKey : null,
             });
 
             structuredPages[index] = {
@@ -876,7 +969,7 @@ if (!els.view) {
                   : null,
               width: viewport.width,
               height: viewport.height,
-              language: source === "ocr" ? "spa" : null,
+              language: source === "ocr" ? languageKey : null,
             };
           } finally {
             page.cleanup();
@@ -917,7 +1010,7 @@ if (!els.view) {
 
         state.balancedOcrPool =
           await createOcrBenchmarkWorkerPool({
-            languages: ["spa"],
+            languages: languageCodes,
             parameters: balancedProfile.tesseract,
             size: Math.min(2, retryQueue.length),
           });
@@ -941,7 +1034,7 @@ if (!els.view) {
                 resolved.pages.length,
                 state.balancedOcrPool,
                 balancedProfile,
-                ["spa"]
+                languageCodes
               );
 
               const balancedText = reconstructOcrText(
@@ -955,7 +1048,7 @@ if (!els.view) {
                 source: balancedText ? "ocr" : "empty",
                 width: retry.width,
                 height: retry.height,
-                language: balanced.record.text ? "spa" : null,
+                language: balanced.record.text ? languageKey : null,
               });
 
               if (balanced.record.text) {
@@ -963,7 +1056,7 @@ if (!els.view) {
                   {
                     documentHash: state.documentHash,
                     pageNumber: retry.pageNumber,
-                    languageKey: "spa",
+                    languageKey,
                     profileKey: "fast",
                     rotation: 0,
                     engineVersion: "tesseract-local-v1",
@@ -979,7 +1072,7 @@ if (!els.view) {
                 ocrRecord: balanced.record,
                 width: retry.width,
                 height: retry.height,
-                language: balancedText ? "spa" : null,
+                language: balancedText ? languageKey : null,
               };
               state.adaptive.balancedRetried += 1;
               completed += 1;
@@ -1070,15 +1163,18 @@ if (!els.view) {
         );
       }
     } finally {
-      for (const poolName of ["ocrPool", "balancedOcrPool"]) {
-        const pool = state[poolName];
-        if (pool) {
-          try {
-            await pool.destroy();
-          } catch {}
-          state[poolName] = null;
-        }
-      }
+      const pools = [
+        state.ocrPool,
+        state.balancedOcrPool,
+      ];
+
+      state.ocrPool = null;
+      state.balancedOcrPool = null;
+
+      await Promise.all(
+        pools.map((pool) => destroyOcrPoolSafely(pool))
+      );
+
       setBusy(false);
     }
   }
@@ -1169,17 +1265,30 @@ if (!els.view) {
     showOnly(els.view);
     document.title =
       "Convertir y exportar | PDFPrivado Pro";
-    els.choose.focus({ preventScroll: true });
 
-    if (!state.busy) {
-      setBusy(true);
-      const reused = await preloadViewerDocument();
-      setBusy(false);
+    let reused = false;
 
-      if (!reused && !state.pdf) {
-        setStatus("Selecciona un PDF para comenzar.");
+    try {
+      if (!state.busy) {
+        setBusy(true);
+        reused = await preloadViewerDocument();
       }
+    } catch (error) {
+      console.warn(
+        "No se pudo comprobar el documento abierto en el visor.",
+        error
+      );
+    } finally {
+      setBusy(false);
+      els.choose.disabled = false;
+      els.cancel.hidden = true;
     }
+
+    if (!reused && !state.pdf) {
+      setStatus("Selecciona un PDF para comenzar.");
+    }
+
+    els.choose.focus({ preventScroll: true });
   }
 
   els.openButtons.forEach((button) => {
@@ -1221,7 +1330,29 @@ if (!els.view) {
   });
 
   els.scope.addEventListener("change", updateScopeUi);
-  els.textMode.addEventListener("change", saveSettings);
+  els.textMode.addEventListener("change", () => {
+    updateOcrLanguageUi();
+    saveSettings();
+    resetResult();
+  });
+
+  els.ocrPrimary?.addEventListener("change", () => {
+    if (els.ocrSecondary?.value === els.ocrPrimary?.value) {
+      els.ocrSecondary.value = "";
+    }
+    updateOcrLanguageUi();
+    saveSettings();
+    resetResult();
+  });
+
+  els.ocrSecondary?.addEventListener("change", () => {
+    if (els.ocrSecondary?.value === els.ocrPrimary?.value) {
+      els.ocrSecondary.value = "";
+    }
+    updateOcrLanguageUi();
+    saveSettings();
+    resetResult();
+  });
   els.layoutMode?.addEventListener("change", () => {
     saveSettings();
     resetResult();
@@ -1257,10 +1388,24 @@ if (!els.view) {
     }
     state.renderTasks.clear();
 
-    els.cancel.disabled = true;
-    void state.ocrPool?.cancel?.();
-    void state.balancedOcrPool?.cancel?.();
-    void cancelOcrEngine();
+    const cancelledPools = [
+      state.ocrPool,
+      state.balancedOcrPool,
+    ];
+
+    state.ocrPool = null;
+    state.balancedOcrPool = null;
+
+    setBusy(false);
+    els.progressText.textContent = "Análisis cancelado";
+    setStatus("Análisis cancelado.", "info");
+
+    void Promise.allSettled([
+      ...cancelledPools.map((pool) =>
+        Promise.resolve(pool?.cancel?.())
+      ),
+      Promise.resolve(cancelOcrEngine()),
+    ]);
   });
 
   /* PDFPRIVADO_LAYOUT_REFRESH_CAPTURE_V3 */
