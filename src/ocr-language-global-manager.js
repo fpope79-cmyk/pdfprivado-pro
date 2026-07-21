@@ -6,6 +6,99 @@ import {
 export const OCR_LANGUAGES_CHANGED_EVENT =
   "pdfprivado:ocr-languages-changed";
 
+export const OCR_PRIMARY_LANGUAGE_PREFERENCE_KEY =
+  "pdfprivado.ocr.primaryLanguage.v1";
+
+const OCR_LOCALE_TO_LANGUAGE = Object.freeze({
+  es: "spa",
+  en: "eng",
+  fr: "fra",
+  de: "deu",
+  it: "ita",
+  pt: "por",
+  nl: "nld",
+  pl: "pol",
+  ro: "ron",
+  tr: "tur",
+  ru: "rus",
+  uk: "ukr",
+  ar: "ara",
+  zh: "chi_sim",
+  ja: "jpn",
+});
+
+function normalizedOcrCode(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function localeToOcrCode(locale) {
+  const base = String(locale || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-")
+    .split("-")[0];
+  return OCR_LOCALE_TO_LANGUAGE[base] || "";
+}
+
+export function readGlobalOcrPrimaryLanguagePreference() {
+  try {
+    return normalizedOcrCode(
+      localStorage.getItem(OCR_PRIMARY_LANGUAGE_PREFERENCE_KEY)
+    );
+  } catch {
+    return "";
+  }
+}
+
+export function saveGlobalOcrPrimaryLanguagePreference(code) {
+  const normalized = normalizedOcrCode(code);
+  if (!normalized) return;
+  try {
+    localStorage.setItem(OCR_PRIMARY_LANGUAGE_PREFERENCE_KEY, normalized);
+  } catch {
+    // La selección continúa activa durante la sesión aunque no pueda persistirse.
+  }
+}
+
+export function resolveGlobalOcrPrimaryLanguage({
+  availableCodes = [],
+  preferredCodes = [],
+} = {}) {
+  const available = [...new Set(availableCodes.map(normalizedOcrCode).filter(Boolean))];
+  const installed = new Set(available);
+  if (!available.length) return "";
+
+  const explicitCandidates = [
+    ...preferredCodes,
+    readGlobalOcrPrimaryLanguagePreference(),
+  ]
+    .map(normalizedOcrCode)
+    .filter(Boolean);
+
+  for (const code of explicitCandidates) {
+    if (installed.has(code)) return code;
+  }
+
+  const localeCandidates = [
+    document.documentElement?.lang,
+    ...(Array.isArray(navigator.languages) ? navigator.languages : []),
+    navigator.language,
+  ];
+
+  for (const locale of localeCandidates) {
+    const code = localeToOcrCode(locale);
+    if (code && installed.has(code)) return code;
+  }
+
+  const optionalInstalled = available.find(
+    (code) => code !== "eng" && code !== "spa"
+  );
+  if (optionalInstalled) return optionalInstalled;
+  if (installed.has("eng")) return "eng";
+  if (installed.has("spa")) return "spa";
+  return available[0];
+}
+
 let sharedStorage = null;
 
 export function getGlobalOcrLanguageStorage() {

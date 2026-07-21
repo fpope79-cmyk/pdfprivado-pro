@@ -29,6 +29,8 @@ import { OCR_LANGUAGE_MANIFEST } from "./ocr-language-manifest.js";
 import {
   getGlobalOcrLanguageStorage,
   onGlobalOcrLanguagesChanged,
+  resolveGlobalOcrPrimaryLanguage,
+  saveGlobalOcrPrimaryLanguagePreference,
 } from "./ocr-language-global-manager.js";
 import {
   cancelExternalOcrRuntime,
@@ -97,6 +99,7 @@ if (!els.view) {
     installedOcrLanguages: new Map(),
     externalOcrModels: [],
     usesExternalOcr: false,
+    ocrLanguagesInitialized: false,
     adaptive: {
       fastAccepted: 0,
       balancedRetried: 0,
@@ -135,7 +138,7 @@ if (!els.view) {
 
     const primary = availableCodes.has(els.ocrPrimary?.value)
       ? els.ocrPrimary.value
-      : "spa";
+      : resolveGlobalOcrPrimaryLanguage({ availableCodes: [...availableCodes] });
     const secondary = availableCodes.has(els.ocrSecondary?.value)
       ? els.ocrSecondary.value
       : "";
@@ -212,13 +215,16 @@ if (!els.view) {
       available.map((language) => language.code)
     );
 
-    const primaryCandidate = [
-      previous.primary,
-      saved.primary,
-      "spa",
-    ].find((code) => availableCodes.has(code));
+    const primaryCandidate = resolveGlobalOcrPrimaryLanguage({
+      availableCodes: [...availableCodes],
+      preferredCodes: [
+        saved.primary,
+        state.ocrLanguagesInitialized ? previous.primary : "",
+      ],
+    });
 
-    els.ocrPrimary.value = primaryCandidate || "spa";
+    els.ocrPrimary.value = primaryCandidate;
+    state.ocrLanguagesInitialized = true;
 
     const secondaryCandidate = [
       previous.secondary,
@@ -396,7 +402,7 @@ if (!els.view) {
         format: els.format.value,
         scope: els.scope.value,
         textMode: els.textMode.value,
-        ocrPrimary: els.ocrPrimary?.value || "spa",
+        ocrPrimary: els.ocrPrimary?.value || "",
         ocrSecondary: els.ocrSecondary?.value || "",
         headings: els.headings.checked,
         layoutMode: selectedLayoutMode(),
@@ -1559,6 +1565,7 @@ if (!els.view) {
   });
 
   els.ocrPrimary?.addEventListener("change", () => {
+    saveGlobalOcrPrimaryLanguagePreference(els.ocrPrimary?.value);
     if (els.ocrSecondary?.value === els.ocrPrimary?.value) {
       els.ocrSecondary.value = "";
     }

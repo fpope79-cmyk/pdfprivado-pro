@@ -61,6 +61,8 @@ import {
   announceGlobalOcrLanguageChange,
   getGlobalOcrLanguageStorage,
   onGlobalOcrLanguagesChanged,
+  resolveGlobalOcrPrimaryLanguage,
+  saveGlobalOcrPrimaryLanguagePreference,
 } from "./ocr-language-global-manager.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -2657,8 +2659,8 @@ function createOcrLanguageOption(language) {
 function rebuildOcrLanguageSelectors({ preserve = true } = {}) {
   const installed = installedOcrLanguageCodes();
   const previousPrimary = preserve
-    ? String(ocrLanguage?.value || "spa")
-    : "spa";
+    ? String(ocrLanguage?.value || "")
+    : "";
   const previousSecondary = preserve
     ? String(ocrLanguageSecondary?.value || "")
     : "";
@@ -2667,9 +2669,10 @@ function rebuildOcrLanguageSelectors({ preserve = true } = {}) {
     ocrLanguage.replaceChildren(
       ...OCR_LANGUAGES.map(createOcrLanguageOption)
     );
-    ocrLanguage.value = installed.has(previousPrimary)
-      ? previousPrimary
-      : "spa";
+    ocrLanguage.value = resolveGlobalOcrPrimaryLanguage({
+      availableCodes: [...installed],
+      preferredCodes: [previousPrimary],
+    });
   }
 
   if (ocrLanguageSecondary) {
@@ -2703,7 +2706,7 @@ function selectedOcrLanguageSelection() {
   const installed = installedOcrLanguageCodes();
   const primaryCode = installed.has(ocrLanguage?.value)
     ? ocrLanguage.value
-    : "spa";
+    : resolveGlobalOcrPrimaryLanguage({ availableCodes: [...installed] });
   const secondaryCode =
     ocrLanguageSecondary?.value &&
     ocrLanguageSecondary.value !== primaryCode &&
@@ -9658,6 +9661,7 @@ ocrPageNumberInput?.addEventListener("keydown", (event) => {
   }
 });
 ocrLanguage?.addEventListener("change", () => {
+  saveGlobalOcrPrimaryLanguagePreference(ocrLanguage?.value);
   syncOcrLanguageSelectors({ announce: true });
 });
 ocrLanguageSecondary?.addEventListener("change", () => {
