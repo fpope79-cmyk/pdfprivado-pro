@@ -1343,14 +1343,38 @@ function pageOcrLayoutEntries(page = {}) {
   return ocr.length ? ocr : (pageSource === "ocr" ? layout : []);
 }
 
-function pageOcrScale(page = {}) {
+function pageOcrLayoutCoverage(page = {}) {
+  const layout = pageOcrLayoutEntries(page);
+  const pageArea =
+    Math.max(1, Number(page?.width) || 595.28) *
+    Math.max(1, Number(page?.height) || 841.89);
+  return layout.reduce((sum, entry) => {
+    const width = Math.max(0, Number(entry?.width) || 0);
+    const height = Math.max(
+      0,
+      Number(entry?.height) || Number(entry?.fontSize) || 0
+    );
+    return sum + width * height;
+  }, 0) / pageArea;
+}
+
+export function docxAdaptiveOcrBaseScale(page = {}) {
   const rawOverride = page.ocrScaleOverride;
   const override = Number(rawOverride);
   if (rawOverride !== null && rawOverride !== undefined && rawOverride !== "" && Number.isFinite(override)) {
     return clampDocx(override, 0.58, 1.08);
   }
   const lineCount = pageOcrLayoutEntries(page).length;
-  return lineCount <= 32 ? 0.78 : 0.86;
+  const historicalScale = lineCount <= 32 ? 0.78 : 0.86;
+  // El render real de Word/LibreOffice muestra que las paginas OCR con una
+  // huella geometrica densa necesitan una base menor que la historica. La
+  // cobertura se deriva unicamente de cajas OCR normalizadas y, por tanto,
+  // generaliza entre documentos sin reglas por plantilla o pagina concreta.
+  return pageOcrLayoutCoverage(page) >= 0.20 ? 0.70 : historicalScale;
+}
+
+function pageOcrScale(page = {}) {
+  return docxAdaptiveOcrBaseScale(page);
 }
 
 function initialDocxFontSize(line, page) {
@@ -1379,17 +1403,7 @@ function initialDocxFontSize(line, page) {
         : Infinity;
   raw = Math.min(raw, robustMaximum);
   const sparse = layout.length <= 32;
-  const pageArea =
-    Math.max(1, Number(page?.width) || 595.28) *
-    Math.max(1, Number(page?.height) || 841.89);
-  const layoutCoverage = layout.reduce((sum, entry) => {
-    const width = Math.max(0, Number(entry?.width) || 0);
-    const height = Math.max(
-      0,
-      Number(entry?.height) || Number(entry?.fontSize) || 0
-    );
-    return sum + width * height;
-  }, 0) / pageArea;
+  const layoutCoverage = pageOcrLayoutCoverage(page);
   // La caja OCR mide tinta visible. En páginas poco densas la señal es limpia
   // y con cobertura suficiente puede recuperarse el em completo. Cuando el
   // OCR solo ha encontrado fragmentos de una infografía o un sello, se

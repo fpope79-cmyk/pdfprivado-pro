@@ -13,6 +13,7 @@ import {
 import {
   buildOcrWordAnchorPlan,
   classifyDocxPage,
+  docxAdaptiveOcrBaseScale,
   docxOcrTextScale,
   docxOcrWordTextScale,
   layoutLineTextAndTabs,
@@ -174,6 +175,72 @@ assert.equal(
   "los runs nativos fiables deben conservar estilo mixto"
 );
 assert.ok(ocrLayout[0].confidence > 94 && ocrLayout[0].confidence < 96, "la confianza OCR debe propagarse a la línea");
+
+const denseOcrPage = {
+  source: "ocr",
+  width: 600,
+  height: 800,
+  layout: Array.from({ length: 40 }, (_, index) => ({
+    source: "ocr",
+    text: `Linea densa ${index}`,
+    x: 40,
+    y: 40 + index * 15,
+    width: 300,
+    height: 8,
+    fontSize: 8,
+  })),
+};
+assert.equal(
+  docxAdaptiveOcrBaseScale(denseOcrPage),
+  0.70,
+  "una cobertura OCR densa >=20 % debe partir de escala 0.70"
+);
+
+const lowCoverageDenseOcrPage = {
+  ...denseOcrPage,
+  layout: Array.from({ length: 40 }, (_, index) => ({
+    source: "ocr",
+    text: `Linea breve ${index}`,
+    x: 40,
+    y: 40 + index * 15,
+    width: 80,
+    height: 6,
+    fontSize: 6,
+  })),
+};
+assert.equal(
+  docxAdaptiveOcrBaseScale(lowCoverageDenseOcrPage),
+  0.86,
+  "una pagina OCR densa pero con poca cobertura debe conservar la escala historica 0.86"
+);
+
+const lowCoverageSparseOcrPage = {
+  source: "ocr",
+  width: 600,
+  height: 800,
+  layout: Array.from({ length: 12 }, (_, index) => ({
+    source: "ocr",
+    text: `Campo ${index}`,
+    x: 50,
+    y: 70 + index * 25,
+    width: 90,
+    height: 8,
+    fontSize: 8,
+  })),
+};
+assert.equal(
+  docxAdaptiveOcrBaseScale(lowCoverageSparseOcrPage),
+  0.78,
+  "una pagina OCR dispersa debe conservar la escala historica 0.78"
+);
+assert.equal(
+  docxAdaptiveOcrBaseScale({
+    ...denseOcrPage,
+    ocrScaleOverride: 0.91,
+  }),
+  0.91,
+  "una calibracion/override explicita debe seguir teniendo prioridad sobre la base adaptativa"
+);
 
 const tabbedSegments = deriveLineSegments({
   fontSize: 6,
