@@ -1,3 +1,9 @@
+import {
+  buildNormalizedPageModel,
+  enrichPdfTextStyles,
+  pageModelToLegacyLayout,
+} from "./pdf-word-page-model.js";
+
 export const EXPORT_FORMATS = Object.freeze(["txt", "json", "html", "markdown"]);
 
 export function normalizePageExpression(value = "") {
@@ -133,6 +139,111 @@ export function countWords(text = "") {
   }
 }
 
+function normalizedComparableText(value = "") {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function comparableTokens(value = "") {
+  return new Set(normalizedComparableText(value).split(/\s+/u).filter(Boolean));
+}
+
+function tokenOverlapScore(a = "", b = "") {
+  const left = comparableTokens(a);
+  const right = comparableTokens(b);
+  if (!left.size || !right.size) return 0;
+  let common = 0;
+  for (const token of left) if (right.has(token)) common += 1;
+  return common / Math.max(1, Math.min(left.size, right.size));
+}
+
+function legacyLayoutTop(line = {}, pageHeight = 842) {
+  const source = String(line?.source || "native").toLocaleLowerCase();
+  const ocrTop = Number(line?.ocrTop);
+  if (source === "ocr" && Number.isFinite(ocrTop)) return ocrTop;
+  const fontSize = Math.max(1, Number(line?.fontSize) || Number(line?.height) || 10);
+  const y = Number(line?.y);
+  if (Number.isFinite(y)) return Math.max(0, Number(pageHeight || 842) - y - fontSize * 0.82);
+  return Math.max(0, Number(line?.top) || 0);
+}
+
+function legacyLayoutBox(line = {}, pageHeight = 842) {
+  const x = Number(line?.x) || 0;
+  const top = legacyLayoutTop(line, pageHeight);
+  const width = Math.max(0.1, Number(line?.width) || 1);
+  const height = Math.max(1, Number(line?.height) || Number(line?.fontSize) || 10);
+  return { x, top, right: x + width, bottom: top + height, width, height };
+}
+
+function oneDimensionalOverlap(a0, a1, b0, b1) {
+  return Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+}
+
+/**
+ * Une texto PDF nativo y OCR sin duplicar las líneas que el OCR vuelve a leer
+ * del propio texto nativo. El OCR solo aporta regiones visuales que no están
+ * ya representadas por la capa de texto del PDF (capturas, escaneos parciales,
+ * imágenes incrustadas, etc.).
+ */
+export function mergeNativeAndOcrLayouts(nativeLayout = [], ocrLayout = [], {
+  pageHeight = 842,
+} = {}) {
+  const native = (Array.isArray(nativeLayout) ? nativeLayout : [])
+    .filter((line) => String(line?.text || "").trim())
+    .map((line) => ({ ...line, source: "native" }));
+  const ocr = (Array.isArray(ocrLayout) ? ocrLayout : [])
+    .filter((line) => String(line?.text || "").trim())
+    .map((line) => ({ ...line, source: "ocr" }));
+
+  const extraOcr = ocr.filter((candidate) => {
+    const cb = legacyLayoutBox(candidate, pageHeight);
+    const cCenterY = (cb.top + cb.bottom) / 2;
+    const candidateText = normalizedComparableText(candidate.text);
+
+    return !native.some((existing) => {
+      const nb = legacyLayoutBox(existing, pageHeight);
+      const nCenterY = (nb.top + nb.bottom) / 2;
+      const verticalOverlap = oneDimensionalOverlap(cb.top, cb.bottom, nb.top, nb.bottom);
+      const horizontalOverlap = oneDimensionalOverlap(cb.x, cb.right, nb.x, nb.right);
+      const verticalRatio = verticalOverlap / Math.max(1, Math.min(cb.height, nb.height));
+      const horizontalRatio = horizontalOverlap / Math.max(1, Math.min(cb.width, nb.width));
+      const fontScale = Math.max(4, Number(candidate?.fontSize) || Number(existing?.fontSize) || 10);
+      const sameBand = Math.abs(cCenterY - nCenterY) <= Math.max(2.5, fontScale * 0.72);
+      const overlapText = tokenOverlapScore(candidate.text, existing.text);
+      const nativeText = normalizedComparableText(existing.text);
+      const compactContains = candidateText.length >= 5 && nativeText.length >= 5 &&
+        (candidateText.includes(nativeText) || nativeText.includes(candidateText));
+
+      return (
+        sameBand && horizontalRatio >= 0.28 && (overlapText >= 0.44 || compactContains)
+      ) || (
+        verticalRatio >= 0.72 && horizontalRatio >= 0.72 && overlapText >= 0.25
+      );
+    });
+  });
+
+  return [...native, ...extraOcr].sort((a, b) => {
+    const topA = legacyLayoutTop(a, pageHeight);
+    const topB = legacyLayoutTop(b, pageHeight);
+    return (topA - topB) || ((Number(a?.x) || 0) - (Number(b?.x) || 0));
+  });
+}
+
+export function layoutToStructuredText(layout = [], { pageHeight = 842 } = {}) {
+  const lines = (Array.isArray(layout) ? layout : [])
+    .filter((line) => String(line?.text || "").trim())
+    .sort((a, b) => {
+      const topA = legacyLayoutTop(a, pageHeight);
+      const topB = legacyLayoutTop(b, pageHeight);
+      return (topA - topB) || ((Number(a?.x) || 0) - (Number(b?.x) || 0));
+    });
+  return lines.map((line) => String(line.text).trim()).join("\n").trim();
+}
+
 export function buildPageRecord({
   pageNumber,
   text = "",
@@ -140,6 +251,7 @@ export function buildPageRecord({
   width = null,
   height = null,
   language = null,
+  layout = null,
 } = {}) {
   const normalized = String(text).replace(/\r\n?/g, "\n").trim();
 
@@ -153,6 +265,7 @@ export function buildPageRecord({
     width: Number.isFinite(width) ? width : null,
     height: Number.isFinite(height) ? height : null,
     language: language || null,
+    layout: Array.isArray(layout) ? layout : null,
   };
 }
 
@@ -166,6 +279,7 @@ export function calculateExportStatistics(pages = [], requestedPages = pages.len
     stats.charactersWithoutSpaces += Number(page?.charactersWithoutSpaces) || 0;
 
     if (page?.source === "ocr") stats.ocrPages += 1;
+    else if (page?.source === "hybrid") stats.hybridPages += 1;
     else if (page?.source === "native") stats.nativePages += 1;
     else stats.emptyPages += 1;
 
@@ -175,6 +289,7 @@ export function calculateExportStatistics(pages = [], requestedPages = pages.len
     processedPages: 0,
     nativePages: 0,
     ocrPages: 0,
+    hybridPages: 0,
     emptyPages: 0,
     words: 0,
     characters: 0,
@@ -221,4 +336,35 @@ export function safeBaseName(fileName = "documento.pdf") {
     .trim();
 
   return safe || "documento";
+}
+
+
+
+
+function ocrWordBox(word = {}) {
+  const box = word.bbox || word.box || word.boundingBox || {};
+  const x0 = Number(box.x0 ?? box.left ?? word.x0 ?? word.left);
+  const y0 = Number(box.y0 ?? box.top ?? word.y0 ?? word.top);
+  const x1 = Number(box.x1 ?? box.right ?? word.x1 ?? word.right);
+  const y1 = Number(box.y1 ?? box.bottom ?? word.y1 ?? word.bottom);
+  if (![x0, y0, x1, y1].every(Number.isFinite) || x1 <= x0 || y1 <= y0) return null;
+  return { x0, y0, x1, y1 };
+}
+
+export function ocrRecordToLayout(record = {}, pageWidth = 0, pageHeight = 0) {
+  return pageModelToLegacyLayout(buildNormalizedPageModel({
+    width: Math.max(1, Number(pageWidth) || Number(record?.imageWidth) || 595.28),
+    height: Math.max(1, Number(pageHeight) || Number(record?.imageHeight) || 841.89),
+    source: "ocr",
+    ocrRecord: record,
+  }));
+}
+export function textItemsToLayout(items = [], styles = {}, pageWidth = 0, pageHeight = 0) {
+  return pageModelToLegacyLayout(buildNormalizedPageModel({
+    width: Math.max(1, Number(pageWidth) || 595.28),
+    height: Math.max(1, Number(pageHeight) || 841.89),
+    source: "native",
+    nativeItems: items,
+    nativeStyles: enrichPdfTextStyles(styles),
+  }));
 }

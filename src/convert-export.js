@@ -5,8 +5,15 @@ import {
   resolveExportPages,
   safeBaseName,
   textItemsToStructuredText,
+  textItemsToLayout,
+  ocrRecordToLayout,
+  mergeNativeAndOcrLayouts,
+  layoutToStructuredText,
 } from "./convert-export-core.js";
-import { serializeExportDocument } from "./convert-export-formats.js";
+import {
+  classifyDocxPage,
+  serializeExportDocument,
+} from "./convert-export-formats.js";
 import {
   buildOcrRecord,
   renderPageForOcr,
@@ -37,6 +44,7 @@ import {
   isExternalOcrCancelledError,
   recognizeExternalOcrImage,
 } from "./ocr-external-runtime.js";
+import { suppressRasterTextInImageData } from "./raster-text-separation.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
@@ -96,6 +104,7 @@ if (!els.view) {
     persistentCache: new Map(),
     cacheHits: 0,
     balancedOcrPool: null,
+    preciseOcrPool: null,
     installedOcrLanguages: new Map(),
     externalOcrModels: [],
     usesExternalOcr: false,
@@ -103,6 +112,7 @@ if (!els.view) {
     adaptive: {
       fastAccepted: 0,
       balancedRetried: 0,
+      preciseRetried: 0,
       blankSkipped: 0,
       croppedPages: 0,
     },
@@ -413,7 +423,7 @@ if (!els.view) {
   function restoreSettings() {
     try {
       const value = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      if (["txt", "json", "html", "markdown"].includes(value.format)) {
+      if (["docx", "txt", "json", "html", "markdown"].includes(value.format)) {
         els.format.value = value.format;
       }
       if (["all", "current", "range"].includes(value.scope)) {
@@ -486,6 +496,8 @@ if (!els.view) {
 
       if (page.source === "ocr" && page.ocrRecord) {
         text = reconstructOcrText(page.ocrRecord, mode);
+      } else if (page.source === "hybrid" && Array.isArray(page.layout)) {
+        text = layoutToStructuredText(page.layout, { pageHeight: page.height });
       }
 
       return buildPageRecord({
@@ -495,6 +507,11 @@ if (!els.view) {
         width: page.width,
         height: page.height,
         language: page.language,
+        layout: Array.isArray(page.layout)
+          ? page.layout
+          : page.source === "ocr" && page.ocrRecord
+            ? ocrRecordToLayout(page.ocrRecord, page.width, page.height)
+            : null,
       });
     });
 
@@ -656,6 +673,7 @@ if (!els.view) {
   function resetAdaptiveStats() {
     state.adaptive.fastAccepted = 0;
     state.adaptive.balancedRetried = 0;
+    state.adaptive.preciseRetried = 0;
     state.adaptive.blankSkipped = 0;
     state.adaptive.croppedPages = 0;
   }
@@ -696,6 +714,61 @@ if (!els.view) {
       visibleCharacters,
       suspiciousRatio,
     };
+  }
+
+
+  function ocrQualityScore(quality) {
+    const confidence = Number.isFinite(Number(quality?.confidence))
+      ? Number(quality.confidence)
+      : 68;
+    const visibleCharacters = Math.max(0, Number(quality?.visibleCharacters) || 0);
+    const words = Math.max(0, Number(quality?.words) || 0);
+    const suspiciousRatio = Math.max(0, Number(quality?.suspiciousRatio) || 0);
+    return (
+      (quality?.accepted ? 28 : 0) +
+      confidence +
+      Math.min(10, Math.log2(visibleCharacters + 1) * 1.25) +
+      Math.min(4, Math.log2(words + 1) * 0.75) -
+      suspiciousRatio * 125
+    );
+  }
+
+  function shouldTryPreciseOcr(quality) {
+    if (!quality) return true;
+    if (!quality.accepted) return true;
+    const confidence = Number(quality.confidence);
+    return (
+      (Number.isFinite(confidence) && confidence < 82) ||
+      Number(quality.suspiciousRatio || 0) > 0.035
+    );
+  }
+
+  function chooseBetterOcrRecord(primaryRecord, candidateRecord) {
+    if (!candidateRecord?.text) return primaryRecord;
+    if (!primaryRecord?.text) return candidateRecord;
+    const primaryQuality = ocrRecordQuality(primaryRecord);
+    const candidateQuality = ocrRecordQuality(candidateRecord);
+
+    // Una pasada más precisa puede subir la confianza simplemente porque
+    // omitió las palabras difíciles. No aceptamos esa falsa mejora cuando la
+    // pasada primaria ya era coherente: debe conservar prácticamente toda la
+    // cobertura textual antes de competir por puntuación.
+    if (primaryQuality.accepted) {
+      const characterCoverage =
+        candidateQuality.visibleCharacters /
+        Math.max(1, primaryQuality.visibleCharacters);
+      const wordCoverage =
+        candidateQuality.words / Math.max(1, primaryQuality.words);
+      if (characterCoverage < 0.90 || (primaryQuality.words >= 8 && wordCoverage < 0.84)) {
+        return primaryRecord;
+      }
+    }
+
+    const primaryScore = ocrQualityScore(primaryQuality);
+    const candidateScore = ocrQualityScore(candidateQuality);
+    return candidateScore >= primaryScore + 1.5
+      ? candidateRecord
+      : primaryRecord;
   }
 
   function analyzeCanvasInk(canvas) {
@@ -816,6 +889,71 @@ if (!els.view) {
     return lettersOrNumbers >= NATIVE_TEXT_MINIMUM;
   }
 
+  function rasterContentMayContainEditableText(metrics = {}) {
+    const imageOperations = Math.max(0, Number(metrics?.imageOperations) || 0);
+    const totalCoverage = Math.max(0, Number(metrics?.imageCoverageRatio) || 0);
+    const maxCoverage = Math.max(0, Number(metrics?.maxImageCoverageRatio) || 0);
+    if (!imageOperations) return false;
+    // Una imagen diminuta suele ser un logo o icono y debe permanecer como
+    // gráfico. A partir de esta cobertura ya puede ser una captura, un recorte
+    // escaneado o una región de documento con texto que el usuario espera poder
+    // editar. El OCR posterior y la deduplicación deciden si realmente aporta
+    // contenido adicional.
+    return maxCoverage >= 0.10 || totalCoverage >= 0.16;
+  }
+
+  async function inspectRasterContentForHybridOcr(page, pageRecord = {}) {
+    try {
+      const operatorList = await page.getOperatorList();
+      const metrics = docxOperatorMetrics(operatorList, pageRecord);
+      return {
+        metrics,
+        needsHybridOcr: rasterContentMayContainEditableText(metrics),
+      };
+    } catch (error) {
+      console.warn("[PDF→Word] No se pudo inspeccionar contenido raster híbrido.", error);
+      return { metrics: null, needsHybridOcr: false };
+    }
+  }
+
+  function buildHybridPageContent({
+    nativeText = "",
+    nativeLayout = [],
+    ocrRecord = null,
+    width = 595.28,
+    height = 841.89,
+  } = {}) {
+    if (!ocrRecord?.text) {
+      return {
+        source: nativeTextIsUseful(nativeText) ? "native" : "empty",
+        text: nativeText,
+        layout: nativeLayout,
+        extraOcrLines: 0,
+      };
+    }
+    const ocrLayout = ocrRecordToLayout(ocrRecord, width, height);
+    const mergedLayout = mergeNativeAndOcrLayouts(nativeLayout, ocrLayout, {
+      pageHeight: height,
+    });
+    const extraOcrLines = mergedLayout.filter(
+      (line) => String(line?.source || "").toLocaleLowerCase() === "ocr"
+    ).length;
+    if (!extraOcrLines) {
+      return {
+        source: nativeTextIsUseful(nativeText) ? "native" : "empty",
+        text: nativeText,
+        layout: nativeLayout,
+        extraOcrLines: 0,
+      };
+    }
+    return {
+      source: "hybrid",
+      text: layoutToStructuredText(mergedLayout, { pageHeight: height }),
+      layout: mergedLayout,
+      extraOcrLines,
+    };
+  }
+
   async function recognizePageWithOcr(
     page,
     pageNumber,
@@ -903,17 +1041,19 @@ if (!els.view) {
         },
       });
 
-      return {
-        record: buildOcrRecord(result?.data, {
-          imageWidth: preparedCanvas.width,
-          imageHeight: preparedCanvas.height,
-          language: languageCodes.join("+"),
-          languageLabel: "OCR automático",
-          rotation: rendered.rotation,
-          effectiveDpi: rendered.effectiveDpi,
-        }),
-        blank: false,
-      };
+      const record = buildOcrRecord(result?.data, {
+        imageWidth: preparedCanvas.width,
+        imageHeight: preparedCanvas.height,
+        language: languageCodes.join("+"),
+        languageLabel: "OCR automático",
+        rotation: rendered.rotation,
+        effectiveDpi: rendered.effectiveDpi,
+      });
+      record.pageImageWidth = rendered.width;
+      record.pageImageHeight = rendered.height;
+      record.cropX = preparedCanvas === rendered.canvas ? 0 : (ink.bounds?.x || 0);
+      record.cropY = preparedCanvas === rendered.canvas ? 0 : (ink.bounds?.y || 0);
+      return { record, blank: false };
     } finally {
       if (renderTask) state.renderTasks.delete(renderTask);
 
@@ -938,6 +1078,7 @@ if (!els.view) {
       ["Páginas", `${stats.processedPages}/${stats.requestedPages}`],
       ["PDF", String(stats.nativePages)],
       ["OCR", String(stats.ocrPages)],
+      ["Híbridas", String(stats.hybridPages || 0)],
       ["Vacías", String(stats.emptyPages)],
       ["Palabras", stats.words.toLocaleString("es-ES")],
       ["Rápidas", String(state.adaptive.fastAccepted)],
@@ -971,6 +1112,7 @@ if (!els.view) {
       els.format.value,
       {
         includePageHeadings: els.headings.checked,
+        layoutMode: selectedLayoutMode(),
       }
     );
 
@@ -1017,6 +1159,7 @@ if (!els.view) {
       : [];
     const fastProfile = resolveOcrProfile("fast");
     const balancedProfile = resolveOcrProfile("balanced");
+    const preciseProfile = resolveOcrProfile("precise");
     const records = new Array(resolved.pages.length);
     const structuredPages = new Array(resolved.pages.length);
     state.cacheHits = 0;
@@ -1059,9 +1202,13 @@ if (!els.view) {
 
           try {
             let nativeText = "";
+            let nativeLayout = null;
             let text = "";
             let source = "empty";
+            let layout = null;
             let activeOcrRecord = null;
+            let visualMetrics = null;
+            let hybridRequested = false;
 
             if (textMode !== "ocr") {
               const content = await page.getTextContent({
@@ -1071,6 +1218,33 @@ if (!els.view) {
               nativeText = textItemsToStructuredText(
                 content.items || []
               );
+              nativeLayout = textItemsToLayout(
+                content.items || [],
+                content.styles || {},
+                viewport.width,
+                viewport.height
+              );
+            }
+
+            const nativeStrong =
+              textMode === "auto" &&
+              nativeTextIsUseful(nativeText) &&
+              (
+                String(nativeText || "").replace(/\s+/gu, "").length >= 160 ||
+                (Array.isArray(nativeLayout) && nativeLayout.length >= 8)
+              );
+
+            // En automático, una capa de texto nativa ya no implica que todo
+            // el texto visible sea nativo. Una captura o un escaneado parcial
+            // incrustado puede contener texto adicional. Solo activamos OCR
+            // híbrido cuando la página presenta una región raster relevante.
+            if (nativeStrong) {
+              const rasterInspection = await inspectRasterContentForHybridOcr(
+                page,
+                { width: viewport.width, height: viewport.height }
+              );
+              visualMetrics = rasterInspection.metrics;
+              hybridRequested = rasterInspection.needsHybridOcr;
             }
 
             const cachedOcr =
@@ -1089,19 +1263,35 @@ if (!els.view) {
               source = nativeTextIsUseful(text)
                 ? "native"
                 : "empty";
-            } else if (
-              textMode === "auto" &&
-              nativeTextIsUseful(nativeText)
-            ) {
+              layout = source === "native" ? nativeLayout : null;
+            } else if (nativeStrong && !hybridRequested) {
               text = nativeText;
               source = "native";
+              layout = nativeLayout;
             } else if (cachedOcr?.text) {
-              text = reconstructOcrText(
-                cachedOcr,
-                selectedLayoutMode()
-              );
-              source = "ocr";
+              activeOcrRecord = cachedOcr;
               reusedOcr += 1;
+              if (nativeStrong && hybridRequested) {
+                const hybrid = buildHybridPageContent({
+                  nativeText,
+                  nativeLayout,
+                  ocrRecord: cachedOcr,
+                  width: viewport.width,
+                  height: viewport.height,
+                });
+                ({ text, source, layout } = hybrid);
+              } else {
+                text = reconstructOcrText(
+                  cachedOcr,
+                  selectedLayoutMode()
+                );
+                source = "ocr";
+                layout = ocrRecordToLayout(
+                  cachedOcr,
+                  viewport.width,
+                  viewport.height
+                );
+              }
             } else {
               const fast = await recognizePageWithOcr(
                 page,
@@ -1117,16 +1307,40 @@ if (!els.view) {
               );
 
               const quality = ocrRecordQuality(fast.record);
+              activeOcrRecord = fast.record;
 
               if (fast.blank) {
-                text = "";
-                source = "empty";
+                if (nativeStrong && hybridRequested) {
+                  text = nativeText;
+                  source = "native";
+                  layout = nativeLayout;
+                } else {
+                  text = "";
+                  source = "empty";
+                  layout = null;
+                }
               } else if (quality.accepted) {
-                text = reconstructOcrText(
-                  fast.record,
-                  selectedLayoutMode()
-                );
-                source = "ocr";
+                if (nativeStrong && hybridRequested) {
+                  const hybrid = buildHybridPageContent({
+                    nativeText,
+                    nativeLayout,
+                    ocrRecord: fast.record,
+                    width: viewport.width,
+                    height: viewport.height,
+                  });
+                  ({ text, source, layout } = hybrid);
+                } else {
+                  text = reconstructOcrText(
+                    fast.record,
+                    selectedLayoutMode()
+                  );
+                  source = "ocr";
+                  layout = ocrRecordToLayout(
+                    fast.record,
+                    viewport.width,
+                    viewport.height
+                  );
+                }
                 state.adaptive.fastAccepted += 1;
                 void writeOcrCacheRecord(
                   {
@@ -1145,26 +1359,35 @@ if (!els.view) {
                   pageNumber,
                   width: viewport.width,
                   height: viewport.height,
+                  nativeText,
+                  nativeLayout,
+                  hybridRequested,
+                  visualMetrics,
                 });
                 return;
               }
             }
 
+            const language = source === "ocr" || source === "hybrid"
+              ? languageKey
+              : null;
             records[index] = buildPageRecord({
               pageNumber,
               text,
               source,
               width: viewport.width,
               height: viewport.height,
-              language: source === "ocr" ? languageKey : null,
+              language,
+              layout,
             });
+            if (visualMetrics) records[index].docxVisualMetrics = visualMetrics;
 
             structuredPages[index] = {
               pageNumber,
               source,
-              nativeText: source === "native" ? text : "",
+              nativeText,
               ocrRecord:
-                source === "ocr"
+                source === "ocr" || source === "hybrid"
                   ? (
                       state.ocrRecords.get(pageNumber) ||
                       state.persistentCache.get(pageNumber) ||
@@ -1174,7 +1397,9 @@ if (!els.view) {
                   : null,
               width: viewport.width,
               height: viewport.height,
-              language: source === "ocr" ? languageKey : null,
+              language,
+              layout,
+              docxVisualMetrics: visualMetrics,
             };
           } finally {
             page.cleanup();
@@ -1222,6 +1447,15 @@ if (!els.view) {
               parameters: balancedProfile.tesseract,
               size: Math.min(2, retryQueue.length),
             });
+          // El pool preciso se crea con un único worker: solo se usa cuando
+          // la segunda pasada sigue dejando evidencia de OCR dudoso. Así la
+          // calidad máxima no penaliza las páginas que ya quedaron bien.
+          state.preciseOcrPool =
+            await createOcrBenchmarkWorkerPool({
+              languages: languageCodes,
+              parameters: preciseProfile.tesseract,
+              size: 1,
+            });
         }
 
         let retryCursor = 0;
@@ -1249,21 +1483,70 @@ if (!els.view) {
                   : null
               );
 
-              const balancedText = reconstructOcrText(
-                balanced.record,
+              state.adaptive.balancedRetried += 1;
+              let selectedRecord = balanced.record;
+              const balancedQuality = ocrRecordQuality(balanced.record);
+
+              if (shouldTryPreciseOcr(balancedQuality)) {
+                const precise = await recognizePageWithOcr(
+                  page,
+                  retry.pageNumber,
+                  retry.index,
+                  resolved.pages.length,
+                  state.preciseOcrPool,
+                  preciseProfile,
+                  languageCodes,
+                  usesExternalOcr
+                    ? state.externalOcrModels
+                    : null
+                );
+                selectedRecord = chooseBetterOcrRecord(
+                  balanced.record,
+                  precise.record
+                );
+                state.adaptive.preciseRetried += 1;
+              }
+
+              let selectedText = reconstructOcrText(
+                selectedRecord,
                 selectedLayoutMode()
               );
+              let selectedSource = selectedText ? "ocr" : "empty";
+              let selectedLayout = selectedText
+                ? ocrRecordToLayout(selectedRecord, retry.width, retry.height)
+                : null;
 
+              if (retry.hybridRequested && nativeTextIsUseful(retry.nativeText)) {
+                const hybrid = buildHybridPageContent({
+                  nativeText: retry.nativeText,
+                  nativeLayout: retry.nativeLayout,
+                  ocrRecord: selectedRecord,
+                  width: retry.width,
+                  height: retry.height,
+                });
+                selectedText = hybrid.text;
+                selectedSource = hybrid.source;
+                selectedLayout = hybrid.layout;
+              }
+
+              const selectedLanguage =
+                selectedSource === "ocr" || selectedSource === "hybrid"
+                  ? languageKey
+                  : null;
               records[retry.index] = buildPageRecord({
                 pageNumber: retry.pageNumber,
-                text: balancedText,
-                source: balancedText ? "ocr" : "empty",
+                text: selectedText,
+                source: selectedSource,
                 width: retry.width,
                 height: retry.height,
-                language: balanced.record.text ? languageKey : null,
+                language: selectedLanguage,
+                layout: selectedLayout,
               });
+              if (retry.visualMetrics) {
+                records[retry.index].docxVisualMetrics = retry.visualMetrics;
+              }
 
-              if (balanced.record.text) {
+              if (selectedRecord.text) {
                 void writeOcrCacheRecord(
                   {
                     documentHash: state.documentHash,
@@ -1273,20 +1556,24 @@ if (!els.view) {
                     rotation: 0,
                     engineVersion: "tesseract-local-v1",
                   },
-                  balanced.record
+                  selectedRecord
                 );
               }
 
               structuredPages[retry.index] = {
                 pageNumber: retry.pageNumber,
-                source: balancedText ? "ocr" : "empty",
-                nativeText: "",
-                ocrRecord: balanced.record,
+                source: selectedSource,
+                nativeText: retry.nativeText || "",
+                ocrRecord:
+                  selectedSource === "ocr" || selectedSource === "hybrid"
+                    ? selectedRecord
+                    : null,
                 width: retry.width,
                 height: retry.height,
-                language: balancedText ? languageKey : null,
+                language: selectedLanguage,
+                layout: selectedLayout,
+                docxVisualMetrics: retry.visualMetrics || null,
               };
-              state.adaptive.balancedRetried += 1;
               completed += 1;
               const percent = 82 + Math.round(
                 ((retryIndex + 1) / retryQueue.length) * 18
@@ -1349,7 +1636,8 @@ if (!els.view) {
       }
 
       const ocrPages =
-        state.document.statistics.ocrPages;
+        state.document.statistics.ocrPages +
+        (state.document.statistics.hybridPages || 0);
       const details = [
         `${state.adaptive.fastAccepted} rápidas`,
         `${state.adaptive.balancedRetried} revisadas`,
@@ -1383,10 +1671,12 @@ if (!els.view) {
       const pools = [
         state.ocrPool,
         state.balancedOcrPool,
+        state.preciseOcrPool,
       ];
 
       state.ocrPool = null;
       state.balancedOcrPool = null;
+      state.preciseOcrPool = null;
 
       await Promise.all(
         pools.map((pool) => destroyOcrPoolSafely(pool))
@@ -1398,6 +1688,352 @@ if (!els.view) {
     }
   }
 
+
+  const DOCX_PAGE_INSPECTION_TIMEOUT_MS = 5_000;
+  const DOCX_PAGE_OPEN_TIMEOUT_MS = 6_000;
+  const DOCX_PAGE_RENDER_TIMEOUT_MS = 15_000;
+  const DOCX_PAGE_ENCODE_TIMEOUT_MS = 5_000;
+
+  function withTimeout(promise, timeoutMs, message) {
+    let timeoutId = null;
+
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(message));
+        }, timeoutMs);
+      }),
+    ]).finally(() => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    });
+  }
+
+  function docxOperatorMetrics(operatorList, pageRecord = {}) {
+    const ops = pdfjsLib.OPS || {};
+    const imageOps = new Set([
+      ops.paintInlineImageXObject,
+      ops.paintImageXObject,
+      ops.paintJpegXObject,
+      ops.paintImageMaskXObject,
+      ops.paintSolidColorImageMask,
+      ops.paintImageMaskXObjectGroup,
+      ops.paintImageXObjectRepeat,
+      ops.paintImageMaskXObjectRepeat,
+    ].filter(Number.isInteger));
+    const vectorOps = new Set([
+      ops.constructPath,
+      ops.stroke,
+      ops.closeStroke,
+      ops.fill,
+      ops.eoFill,
+      ops.fillStroke,
+      ops.eoFillStroke,
+      ops.closeFillStroke,
+      ops.closeEOFillStroke,
+      ops.shadingFill,
+    ].filter(Number.isInteger));
+    const width = Math.max(1, Number(pageRecord?.width) || 595);
+    const height = Math.max(1, Number(pageRecord?.height) || 842);
+    const pageArea = width * height;
+    const stack = [];
+    let areaScale = 1;
+    let imageOperations = 0;
+    let vectorOperations = 0;
+    let imageCoverage = 0;
+    let maxImageCoverageRatio = 0;
+
+    for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+      const fn = operatorList.fnArray[index];
+      const args = operatorList.argsArray[index] || [];
+
+      if (fn === ops.save) {
+        stack.push(areaScale);
+        continue;
+      }
+      if (fn === ops.restore) {
+        areaScale = stack.length ? stack.pop() : 1;
+        continue;
+      }
+      if (fn === ops.transform && args.length >= 4) {
+        const determinant = Math.abs(
+          (Number(args[0]) || 0) * (Number(args[3]) || 0) -
+          (Number(args[1]) || 0) * (Number(args[2]) || 0)
+        );
+        if (Number.isFinite(determinant) && determinant > 0) {
+          areaScale *= determinant;
+        }
+        continue;
+      }
+
+      if (imageOps.has(fn)) {
+        imageOperations += 1;
+        const ratio = Math.max(0, Math.min(1, areaScale / pageArea));
+        imageCoverage += ratio;
+        maxImageCoverageRatio = Math.max(maxImageCoverageRatio, ratio);
+      }
+      if (vectorOps.has(fn)) vectorOperations += 1;
+    }
+
+    return {
+      operatorCount: operatorList.fnArray.length,
+      imageOperations,
+      vectorOperations,
+      imageCoverageRatio: Math.max(0, Math.min(1, imageCoverage)),
+      maxImageCoverageRatio,
+    };
+  }
+
+  async function inspectDocxPage(page, pageRecord) {
+    try {
+      const operatorList = await withTimeout(
+        page.getOperatorList(),
+        DOCX_PAGE_INSPECTION_TIMEOUT_MS,
+        `Tiempo agotado al inspeccionar la página ${pageRecord.pageNumber}.`
+      );
+      return docxOperatorMetrics(operatorList, pageRecord);
+    } catch (error) {
+      console.warn(
+        `[PDF→Word] No se pudo medir la complejidad visual de la página ${pageRecord.pageNumber}:`,
+        error
+      );
+      return {
+        operatorCount: 0,
+        imageOperations: 0,
+        vectorOperations: 0,
+        imageCoverageRatio: 0,
+        maxImageCoverageRatio: 0,
+        inspectionFailed: true,
+      };
+    }
+  }
+
+  async function renderDocxFullPage(page, pageNumber, {
+    suppressText = false,
+    maskLayout = null,
+  } = {}) {
+    const baseViewport = page.getViewport({ scale: 1 });
+    const targetPixels = 1_650_000;
+    const basePixels = Math.max(1, baseViewport.width * baseViewport.height);
+    const scale = Math.max(1, Math.min(1.8, Math.sqrt(targetPixels / basePixels)));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(viewport.width));
+    canvas.height = Math.max(1, Math.round(viewport.height));
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error(`No se pudo preparar el lienzo de la página ${pageNumber}.`);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const originalFillText = context.fillText?.bind(context);
+    const originalStrokeText = context.strokeText?.bind(context);
+    if (suppressText) {
+      context.fillText = () => {};
+      context.strokeText = () => {};
+    }
+
+    const renderTask = page.render({ canvasContext: context, viewport, intent: "display" });
+    state.renderTasks.add(renderTask);
+    try {
+      await withTimeout(
+        renderTask.promise,
+        DOCX_PAGE_RENDER_TIMEOUT_MS,
+        `Tiempo agotado al renderizar la página ${pageNumber}.`
+      );
+
+      if (Array.isArray(maskLayout) && maskLayout.length) {
+        const image = context.getImageData(0, 0, canvas.width, canvas.height);
+        suppressRasterTextInImageData(image, {
+          layout: maskLayout,
+          pageWidth: baseViewport.width,
+          pageHeight: baseViewport.height,
+        });
+        context.putImageData(image, 0, 0);
+      }
+
+      const blob = await withTimeout(new Promise((resolve, reject) => {
+        canvas.toBlob((value) => value ? resolve(value) : reject(new Error("No se pudo codificar la página completa.")), "image/png");
+      }), DOCX_PAGE_ENCODE_TIMEOUT_MS, `Tiempo agotado al codificar la página ${pageNumber}.`);
+      return {
+        bytes: new Uint8Array(await blob.arrayBuffer()),
+        width: canvas.width,
+        height: canvas.height,
+        type: "png",
+        fullPage: true,
+      };
+    } finally {
+      state.renderTasks.delete(renderTask);
+      if (suppressText) {
+        if (originalFillText) context.fillText = originalFillText;
+        if (originalStrokeText) context.strokeText = originalStrokeText;
+      }
+      canvas.width = 1;
+      canvas.height = 1;
+    }
+  }
+
+  function pageOcrLayout(pageRecord = {}) {
+    const layout = Array.isArray(pageRecord?.layout) ? pageRecord.layout : [];
+    const pageSource = String(pageRecord?.source || "").toLocaleLowerCase();
+    return layout.filter((line) => {
+      const source = String(line?.source || pageSource).toLocaleLowerCase();
+      return source === "ocr";
+    });
+  }
+
+  async function extractDocxPageImages() {
+    if (!state.pdf || !state.document?.pages?.length) return new Map();
+    const imagesByPage = new Map();
+    const pages = state.document.pages;
+    const layoutMode = selectedLayoutMode();
+    let renderedPages = 0;
+    let editablePages = 0;
+    let omittedPages = 0;
+    const reasonCounts = new Map();
+
+    state.cancelled = false;
+    els.cancel.hidden = false;
+    els.cancel.disabled = false;
+
+    if (layoutMode !== "original") {
+      for (const pageRecord of pages) {
+        pageRecord.docxVisualMetrics = null;
+        pageRecord.docxPlan = {
+          route: "editable",
+          reasons: ["modo-editable"],
+        };
+      }
+      els.progress.value = 100;
+      els.progressText.textContent =
+        `100% · ${pages.length} páginas editables · diseño ${layoutMode}`;
+      return imagesByPage;
+    }
+
+    for (let index = 0; index < pages.length; index += 1) {
+      if (state.cancelled) {
+        throw new DOMException("Operación cancelada", "AbortError");
+      }
+
+      const pageRecord = pages[index];
+      const pageNumber = pageRecord.pageNumber;
+      const percent = Math.round((index / pages.length) * 100);
+      els.progress.value = percent;
+      els.progressText.textContent =
+        `${percent}% · analizando diseño de la página ${pageNumber}/${pages.length}`;
+
+      let page = null;
+      try {
+        page = await withTimeout(
+          state.pdf.getPage(pageNumber),
+          DOCX_PAGE_OPEN_TIMEOUT_MS,
+          `Tiempo agotado al abrir la página ${pageNumber}.`
+        );
+
+        pageRecord.docxVisualMetrics =
+          pageRecord.docxVisualMetrics ||
+          await inspectDocxPage(
+            page,
+            pageRecord
+          );
+        // Respetar la clasificación de seguridad. No forzar a editable las
+        // páginas OCR: su geometría puede ser válida para búsqueda, pero no
+        // necesariamente para reconstrucción visual exacta en Word.
+        const plan = classifyDocxPage(pageRecord, { layoutMode });
+        pageRecord.docxPlan = {
+          route: plan.route,
+          reasons: [...plan.reasons],
+        };
+        for (const reason of plan.reasons) {
+          reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+        }
+
+        if (plan.route !== "visual") {
+          editablePages += 1;
+          els.progressText.textContent =
+            `${percent}% · página ${pageNumber}/${pages.length} · reconstrucción editable`;
+
+          const metrics = pageRecord.docxVisualMetrics || {};
+          const needsGraphicsLayer =
+            Number(metrics.imageOperations || 0) > 0 ||
+            Number(metrics.vectorOperations || 0) > 0;
+
+          if (needsGraphicsLayer) {
+            try {
+              const rasterMaskLayout = pageOcrLayout(pageRecord);
+              const sourceForCalibration = rasterMaskLayout.length
+                ? await renderDocxFullPage(page, pageNumber)
+                : null;
+              if (sourceForCalibration) {
+                sourceForCalibration.calibrationSource = true;
+                sourceForCalibration.fullPage = false;
+              }
+              const graphicsOnly = await renderDocxFullPage(
+                page,
+                pageNumber,
+                {
+                  suppressText: true,
+                  // El renderer ya suprime el texto PDF nativo. Enmascarar
+                  // también esas líneas dañaba reglas, fondos y gráficos que
+                  // pasaban por detrás. El inpainting raster se reserva al
+                  // texto OCR realmente incrustado en imágenes.
+                  maskLayout: rasterMaskLayout,
+                }
+              );
+              graphicsOnly.graphicsOnly = true;
+              imagesByPage.set(
+                pageNumber,
+                sourceForCalibration
+                  ? [graphicsOnly, sourceForCalibration]
+                  : [graphicsOnly]
+              );
+            } catch (graphicsError) {
+              console.warn(
+                `[PDF→Word] No se pudo crear la capa gráfica editable de la página ${pageNumber}:`,
+                graphicsError
+              );
+            }
+          }
+          continue;
+        }
+
+        els.progressText.textContent =
+          `${percent}% · preservando diseño de la página ${pageNumber}/${pages.length}`;
+        const rendered = await renderDocxFullPage(page, pageNumber);
+        imagesByPage.set(pageNumber, [rendered]);
+        renderedPages += 1;
+      } catch (error) {
+        if (state.cancelled || error?.name === "AbortError") throw error;
+        omittedPages += 1;
+        pageRecord.docxPlan = {
+          route: "editable",
+          reasons: ["respaldo-por-error-de-render"],
+        };
+        console.warn(
+          `[PDF→Word] No se pudo preservar visualmente la página ${pageNumber}:`,
+          error
+        );
+      } finally {
+        try { page?.cleanup(); } catch {}
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+
+    els.progress.value = 100;
+    els.progressText.textContent =
+      `100% · ${renderedPages} páginas visuales · ${editablePages} páginas editables` +
+      (omittedPages ? ` · ${omittedPages} páginas con respaldo textual` : "");
+    console.info("[PDF→Word] Plan híbrido:", {
+      renderedPages,
+      editablePages,
+      omittedPages,
+      reasons: Object.fromEntries(reasonCounts),
+    });
+    return imagesByPage;
+  }
+
   async function exportCopy() {
     if (!state.serialized || !state.file) return;
 
@@ -1406,9 +2042,28 @@ if (!els.view) {
 
     const dialog = window.__TAURI__?.dialog;
     const fs = window.__TAURI__?.fs;
-    const encoded = new TextEncoder().encode(
-      state.serialized.content
-    );
+    let encoded;
+
+    try {
+      if (typeof state.serialized.buildBytes === "function") {
+        setStatus("Creando el documento Word con texto editable e imágenes reales…");
+        els.exportButton.disabled = true;
+        const pageImages = await extractDocxPageImages();
+        encoded = await state.serialized.buildBytes({ pageImages });
+      } else {
+        encoded = new TextEncoder().encode(
+          state.serialized.content
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus(
+        "No se pudo crear el documento Word.",
+        "error"
+      );
+      els.exportButton.disabled = false;
+      return;
+    }
 
     if (
       typeof dialog?.save === "function" &&
@@ -1430,6 +2085,7 @@ if (!els.view) {
         });
 
         if (!chosen) {
+          els.exportButton.disabled = false;
           setStatus(
             "Guardado cancelado. No se creó ningún archivo.",
             "info"
@@ -1438,6 +2094,7 @@ if (!els.view) {
         }
 
         await fs.writeFile(String(chosen), encoded);
+        els.exportButton.disabled = false;
         setStatus(
           `Copia guardada localmente: ${
             String(chosen).split(/[\\/]/).pop()
@@ -1447,6 +2104,7 @@ if (!els.view) {
         return;
       } catch (error) {
         console.error(error);
+        els.exportButton.disabled = false;
         setStatus(
           "No se pudo guardar el archivo en la ruta elegida.",
           "error"
@@ -1468,6 +2126,7 @@ if (!els.view) {
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
+    els.exportButton.disabled = false;
     setStatus(
       "Copia exportada localmente. El PDF original no se ha modificado.",
       "success"
@@ -1620,10 +2279,12 @@ if (!els.view) {
     const cancelledPools = [
       state.ocrPool,
       state.balancedOcrPool,
+      state.preciseOcrPool,
     ];
 
     state.ocrPool = null;
     state.balancedOcrPool = null;
+    state.preciseOcrPool = null;
 
     setBusy(false);
     els.progressText.textContent = "Análisis cancelado";
@@ -1690,6 +2351,12 @@ if (!els.view) {
       if (source === "ocr" && ocrRecord) {
         text = reconstructOcrText(ocrRecord, mode);
         ocrPages += 1;
+      } else if (source === "hybrid" && Array.isArray(structured?.layout ?? previous?.layout)) {
+        text = layoutToStructuredText(
+          structured?.layout ?? previous?.layout,
+          { pageHeight: structured?.height ?? previous?.height ?? 842 }
+        );
+        ocrPages += 1;
       }
 
       rebuiltPages.push(
@@ -1703,6 +2370,7 @@ if (!els.view) {
             structured?.language ??
             previous?.language ??
             null,
+          layout: structured?.layout ?? previous?.layout ?? null,
         })
       );
     }

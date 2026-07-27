@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-07-26",
+  "version": "v14-candidate",
+  "stableBaseline": {
+    "version": "v11",
+    "strictSsim144dpi": 0.7854564260168981,
+    "pages": 41,
+    "regressionsFromV10": 0
+  },
+  "strictGate": {
+    "status": "pending-docx-runtime-dependency",
+    "reason": "The current environment does not contain the npm runtime dependencies required to generate the complete DOCX bank. Registry/DNS access is unavailable, so the strict DOCX -> LibreOffice render -> SSIM gate cannot be rerun here. v11 remains the last strict-SSIM stable release.",
+    "claimMade": false
+  },
+  "changes": [
+    "Large internal OCR gaps are represented as geometric Word tab stops instead of being collapsed into ordinary spaces.",
+    "Continuous prose remains continuous text; segmentation uses relative OCR geometry and page typography rather than document/page-specific rules.",
+    "OCR font fitting uses the summed ink-bearing widths of geometric segments, excluding inter-column blank space from the font-size estimate.",
+    "High-confidence OCR segments may receive a conservative horizontal Word run scale when the required correction is within plus/minus 10 percent.",
+    "The headless benchmark now carries native and OCR run geometry and derives the same line segments used by runtime conversion.",
+    "The segmentation threshold was tuned against all 40 OCR pages in the validation bank and finalized at a conservative 3.7 times line font size with zero proxy regressions."
+  ],
+  "automatedTests": {
+    "pdfWordEngine": "ok",
+    "convertExportCore": "ok",
+    "adaptiveOcr": "ok",
+    "layoutRefreshV3": "ok",
+    "ocrOriginalReadableLayout": "ok",
+    "ocrOriginalVisualLayout": "ok",
+    "drawingMlVerification": "ok",
+    "javascriptSyntax": "ok",
+    "pythonSyntax": "ok"
+  },
+  "segmentGeometryProxy": {
+    "description": "OCR word-start horizontal geometry proxy comparing v13 continuous-line layout with v14 segmented layout. This is not SSIM and is not a substitute for the strict render gate.",
+    "documents": 5,
+    "ocrPages": 40,
+    "lines": 1503,
+    "splitLines": 127,
+    "meanMaeV13": 3.548017574785638,
+    "meanMaeV14": 1.4639574284200458,
+    "meanRelativeReduction": 0.5873872105866064,
+    "splitMeanMaeV13": 25.695632777686534,
+    "splitMeanMaeV14": 1.0315193919583079,
+    "splitMeanRelativeReduction": 0.9598562370157292,
+    "improvedLines": 127,
+    "regressedLines": 0
+  },
+  "rejectedExperiments": [
+    {
+      "name": "robust-vertical-baseline-recalibration",
+      "decision": "rejected",
+      "reason": "It affected too many OCR lines without strict render evidence. v14 retains v13 vertical/baseline behavior rather than accepting a broad unproven change."
+    }
+  ],
+  "rules": {
+    "documentSpecificRulesAdded": false,
+    "pageSpecificRulesAdded": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-07-26",
+  "status": "candidate-awaiting-strict-docx-gate",
+  "base": {
+    "version": "v11",
+    "strictSsim144dpi": 0.7854564260168981,
+    "pages": 41,
+    "regressions": 0
+  },
+  "checks": {
+    "verifyConvertDocx": "ok",
+    "javascriptSyntax": "ok",
+    "pythonCompile": "ok",
+    "convertExportCore": "ok",
+    "adaptiveOcr": "ok",
+    "layoutRefreshV3": "ok",
+    "ocrConfidenceSmoke": {
+      "document": "Maiz 2020",
+      "page": 1,
+      "dpi": 100,
+      "lines": 31,
+      "linesWithConfidence": 31,
+      "minimumConfidence": 52.488387916666674,
+      "maximumConfidence": 94.75572675675676
+    }
+  },
+  "visualInkProxy": {
+    "metric": "weighted L1 ink-color evidence proxy; not DOCX SSIM",
+    "ocrLines": 1690,
+    "linesWithEvidence": 1678,
+    "blackInkProxyError": 112.68390827245153,
+    "robustColorProxyError": 52.30597784225941,
+    "relativeGain": 0.5358167936828035
+  },
+  "strictDocxGate": {
+    "status": "not-run-in-this-container",
+    "reason": "headless npm dependencies unavailable because registry resolution failed",
+    "lastVerifiedVersion": "v11"
+  }
+}

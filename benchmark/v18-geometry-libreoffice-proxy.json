@@ -1,0 +1,295 @@
+{
+  "method": "Python OOXML/WPS DOCX -> LibreOffice PDF -> 144 dpi grayscale SSIM proxy; relative gate only, not official Node/docx strict benchmark",
+  "pages": 40,
+  "meanV14": 0.7938975560193797,
+  "meanCandidateGeometry": 0.8181128683462315,
+  "meanDelta": 0.02421531232685188,
+  "improved": 38,
+  "tied": 2,
+  "regressed": 0,
+  "minDelta": 0.0,
+  "maxDelta": 0.06412999999999991,
+  "pairs": [
+    {
+      "document": "190604",
+      "page": 1,
+      "v14": 0.6125655216763576,
+      "candidateGeometry": 0.6609439200182751,
+      "delta": 0.04837839834191748
+    },
+    {
+      "document": "seguro",
+      "page": 2,
+      "v14": 0.9088218556629469,
+      "candidateGeometry": 0.9191827198479927,
+      "delta": 0.010360864185045782
+    },
+    {
+      "document": "seguro",
+      "page": 3,
+      "v14": 0.8071089291361453,
+      "candidateGeometry": 0.8473216989023118,
+      "delta": 0.0402127697661665
+    },
+    {
+      "document": "190213",
+      "page": 1,
+      "v14": 0.87121,
+      "candidateGeometry": 0.8797,
+      "delta": 0.008489999999999998
+    },
+    {
+      "document": "190213",
+      "page": 2,
+      "v14": 0.8128,
+      "candidateGeometry": 0.81825,
+      "delta": 0.005450000000000066
+    },
+    {
+      "document": "190213",
+      "page": 3,
+      "v14": 0.86924,
+      "candidateGeometry": 0.87294,
+      "delta": 0.0037000000000000366
+    },
+    {
+      "document": "190213",
+      "page": 4,
+      "v14": 0.82288,
+      "candidateGeometry": 0.85279,
+      "delta": 0.029910000000000103
+    },
+    {
+      "document": "190213",
+      "page": 5,
+      "v14": 0.80014,
+      "candidateGeometry": 0.82114,
+      "delta": 0.02100000000000002
+    },
+    {
+      "document": "190213",
+      "page": 6,
+      "v14": 0.60086,
+      "candidateGeometry": 0.64693,
+      "delta": 0.046070000000000055
+    },
+    {
+      "document": "190213",
+      "page": 7,
+      "v14": 0.50974,
+      "candidateGeometry": 0.5548,
+      "delta": 0.04505999999999999
+    },
+    {
+      "document": "190213",
+      "page": 8,
+      "v14": 0.92746,
+      "candidateGeometry": 0.93434,
+      "delta": 0.006879999999999997
+    },
+    {
+      "document": "190213",
+      "page": 9,
+      "v14": 0.47114,
+      "candidateGeometry": 0.51167,
+      "delta": 0.040529999999999955
+    },
+    {
+      "document": "190213",
+      "page": 10,
+      "v14": 0.97137,
+      "candidateGeometry": 0.97346,
+      "delta": 0.0020900000000000363
+    },
+    {
+      "document": "190213",
+      "page": 11,
+      "v14": 0.63481,
+      "candidateGeometry": 0.67179,
+      "delta": 0.03698000000000001
+    },
+    {
+      "document": "190213",
+      "page": 12,
+      "v14": 0.50999,
+      "candidateGeometry": 0.57335,
+      "delta": 0.06335999999999997
+    },
+    {
+      "document": "190213",
+      "page": 13,
+      "v14": 0.89822,
+      "candidateGeometry": 0.91438,
+      "delta": 0.016159999999999952
+    },
+    {
+      "document": "maiz",
+      "page": 1,
+      "v14": 0.76912,
+      "candidateGeometry": 0.79789,
+      "delta": 0.028769999999999962
+    },
+    {
+      "document": "maiz",
+      "page": 2,
+      "v14": 0.67437,
+      "candidateGeometry": 0.71145,
+      "delta": 0.03708
+    },
+    {
+      "document": "maiz",
+      "page": 3,
+      "v14": 0.68231,
+      "candidateGeometry": 0.73003,
+      "delta": 0.047719999999999985
+    },
+    {
+      "document": "maiz",
+      "page": 4,
+      "v14": 0.7091,
+      "candidateGeometry": 0.75869,
+      "delta": 0.04959000000000002
+    },
+    {
+      "document": "maiz",
+      "page": 5,
+      "v14": 0.68551,
+      "candidateGeometry": 0.72913,
+      "delta": 0.04361999999999999
+    },
+    {
+      "document": "maiz",
+      "page": 6,
+      "v14": 0.72681,
+      "candidateGeometry": 0.76421,
+      "delta": 0.03739999999999999
+    },
+    {
+      "document": "maiz",
+      "page": 7,
+      "v14": 0.7716,
+      "candidateGeometry": 0.79472,
+      "delta": 0.02312000000000003
+    },
+    {
+      "document": "maiz",
+      "page": 8,
+      "v14": 0.87145,
+      "candidateGeometry": 0.89044,
+      "delta": 0.018990000000000062
+    },
+    {
+      "document": "maiz",
+      "page": 9,
+      "v14": 0.72568,
+      "candidateGeometry": 0.75652,
+      "delta": 0.03083999999999998
+    },
+    {
+      "document": "maiz",
+      "page": 10,
+      "v14": 0.71074,
+      "candidateGeometry": 0.77487,
+      "delta": 0.06412999999999991
+    },
+    {
+      "document": "maiz",
+      "page": 11,
+      "v14": 0.73094,
+      "candidateGeometry": 0.76255,
+      "delta": 0.031609999999999916
+    },
+    {
+      "document": "maiz",
+      "page": 12,
+      "v14": 0.70221,
+      "candidateGeometry": 0.7372,
+      "delta": 0.034989999999999966
+    },
+    {
+      "document": "maiz",
+      "page": 13,
+      "v14": 0.70707,
+      "candidateGeometry": 0.74255,
+      "delta": 0.03548000000000007
+    },
+    {
+      "document": "maiz",
+      "page": 14,
+      "v14": 0.80943,
+      "candidateGeometry": 0.83124,
+      "delta": 0.021809999999999996
+    },
+    {
+      "document": "maiz",
+      "page": 15,
+      "v14": 0.7981359342997397,
+      "candidateGeometry": 0.8250363950806852,
+      "delta": 0.026900460780945434
+    },
+    {
+      "document": "sd7",
+      "page": 1,
+      "v14": 0.95795,
+      "candidateGeometry": 0.9605,
+      "delta": 0.0025500000000000522
+    },
+    {
+      "document": "sd7",
+      "page": 2,
+      "v14": 1.0,
+      "candidateGeometry": 1.0,
+      "delta": 0.0
+    },
+    {
+      "document": "sd7",
+      "page": 3,
+      "v14": 0.96477,
+      "candidateGeometry": 0.96672,
+      "delta": 0.0019500000000000073
+    },
+    {
+      "document": "sd7",
+      "page": 4,
+      "v14": 0.99176,
+      "candidateGeometry": 0.9919,
+      "delta": 0.000140000000000029
+    },
+    {
+      "document": "sd7",
+      "page": 40,
+      "v14": 0.92512,
+      "candidateGeometry": 0.9276,
+      "delta": 0.0024799999999999267
+    },
+    {
+      "document": "sd7",
+      "page": 41,
+      "v14": 0.93348,
+      "candidateGeometry": 0.93473,
+      "delta": 0.0012499999999999734
+    },
+    {
+      "document": "sd7",
+      "page": 42,
+      "v14": 0.92532,
+      "candidateGeometry": 0.92691,
+      "delta": 0.0015899999999999803
+    },
+    {
+      "document": "sd7",
+      "page": 67,
+      "v14": 0.96539,
+      "candidateGeometry": 0.96736,
+      "delta": 0.0019700000000000273
+    },
+    {
+      "document": "sd7",
+      "page": 77,
+      "v14": 0.98928,
+      "candidateGeometry": 0.98928,
+      "delta": 0.0
+    }
+  ],
+  "note": "Most 190213/Maiz/SD7 values are reconstructed from prior console output rounded to 5 decimals; exact Seguro/190604/Maiz15 values retained."
+}

@@ -1,0 +1,47 @@
+{
+  "version": "v18-candidato",
+  "date": "2026-07-26",
+  "stableReference": {
+    "version": "v11",
+    "strictSSIM144dpi": 0.7854564260168981
+  },
+  "geometryProxy": {
+    "pages": 40,
+    "meanV14": 0.7938975560193797,
+    "meanCandidate": 0.8181128683462315,
+    "meanDelta": 0.02421531232685188,
+    "improved": 38,
+    "tied": 2,
+    "regressed": 0
+  },
+  "wordAnchorProxy": {
+    "ocrPages": 40,
+    "lines": 1503,
+    "anchoredLines": 715,
+    "anchoredWords": 7971,
+    "meanMaeV14": 1.4639574284200458,
+    "meanMaeV15": 0.5095786333619604,
+    "meanRelativeReduction": 0.6519170411178449,
+    "improvedLines": 715,
+    "regressedLines": 0
+  },
+  "baselineProxy": {
+    "lines": 1152,
+    "meanSignedRobust": -2.022687462238875,
+    "medianSignedRobust": -2.25,
+    "meanAbsRobust": 2.556515703260441,
+    "meanAbsUnion": 4.3672349020056105
+  },
+  "features": [
+    "adaptive-word-anchors",
+    "robust-ocr-baseline",
+    "actual-render-calibration",
+    "visual-font-family-gate",
+    "per-line-baseline-feedback",
+    "precise-ocr-third-pass",
+    "hybrid-native-raster-ocr",
+    "ocr-only-raster-masking"
+  ],
+  "officialPromotionGatePassed": false,
+  "officialPromotionGateNote": "El runtime Node docx no está instalado en este entorno; v11 sigue siendo la referencia estable."
+}

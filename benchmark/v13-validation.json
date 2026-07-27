@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-07-26",
+  "version": "v13-candidate",
+  "stableBaseline": {
+    "version": "v11",
+    "strictSsim144dpi": 0.7854564260168981,
+    "pages": 41,
+    "regressionsFromV10": 0
+  },
+  "strictGate": {
+    "status": "pending-docx-runtime-dependency",
+    "reason": "The current environment does not contain the npm docx package required to generate the complete DOCX bank. v11 remains the last strict-SSIM stable release.",
+    "claimMade": false
+  },
+  "changes": [
+    "OCR Word output no longer emits unspaced per-word Word runs that can collapse spaces.",
+    "OCR line-level visual feedback for color/bold/italic is no longer overwritten by default per-word run styles.",
+    "Dense OCR raster cleanup now uses connected-component classification instead of a blind rectangular erase path.",
+    "Low-confidence size outliers are preserved as raster graphics when they are likely logos, stamps, signatures, or graphical fragments.",
+    "Protected raster lines are excluded from editable OCR text and calibration when a graphics layer is present.",
+    "Headless benchmark OCR now carries word-level styledRuns to mirror runtime input more faithfully.",
+    "Vertical table-rule detection is tightened so narrow I/l-like glyph strokes are erased instead of being mistaken for borders, while full-height table borders remain protected."
+  ],
+  "automatedTests": {
+    "pdfWordEngine": "ok",
+    "convertExportCore": "ok",
+    "adaptiveOcr": "ok",
+    "layoutRefreshV3": "ok",
+    "ocrOriginalReadableLayout": "ok",
+    "ocrOriginalVisualLayout": "ok",
+    "drawingMlVerification": "ok",
+    "syntax": "ok"
+  },
+  "representativeRasterProxy": {
+    "pages": 7,
+    "description": "Residual raster-ink proxy inside non-protected OCR line regions after removing long structural lines. This is not SSIM.",
+    "allSampledPagesImproved": true,
+    "meanRelativeReduction": 0.6952404403,
+    "medianRelativeReduction": 0.8973308504,
+    "samples": [
+      {
+        "page": "190604 p1",
+        "protectedLines": 1,
+        "v12": 0.0066327188869410815,
+        "v13": 0.0003758740481348205,
+        "relativeReduction": 0.9433303213144062
+      },
+      {
+        "page": "190213 p1",
+        "protectedLines": 5,
+        "v12": 0.020149440450332953,
+        "v13": 0.01483282502965451,
+        "relativeReduction": 0.2638592090824333
+      },
+      {
+        "page": "190213 p2",
+        "protectedLines": 4,
+        "v12": 0.3783589814042696,
+        "v13": 0.3623698716425441,
+        "relativeReduction": 0.042259099288147854
+      },
+      {
+        "page": "190213 p13",
+        "protectedLines": 1,
+        "v12": 0.007912288263619388,
+        "v13": 0.00015820499887030028,
+        "relativeReduction": 0.9800051522897965
+      },
+      {
+        "page": "Maiz p1",
+        "protectedLines": 0,
+        "v12": 0.014992332108910442,
+        "v13": 0.00262267799305688,
+        "relativeReduction": 0.8250653751527999
+      },
+      {
+        "page": "Maiz p2",
+        "protectedLines": 0,
+        "v12": 0.011385575053854598,
+        "v13": 0.0011689473084466483,
+        "relativeReduction": 0.897330850403476
+      },
+      {
+        "page": "Maiz p15",
+        "protectedLines": 0,
+        "v12": 0.007951162152558906,
+        "v13": 0.0006771760353923897,
+        "relativeReduction": 0.914833074411084
+      }
+    ]
+  },
+  "rules": {
+    "documentSpecificRulesAdded": false,
+    "pageSpecificRulesAdded": false
+  }
+}

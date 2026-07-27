@@ -1,0 +1,66 @@
+{
+  "metric": "weighted L1 ink-color evidence proxy; not DOCX SSIM",
+  "documents": [
+    {
+      "document": "190213",
+      "ocrPages": 13,
+      "ocrLines": 845,
+      "linesWithVisualInkEvidence": 841,
+      "blackInkProxyError": 120.87213236125201,
+      "robustColorProxyError": 50.223287372984224,
+      "relativeProxyGain": 0.5844924186256493
+    },
+    {
+      "document": "190604",
+      "ocrPages": 1,
+      "ocrLines": 108,
+      "linesWithVisualInkEvidence": 108,
+      "blackInkProxyError": 115.5109342849882,
+      "robustColorProxyError": 52.3194394991016,
+      "relativeProxyGain": 0.5470607192041296
+    },
+    {
+      "document": "maiz",
+      "ocrPages": 15,
+      "ocrLines": 540,
+      "linesWithVisualInkEvidence": 540,
+      "blackInkProxyError": 106.73784289584229,
+      "robustColorProxyError": 55.72514427666329,
+      "relativeProxyGain": 0.47792514102949024
+    },
+    {
+      "document": "sd7-low-native-text",
+      "ocrPages": 9,
+      "ocrLines": 142,
+      "linesWithVisualInkEvidence": 140,
+      "blackInkProxyError": 86.85310569994691,
+      "robustColorProxyError": 43.22599210018553,
+      "relativeProxyGain": 0.5023091949121636
+    },
+    {
+      "document": "seguro-pages-2-3",
+      "ocrPages": 2,
+      "ocrLines": 55,
+      "linesWithVisualInkEvidence": 49,
+      "blackInkProxyError": 95.72897648781614,
+      "robustColorProxyError": 48.268763488033095,
+      "relativeProxyGain": 0.49577687698168926
+    },
+    {
+      "document": "sga-control",
+      "ocrPages": 0,
+      "ocrLines": 0,
+      "linesWithVisualInkEvidence": 0,
+      "blackInkProxyError": null,
+      "robustColorProxyError": null,
+      "relativeProxyGain": null
+    }
+  ],
+  "aggregate": {
+    "ocrLines": 1690,
+    "linesWithVisualInkEvidence": 1678,
+    "blackInkProxyError": 112.68390827245153,
+    "robustColorProxyError": 52.30597784225941,
+    "relativeProxyGain": 0.5358167936828035
+  }
+}

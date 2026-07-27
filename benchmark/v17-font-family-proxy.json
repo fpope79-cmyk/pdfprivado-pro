@@ -1,0 +1,4444 @@
+{
+  "summary": {
+    "lines": 250,
+    "bestFamilies": {
+      "Cambria": 14,
+      "Arial": 75,
+      "Times New Roman": 90,
+      "Courier New": 67,
+      "Calibri": 4
+    },
+    "strongNonArial": 10,
+    "strongFamilies": {
+      "Cambria": 1,
+      "Times New Roman": 6,
+      "Calibri": 1,
+      "Courier New": 2
+    },
+    "meanGainStrong": 0.055703006206290054,
+    "examples": [
+      {
+        "doc": "190213",
+        "page": 3,
+        "line": 35,
+        "text": "Datos Técnicos necesarios para [a instalacion",
+        "arial": 66.81730126920506,
+        "bestFamily": "Times New Roman",
+        "best": 60.84903518728717,
+        "relativeGain": 0.08932216609395686,
+        "errors": {
+          "Arial": 66.81730126920506,
+          "Times New Roman": 60.84903518728717,
+          "Courier New": 69.12147161433555,
+          "Calibri": 62.35021097046413,
+          "Cambria": 64.46269216347957
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 2,
+        "line": 53,
+        "text": "[Comercializadora",
+        "arial": 75.36778262979136,
+        "bestFamily": "Courier New",
+        "best": 69.87111801242236,
+        "relativeGain": 0.07293122373479893,
+        "errors": {
+          "Arial": 75.36778262979136,
+          "Times New Roman": 71.4027572624323,
+          "Courier New": 69.87111801242236,
+          "Calibri": 73.37223122636412,
+          "Cambria": 75.06813725490196
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 6,
+        "line": 1,
+        "text": "CONTRATO DE ARRENDAMIENTO Y PRESTACION DE SERVICIOS DE ASISTENCIA TECNICA",
+        "arial": 95.02529691211402,
+        "bestFamily": "Times New Roman",
+        "best": 89.30184633710542,
+        "relativeGain": 0.06023080970009536,
+        "errors": {
+          "Arial": 95.02529691211402,
+          "Times New Roman": 89.30184633710542,
+          "Courier New": 95.44344667943805,
+          "Calibri": 92.96270734955806,
+          "Cambria": 91.28374556896483
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 2,
+        "line": 32,
+        "text": "[ALIAS del suministro",
+        "arial": 68.7356862745098,
+        "bestFamily": "Calibri",
+        "best": 64.83288888888889,
+        "relativeGain": 0.056779783503350896,
+        "errors": {
+          "Arial": 68.7356862745098,
+          "Times New Roman": 64.8522906793049,
+          "Courier New": 72.26508620689656,
+          "Calibri": 64.83288888888889,
+          "Cambria": 68.16750841750842
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 3,
+        "line": 33,
+        "text": "[Contacto Instalac.",
+        "arial": 76.68872549019609,
+        "bestFamily": "Courier New",
+        "best": 72.82750970604548,
+        "relativeGain": 0.05034919747941612,
+        "errors": {
+          "Arial": 76.68872549019609,
+          "Times New Roman": 74.81538461538462,
+          "Courier New": 72.82750970604548,
+          "Calibri": 74.78305785123968,
+          "Cambria": 77.2795698924731
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 2,
+        "line": 57,
+        "text": "Tipo Contador instalar",
+        "arial": 69.91217150760718,
+        "bestFamily": "Times New Roman",
+        "best": 66.53141167775314,
+        "relativeGain": 0.04835724247938973,
+        "errors": {
+          "Arial": 69.91217150760718,
+          "Times New Roman": 66.53141167775314,
+          "Courier New": 71.26977950713359,
+          "Calibri": 67.04405652535328,
+          "Cambria": 71.91320204230487
+        }
+      },
+      {
+        "doc": "190604",
+        "page": 1,
+        "line": 107,
+        "text": "FIRMA ARRENDADOR-DISTRIBUIDOR",
+        "arial": 137.05505729945193,
+        "bestFamily": "Times New Roman",
+        "best": 130.60242424242423,
+        "relativeGain": 0.04708059070691075,
+        "errors": {
+          "Arial": 137.05505729945193,
+          "Times New Roman": 130.60242424242423,
+          "Courier New": 134.23030607124937,
+          "Calibri": 137.39789094650206,
+          "Cambria": 133.2662448284254
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 4,
+        "line": 24,
+        "text": "MANZANARES",
+        "arial": 136.6940527283875,
+        "bestFamily": "Times New Roman",
+        "best": 130.4497843499692,
+        "relativeGain": 0.04568061487521863,
+        "errors": {
+          "Arial": 136.6940527283875,
+          "Times New Roman": 130.4497843499692,
+          "Courier New": 134.19106699751862,
+          "Calibri": 134.36960600375235,
+          "Cambria": 131.93424317617865
+        }
+      },
+      {
+        "doc": "190213",
+        "page": 3,
+        "line": 6,
+        "text": "Teléfono",
+        "arial": 91.18206157965191,
+        "bestFamily": "Times New Roman",
+        "best": 87.19642058165549,
+        "relativeGain": 0.04371080154307301,
+        "errors": {
+          "Arial": 91.18206157965191,
+          "Times New Roman": 87.19642058165549,
+          "Courier New": 89.35479452054794,
+          "Calibri": 92.15056818181819,
+          "Cambria": 92.89015151515152
+        }
+      },
+      {
+        "doc": "190604",
+        "page": 1,
+        "line": 1,
+        "text": "CONTRATO DE ARRENDAMIENTO Y PRESTACION DE SERVICIOS DE ASISTENCIA TECNICA",
+        "arial": 108.17683548229871,
+        "bestFamily": "Cambria",
+        "best": 103.56984022762092,
+        "relativeGain": 0.042587631946690234,
+        "errors": {
+          "Arial": 108.17683548229871,
+          "Times New Roman": 103.82184438293571,
+          "Courier New": 107.24315360136256,
+          "Calibri": 105.53070647301418,
+          "Cambria": 103.56984022762092
+        }
+      }
+    ]
+  },
+  "lines": [
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 1,
+      "text": "CONTRATO DE ARRENDAMIENTO Y PRESTACION DE SERVICIOS DE ASISTENCIA TECNICA",
+      "arial": 108.17683548229871,
+      "bestFamily": "Cambria",
+      "best": 103.56984022762092,
+      "relativeGain": 0.042587631946690234,
+      "errors": {
+        "Arial": 108.17683548229871,
+        "Times New Roman": 103.82184438293571,
+        "Courier New": 107.24315360136256,
+        "Calibri": 105.53070647301418,
+        "Cambria": 103.56984022762092
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 2,
+      "text": "AXON TIME, S.L",
+      "arial": 119.11353095382132,
+      "bestFamily": "Cambria",
+      "best": 116.6519726247987,
+      "relativeGain": 0.020665648220746097,
+      "errors": {
+        "Arial": 119.11353095382132,
+        "Times New Roman": 118.43598961453964,
+        "Courier New": 119.61195542046605,
+        "Calibri": 119.53688943388514,
+        "Cambria": 116.6519726247987
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 3,
+      "text": "LA JARRINA DE MANZANARES, S.L",
+      "arial": 128.8531923546157,
+      "bestFamily": "Arial",
+      "best": 128.8531923546157,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 128.8531923546157,
+        "Times New Roman": 131.20946502057612,
+        "Courier New": 132.1804818293181,
+        "Calibri": 132.3097014925373,
+        "Cambria": 130.9067443796836
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 4,
+      "text": "Como ARRENDATARIO",
+      "arial": 129.93991416309012,
+      "bestFamily": "Times New Roman",
+      "best": 129.09595687331537,
+      "relativeGain": 0.006494981124240873,
+      "errors": {
+        "Arial": 129.93991416309012,
+        "Times New Roman": 129.09595687331537,
+        "Courier New": 132.18550567874527,
+        "Calibri": 131.14792899408283,
+        "Cambria": 130.98018211033744
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 5,
+      "text": "Como ARRENDADOR-DISTRIBUIDOR",
+      "arial": 118.26468854391825,
+      "bestFamily": "Arial",
+      "best": 118.26468854391825,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 118.26468854391825,
+        "Times New Roman": 122.68341307814993,
+        "Courier New": 122.78134858044164,
+        "Calibri": 128.49487074271644,
+        "Cambria": 126.73253338494291
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 6,
+      "text": "con sede en Alicante",
+      "arial": 114.06434782608696,
+      "bestFamily": "Courier New",
+      "best": 112.42807017543859,
+      "relativeGain": 0.01434521550189536,
+      "errors": {
+        "Arial": 114.06434782608696,
+        "Times New Roman": 115.82347749338041,
+        "Courier New": 112.42807017543859,
+        "Calibri": 118.18327402135232,
+        "Cambria": 115.07068062827226
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 7,
+      "text": "con sede en Manzanares",
+      "arial": 105.46917080085046,
+      "bestFamily": "Arial",
+      "best": 105.46917080085046,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 105.46917080085046,
+        "Times New Roman": 107.45539568345323,
+        "Courier New": 106.34189864382584,
+        "Calibri": 109.45163636363637,
+        "Cambria": 107.34099066762383
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 8,
+      "text": "con un capital social escriturado de 68.754 €",
+      "arial": 110.98245614035088,
+      "bestFamily": "Courier New",
+      "best": 110.92472324723248,
+      "relativeGain": 0.0005201983730238243,
+      "errors": {
+        "Arial": 110.98245614035088,
+        "Times New Roman": 111.97398190045249,
+        "Courier New": 110.92472324723248,
+        "Calibri": 113.847875569044,
+        "Cambria": 113.6412674462467
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 9,
+      "text": "con un capital social escriturado de Capital",
+      "arial": 106.65578747628084,
+      "bestFamily": "Times New Roman",
+      "best": 104.81448717948716,
+      "relativeGain": 0.017263951074414623,
+      "errors": {
+        "Arial": 106.65578747628084,
+        "Times New Roman": 104.81448717948716,
+        "Courier New": 105.34391534391536,
+        "Calibri": 106.54282407407408,
+        "Cambria": 107.81062355658199
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 10,
+      "text": "inscrito en el registro mercantil de Barcelona",
+      "arial": 110.45297864368678,
+      "bestFamily": "Courier New",
+      "best": 110.41503267973856,
+      "relativeGain": 0.00034354857980452215,
+      "errors": {
+        "Arial": 110.45297864368678,
+        "Times New Roman": 112.15620272314675,
+        "Courier New": 110.41503267973856,
+        "Calibri": 112.88573590616724,
+        "Cambria": 113.03092006033182
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 11,
+      "text": "inscrito en el registro mercantil de Registro",
+      "arial": 107.1676451402479,
+      "bestFamily": "Times New Roman",
+      "best": 107.04240748057421,
+      "relativeGain": 0.0011686144592408547,
+      "errors": {
+        "Arial": 107.1676451402479,
+        "Times New Roman": 107.04240748057421,
+        "Courier New": 107.68561033747335,
+        "Calibri": 109.05332804022761,
+        "Cambria": 108.65523584285901
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 12,
+      "text": "C.LF. B65217531",
+      "arial": 115.41220657276995,
+      "bestFamily": "Cambria",
+      "best": 113.33398628795298,
+      "relativeGain": 0.018006936584360346,
+      "errors": {
+        "Arial": 115.41220657276995,
+        "Times New Roman": 114.50145208131656,
+        "Courier New": 117.48656429942419,
+        "Calibri": 115.26057030481809,
+        "Cambria": 113.33398628795298
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 14,
+      "text": "representado por Matilde Albert Brotons",
+      "arial": 120.70185395384033,
+      "bestFamily": "Times New Roman",
+      "best": 118.44161278052492,
+      "relativeGain": 0.0187258198550934,
+      "errors": {
+        "Arial": 120.70185395384033,
+        "Times New Roman": 118.44161278052492,
+        "Courier New": 120.15158204562178,
+        "Calibri": 122.54061406917995,
+        "Cambria": 120.74885844748859
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 15,
+      "text": "representado por Francisco Javier Camacho Lopez de Pablo",
+      "arial": 125.0694087403599,
+      "bestFamily": "Times New Roman",
+      "best": 123.4113577399827,
+      "relativeGain": 0.013257046763683515,
+      "errors": {
+        "Arial": 125.0694087403599,
+        "Times New Roman": 123.4113577399827,
+        "Courier New": 125.61,
+        "Calibri": 126.45666962437149,
+        "Cambria": 123.70967741935483
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 17,
+      "text": "con D.N.|. 06259784N _ en calidad de TITULAR",
+      "arial": 108.75819810682894,
+      "bestFamily": "Times New Roman",
+      "best": 107.8285984848485,
+      "relativeGain": 0.008547398156296541,
+      "errors": {
+        "Arial": 108.75819810682894,
+        "Times New Roman": 107.8285984848485,
+        "Courier New": 108.69487769538907,
+        "Calibri": 110.11079124138534,
+        "Cambria": 108.79377870201888
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 18,
+      "text": "Concluyen este contrato de arrendamiento y prestacién de servicios de asistencia técnica (en adelant",
+      "arial": 107.75294638188326,
+      "bestFamily": "Arial",
+      "best": 107.75294638188326,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 107.75294638188326,
+        "Times New Roman": 108.33747613825595,
+        "Courier New": 108.92895719164483,
+        "Calibri": 110.09418681137971,
+        "Cambria": 108.59158395868636
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 20,
+      "text": "Primera (OBJETO):",
+      "arial": 125.05014925373135,
+      "bestFamily": "Arial",
+      "best": 125.05014925373135,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 125.05014925373135,
+        "Times New Roman": 125.8783865141481,
+        "Courier New": 125.58628983764281,
+        "Calibri": 125.7059891107078,
+        "Cambria": 127.02245145631068
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 21,
+      "text": "recepci6n de la solicitud de asistencia, con la excepcién de que se",
+      "arial": 107.55494896748161,
+      "bestFamily": "Arial",
+      "best": 107.55494896748161,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 107.55494896748161,
+        "Times New Roman": 108.82596222806598,
+        "Courier New": 107.77200643530223,
+        "Calibri": 110.73769305019304,
+        "Cambria": 109.19661985241609
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 22,
+      "text": "El objeto del CONTRATO es el arrendamiento de equipos y accesorios",
+      "arial": 116.50204081632653,
+      "bestFamily": "Arial",
+      "best": 116.50204081632653,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.50204081632653,
+        "Times New Roman": 118.15782286383144,
+        "Courier New": 117.62302047122441,
+        "Calibri": 119.51060035664752,
+        "Cambria": 118.80592939340745
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 23,
+      "text": "diese un evento de fuerza mayor que impidiese el cumplimiento para",
+      "arial": 113.18967527060782,
+      "bestFamily": "Arial",
+      "best": 113.18967527060782,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 113.18967527060782,
+        "Times New Roman": 113.79685408299866,
+        "Courier New": 114.31575456053068,
+        "Calibri": 114.87512673200405,
+        "Cambria": 114.1085323092336
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 24,
+      "text": "identificados en la propuesta presentada por el ARRENDADOR-",
+      "arial": 119.77051338306275,
+      "bestFamily": "Courier New",
+      "best": 119.45365005793742,
+      "relativeGain": 0.0026455870996553183,
+      "errors": {
+        "Arial": 119.77051338306275,
+        "Times New Roman": 120.22630959387875,
+        "Courier New": 119.45365005793742,
+        "Calibri": 121.20950259836674,
+        "Cambria": 119.64304655274013
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 25,
+      "text": "con sus obligaciones. En estos casos, el periodo maximo de 10",
+      "arial": 116.00771084337349,
+      "bestFamily": "Courier New",
+      "best": 115.45191543474806,
+      "relativeGain": 0.004791021256990662,
+      "errors": {
+        "Arial": 116.00771084337349,
+        "Times New Roman": 116.27670611120116,
+        "Courier New": 115.45191543474806,
+        "Calibri": 117.1897001303781,
+        "Cambria": 116.52911679068262
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 26,
+      "text": "DISTRIBUIDOR al ARRENDATARIO, asi como la prestacién de",
+      "arial": 118.81787802840435,
+      "bestFamily": "Arial",
+      "best": 118.81787802840435,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 118.81787802840435,
+        "Times New Roman": 119.64914343298622,
+        "Courier New": 119.14416819622893,
+        "Calibri": 120.57213170400543,
+        "Cambria": 120.17914213624894
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 27,
+      "text": "horas se computa desde el momento en que la causa de fuerza",
+      "arial": 115.41222332342255,
+      "bestFamily": "Arial",
+      "best": 115.41222332342255,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.41222332342255,
+        "Times New Roman": 116.41633386581469,
+        "Courier New": 116.75345363209732,
+        "Calibri": 117.56822316555488,
+        "Cambria": 116.60501193317423
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 28,
+      "text": "servicios de asistencia técnica de los equipos y accesorios.",
+      "arial": 108.57229678399595,
+      "bestFamily": "Arial",
+      "best": 108.57229678399595,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 108.57229678399595,
+        "Times New Roman": 109.94810838445808,
+        "Courier New": 110.23080782739589,
+        "Calibri": 111.3516511867905,
+        "Cambria": 110.65328930657861
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 29,
+      "text": "mayor finalice.",
+      "arial": 111.97171556965372,
+      "bestFamily": "Courier New",
+      "best": 111.00184016824396,
+      "relativeGain": 0.008661789242716747,
+      "errors": {
+        "Arial": 111.97171556965372,
+        "Times New Roman": 111.82974767596282,
+        "Courier New": 111.00184016824396,
+        "Calibri": 114.64179507975129,
+        "Cambria": 112.7451290152712
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 30,
+      "text": "* La solicitud de asistencia debe ser remitida a la direccion de correo",
+      "arial": 108.13904893600677,
+      "bestFamily": "Arial",
+      "best": 108.13904893600677,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 108.13904893600677,
+        "Times New Roman": 109.51126596980255,
+        "Courier New": 108.4952122445902,
+        "Calibri": 111.14049457836026,
+        "Cambria": 110.01409869083585
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 32,
+      "text": "electrénico siguiente: atencion.cliente@axontime.com",
+      "arial": 119.49915231063711,
+      "bestFamily": "Courier New",
+      "best": 116.58032480429955,
+      "relativeGain": 0.024425508046702245,
+      "errors": {
+        "Arial": 119.49915231063711,
+        "Times New Roman": 118.1008856824447,
+        "Courier New": 116.58032480429955,
+        "Calibri": 120.47708592040682,
+        "Cambria": 119.25261999884198
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 33,
+      "text": "EI periodo inicial, de cumplimiento minimo obligatorio, empezaré a",
+      "arial": 116.84668277271882,
+      "bestFamily": "Times New Roman",
+      "best": 115.78711952487008,
+      "relativeGain": 0.009067978848057878,
+      "errors": {
+        "Arial": 116.84668277271882,
+        "Times New Roman": 115.78711952487008,
+        "Courier New": 115.8677609738104,
+        "Calibri": 117.80893536121673,
+        "Cambria": 118.66542125910705
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 34,
+      "text": "* Proporcionar, sin gastos adicionales para el ARRENDATARIO, los",
+      "arial": 115.50385076159507,
+      "bestFamily": "Cambria",
+      "best": 115.05764584052469,
+      "relativeGain": 0.003863117273824712,
+      "errors": {
+        "Arial": 115.50385076159507,
+        "Times New Roman": 116.17571059431525,
+        "Courier New": 116.07744796997612,
+        "Calibri": 116.68511083958806,
+        "Cambria": 115.05764584052469
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 35,
+      "text": "contar el primer dia del mes o trimestre natural siguiente a la fecha de",
+      "arial": 113.62969031623791,
+      "bestFamily": "Arial",
+      "best": 113.62969031623791,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 113.62969031623791,
+        "Times New Roman": 114.45608274503365,
+        "Courier New": 113.74707981829981,
+        "Calibri": 115.45454545454545,
+        "Cambria": 114.90160183066362
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 36,
+      "text": "recursos necesarios para la instalacién de los equipos.",
+      "arial": 112.49452554744525,
+      "bestFamily": "Arial",
+      "best": 112.49452554744525,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 112.49452554744525,
+        "Times New Roman": 113.46455862977602,
+        "Courier New": 112.86396120469627,
+        "Calibri": 115.09356725146199,
+        "Cambria": 114.03572366692934
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 37,
+      "text": "entrega de los bienes arrendados, segtin sea el modo de pago acordado.",
+      "arial": 116.49592532226997,
+      "bestFamily": "Arial",
+      "best": 116.49592532226997,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.49592532226997,
+        "Times New Roman": 117.471081810009,
+        "Courier New": 117.64910727460529,
+        "Calibri": 118.65126811594203,
+        "Cambria": 117.69168660287082
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 38,
+      "text": "Entre la fecha de entrega del bien y la de inicio del contrato, el",
+      "arial": 116.45818557919621,
+      "bestFamily": "Arial",
+      "best": 116.45818557919621,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.45818557919621,
+        "Times New Roman": 117.22109654350417,
+        "Courier New": 116.49175302875493,
+        "Calibri": 118.0525921486365,
+        "Cambria": 116.76460098082924
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 39,
+      "text": "Cuarta (OBLIGACIONES DEL ARRENDATARIO):",
+      "arial": 126.31007751937985,
+      "bestFamily": "Cambria",
+      "best": 123.23049132947978,
+      "relativeGain": 0.024381159843936972,
+      "errors": {
+        "Arial": 126.31007751937985,
+        "Times New Roman": 123.4951992318771,
+        "Courier New": 125.17560740918933,
+        "Calibri": 125.3259587020649,
+        "Cambria": 123.23049132947978
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 40,
+      "text": "ARRENDATARIO deberd abonar diariamente 1/30 de la renta acordada",
+      "arial": 115.77255813953488,
+      "bestFamily": "Arial",
+      "best": 115.77255813953488,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.77255813953488,
+        "Times New Roman": 117.01251564455569,
+        "Courier New": 116.54525728456292,
+        "Calibri": 118.07811023622047,
+        "Cambria": 116.89669163545568
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 41,
+      "text": "Las obligaciones del ARRENDATARIO son, entre otras, las que se",
+      "arial": 121.08205128205128,
+      "bestFamily": "Courier New",
+      "best": 120.87509382975529,
+      "relativeGain": 0.0017092331200592563,
+      "errors": {
+        "Arial": 121.08205128205128,
+        "Times New Roman": 121.86023294509151,
+        "Courier New": 120.87509382975529,
+        "Calibri": 122.60737792744528,
+        "Cambria": 121.81957047791893
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 42,
+      "text": "hasta el inicio del CONTRATO. A Ia finalizacién del periodo inicial del",
+      "arial": 114.56153232242617,
+      "bestFamily": "Courier New",
+      "best": 113.66483084185681,
+      "relativeGain": 0.0078272476143707,
+      "errors": {
+        "Arial": 114.56153232242617,
+        "Times New Roman": 114.8408111128852,
+        "Courier New": 113.66483084185681,
+        "Calibri": 116.15972109615697,
+        "Cambria": 115.21228603423452
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 43,
+      "text": "derivan de su condicién legal como ARRENDATARIO contenidas en los",
+      "arial": 115.20810220205077,
+      "bestFamily": "Arial",
+      "best": 115.20810220205077,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.20810220205077,
+        "Times New Roman": 115.99121769971289,
+        "Courier New": 116.022693141999,
+        "Calibri": 117.18136920980926,
+        "Cambria": 116.33119079837618
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 45,
+      "text": "apartados siguientes:",
+      "arial": 116.77030393622321,
+      "bestFamily": "Times New Roman",
+      "best": 115.96138415245737,
+      "relativeGain": 0.006927444362974809,
+      "errors": {
+        "Arial": 116.77030393622321,
+        "Times New Roman": 115.96138415245737,
+        "Courier New": 117.47529069767442,
+        "Calibri": 118.74413863404689,
+        "Cambria": 117.70424671385237
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 46,
+      "text": "natural, a menos que una de las partes manifieste su voluntad de",
+      "arial": 115.14180046906007,
+      "bestFamily": "Courier New",
+      "best": 115.07420684710522,
+      "relativeGain": 0.0005870467691098791,
+      "errors": {
+        "Arial": 115.14180046906007,
+        "Times New Roman": 116.12202218585197,
+        "Courier New": 115.07420684710522,
+        "Calibri": 117.50925756186984,
+        "Cambria": 116.12039891205802
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 47,
+      "text": "* Pagar las cantidades establecidas en la siguiente clausula en la",
+      "arial": 112.8500860162202,
+      "bestFamily": "Arial",
+      "best": 112.8500860162202,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 112.8500860162202,
+        "Times New Roman": 114.29229253878356,
+        "Courier New": 112.96064531899292,
+        "Calibri": 115.62298792756539,
+        "Cambria": 113.64435663126697
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 48,
+      "text": "resolverlo con una antelacién minima de 30 dias naturales. El",
+      "arial": 115.14305923961096,
+      "bestFamily": "Courier New",
+      "best": 114.59042927515834,
+      "relativeGain": 0.004799507396295645,
+      "errors": {
+        "Arial": 115.14305923961096,
+        "Times New Roman": 116.0871339840284,
+        "Courier New": 114.59042927515834,
+        "Calibri": 117.09471050750535,
+        "Cambria": 116.4241622574956
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 50,
+      "text": "ARRENDATARIO no podra resolver unilateralmente el CONTRATO",
+      "arial": 118.35593220338983,
+      "bestFamily": "Times New Roman",
+      "best": 117.72037389100127,
+      "relativeGain": 0.005369889793917324,
+      "errors": {
+        "Arial": 118.35593220338983,
+        "Times New Roman": 117.72037389100127,
+        "Courier New": 118.26953003423591,
+        "Calibri": 119.00763237398633,
+        "Cambria": 119.30534835740359
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 51,
+      "text": "* Mantener en buen estado, y en el mismo lugar en el que fue",
+      "arial": 110.79309566787003,
+      "bestFamily": "Arial",
+      "best": 110.79309566787003,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 110.79309566787003,
+        "Times New Roman": 111.8574988672406,
+        "Courier New": 112.1514266456976,
+        "Calibri": 113.21353211009175,
+        "Cambria": 111.88544961590601
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 52,
+      "text": "hasta, como minimo, el final de la duracién del arrendamiento",
+      "arial": 114.94471319972357,
+      "bestFamily": "Arial",
+      "best": 114.94471319972357,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 114.94471319972357,
+        "Times New Roman": 115.9358372456964,
+        "Courier New": 115.81584840654608,
+        "Calibri": 116.57959326788219,
+        "Cambria": 116.17437229437229
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 53,
+      "text": "instalado, el equipo arrendado por el CONTRATO, siendo",
+      "arial": 115.56564438318401,
+      "bestFamily": "Arial",
+      "best": 115.56564438318401,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.56564438318401,
+        "Times New Roman": 116.4288431609891,
+        "Courier New": 115.60143934201508,
+        "Calibri": 117.33135267389025,
+        "Cambria": 116.31165686613629
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 54,
+      "text": "inicialmente convenida. La resolucién deberé realizarse por escrito. Tras",
+      "arial": 114.09766418415707,
+      "bestFamily": "Times New Roman",
+      "best": 113.91059264305177,
+      "relativeGain": 0.001639573802346715,
+      "errors": {
+        "Arial": 114.09766418415707,
+        "Times New Roman": 113.91059264305177,
+        "Courier New": 114.86799124431722,
+        "Calibri": 115.60999138673557,
+        "Cambria": 114.61920923129136
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 55,
+      "text": "responsable de cualquier daiio 0 defecto que pueda surgir por una",
+      "arial": 115.51651019747491,
+      "bestFamily": "Arial",
+      "best": 115.51651019747491,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.51651019747491,
+        "Times New Roman": 116.86731020942409,
+        "Courier New": 116.74246089340429,
+        "Calibri": 117.63309708257788,
+        "Cambria": 116.88063099691007
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 56,
+      "text": "la_finalizacién del CONTRATO 0 cualquiera de sus prérrogas el",
+      "arial": 114.92197556810719,
+      "bestFamily": "Arial",
+      "best": 114.92197556810719,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 114.92197556810719,
+        "Times New Roman": 115.87574042385152,
+        "Courier New": 115.22688087774294,
+        "Calibri": 116.645850013344,
+        "Cambria": 116.03801131132448
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 57,
+      "text": "manipulacién 0 uso defectuoso 0 por un desplazamiento, excepto",
+      "arial": 113.91454849498328,
+      "bestFamily": "Arial",
+      "best": 113.91454849498328,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 113.91454849498328,
+        "Times New Roman": 114.59885675857431,
+        "Courier New": 115.3225645295587,
+        "Calibri": 115.68657729509587,
+        "Cambria": 114.75050268096514
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 58,
+      "text": "ARRENDATARIO estaré obligado a devolver los bienes, en los términos",
+      "arial": 117.1030534351145,
+      "bestFamily": "Courier New",
+      "best": 117.03699019917799,
+      "relativeGain": 0.0005641461430646288,
+      "errors": {
+        "Arial": 117.1030534351145,
+        "Times New Roman": 117.9912084398977,
+        "Courier New": 117.03699019917799,
+        "Calibri": 118.4321226795803,
+        "Cambria": 117.73334395919669
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 59,
+      "text": "que el dafio se produzca por el desgaste normal de la utilizacién de",
+      "arial": 112.99963570127504,
+      "bestFamily": "Arial",
+      "best": 112.99963570127504,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 112.99963570127504,
+        "Times New Roman": 113.8842396313364,
+        "Courier New": 113.35458815028902,
+        "Calibri": 115.5969264950935,
+        "Cambria": 114.1949074922147
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 60,
+      "text": "indicados en este CONTRATO.",
+      "arial": 117.63215258855585,
+      "bestFamily": "Arial",
+      "best": 117.63215258855585,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 117.63215258855585,
+        "Times New Roman": 118.32194899817851,
+        "Courier New": 118.34888989578613,
+        "Calibri": 119.567843866171,
+        "Cambria": 119.94160583941606
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 61,
+      "text": "los equipos.",
+      "arial": 114.60456273764258,
+      "bestFamily": "Courier New",
+      "best": 112.69773755656108,
+      "relativeGain": 0.016638300740666696,
+      "errors": {
+        "Arial": 114.60456273764258,
+        "Times New Roman": 112.82999044890163,
+        "Courier New": 112.69773755656108,
+        "Calibri": 113.3764367816092,
+        "Cambria": 113.41468064823641
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 62,
+      "text": "* No permitir intervenciones tecnolégicas en el equipo por parte de",
+      "arial": 116.34718281313336,
+      "bestFamily": "Arial",
+      "best": 116.34718281313336,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.34718281313336,
+        "Times New Roman": 116.99511201629328,
+        "Courier New": 117.10817836432713,
+        "Calibri": 118.71085832471562,
+        "Cambria": 117.53976927747419
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 63,
+      "text": "FECHA DE ENTREGA: Ley",
+      "arial": 126.30849868962935,
+      "bestFamily": "Times New Roman",
+      "best": 123.52398661212347,
+      "relativeGain": 0.022045326374657517,
+      "errors": {
+        "Arial": 126.30849868962935,
+        "Times New Roman": 123.52398661212347,
+        "Courier New": 127.36784224497535,
+        "Calibri": 128.63691838291382,
+        "Cambria": 129.0533480500368
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 64,
+      "text": "terceros no indicados por el ARRENDADOR-DISTRIBUIDOR.",
+      "arial": 116.29297544260423,
+      "bestFamily": "Arial",
+      "best": 116.29297544260423,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.29297544260423,
+        "Times New Roman": 117.14348998459168,
+        "Courier New": 116.66030534351145,
+        "Calibri": 117.66802800466745,
+        "Cambria": 117.39099480469501
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 65,
+      "text": "DURACION: 60 meses",
+      "arial": 114.20647376164787,
+      "bestFamily": "Cambria",
+      "best": 112.23958843704067,
+      "relativeGain": 0.01722218767310993,
+      "errors": {
+        "Arial": 114.20647376164787,
+        "Times New Roman": 112.72897196261682,
+        "Courier New": 112.25513196480938,
+        "Calibri": 112.8390918065153,
+        "Cambria": 112.23958843704067
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 66,
+      "text": "* No permitir la constitucién por parte de terceros de cargas ylo",
+      "arial": 114.09140625,
+      "bestFamily": "Times New Roman",
+      "best": 114.01160275319567,
+      "relativeGain": 0.0006994698323681243,
+      "errors": {
+        "Arial": 114.09140625,
+        "Times New Roman": 114.01160275319567,
+        "Courier New": 114.53855005753739,
+        "Calibri": 116.00754267566495,
+        "Cambria": 114.44301075268817
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 69,
+      "text": "Tercera (OBLIGACIONES DEL ARRENDADOR-DISTRIBUIDOR):",
+      "arial": 128.57161879398896,
+      "bestFamily": "Times New Roman",
+      "best": 123.86793878707728,
+      "relativeGain": 0.03658412370500223,
+      "errors": {
+        "Arial": 128.57161879398896,
+        "Times New Roman": 123.86793878707728,
+        "Courier New": 126.6401833460657,
+        "Calibri": 126.13631956563894,
+        "Cambria": 124.0041769508259
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 70,
+      "text": "cuando sea consciente de que un tercero invoca derechos respecto",
+      "arial": 118.2086876155268,
+      "bestFamily": "Arial",
+      "best": 118.2086876155268,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 118.2086876155268,
+        "Times New Roman": 118.67622259696459,
+        "Courier New": 119.36593467429415,
+        "Calibri": 120.12304503485962,
+        "Cambria": 118.59205372132065
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 71,
+      "text": "Debido a la naturaleza mixta del CONTRATO, las obligaciones del",
+      "arial": 121.65664085765337,
+      "bestFamily": "Arial",
+      "best": 121.65664085765337,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 121.65664085765337,
+        "Times New Roman": 122.20766008378217,
+        "Courier New": 122.01334321719793,
+        "Calibri": 123.07666717072433,
+        "Cambria": 122.1548473967684
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 72,
+      "text": "al equipo arrendado.",
+      "arial": 111.37574950033311,
+      "bestFamily": "Arial",
+      "best": 111.37574950033311,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 111.37574950033311,
+        "Times New Roman": 112.95010114632501,
+        "Courier New": 113.09571619812584,
+        "Calibri": 113.6278118609407,
+        "Cambria": 111.98587760591795
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 73,
+      "text": "ARRENDADOR-DISTRIBUIDOR son, entre otras, las que se derivan de",
+      "arial": 120.66054430888859,
+      "bestFamily": "Arial",
+      "best": 120.66054430888859,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 120.66054430888859,
+        "Times New Roman": 121.76747967479675,
+        "Courier New": 120.78488841086313,
+        "Calibri": 121.85531509459643,
+        "Cambria": 121.82183441558442
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 74,
+      "text": "su condicién legal como distribuidor, arrendador, instalador y prestador",
+      "arial": 117.2698481561822,
+      "bestFamily": "Courier New",
+      "best": 116.829380480092,
+      "relativeGain": 0.003756018132671107,
+      "errors": {
+        "Arial": 117.2698481561822,
+        "Times New Roman": 118.1120198627136,
+        "Courier New": 116.829380480092,
+        "Calibri": 118.71460047003525,
+        "Cambria": 117.84473493100944
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 75,
+      "text": "Quinta (PRECIOS):",
+      "arial": 125.52965355255432,
+      "bestFamily": "Times New Roman",
+      "best": 123.03092182030339,
+      "relativeGain": 0.019905509666724372,
+      "errors": {
+        "Arial": 125.52965355255432,
+        "Times New Roman": 123.03092182030339,
+        "Courier New": 123.55847953216374,
+        "Calibri": 124.64084084084084,
+        "Cambria": 124.20474777448071
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 76,
+      "text": "de servicios de asistencia técnica y mantenimiento, contenidas en los",
+      "arial": 114.11603670866387,
+      "bestFamily": "Courier New",
+      "best": 114.09539023277043,
+      "relativeGain": 0.000180925279995073,
+      "errors": {
+        "Arial": 114.11603670866387,
+        "Times New Roman": 114.57303898543917,
+        "Courier New": 114.09539023277043,
+        "Calibri": 115.52242577384713,
+        "Cambria": 114.60903426791278
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 77,
+      "text": "Tanto para el arrendamiento como para la asistencia técnica, el",
+      "arial": 117.78473164115482,
+      "bestFamily": "Arial",
+      "best": 117.78473164115482,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 117.78473164115482,
+        "Times New Roman": 118.16379984362783,
+        "Courier New": 118.538906009245,
+        "Calibri": 120.02901697591788,
+        "Cambria": 118.69029126213593
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 78,
+      "text": "apartados siguientes:",
+      "arial": 124.7450890817725,
+      "bestFamily": "Cambria",
+      "best": 121.00742115027829,
+      "relativeGain": 0.02996244548788699,
+      "errors": {
+        "Arial": 124.7450890817725,
+        "Times New Roman": 121.3481724461106,
+        "Courier New": 121.98518518518519,
+        "Calibri": 121.8893075836081,
+        "Cambria": 121.00742115027829
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 80,
+      "text": "+ Instalar y poner en funcionamiento el equipo y los accesorios",
+      "arial": 114.97506123357827,
+      "bestFamily": "Arial",
+      "best": 114.97506123357827,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 114.97506123357827,
+        "Times New Roman": 115.92105263157895,
+        "Courier New": 115.25213768910326,
+        "Calibri": 117.45556061987237,
+        "Cambria": 115.80761523046093
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 81,
+      "text": "establecido mensuaimente en concepto de rentas y servicios de",
+      "arial": 117.58492003046459,
+      "bestFamily": "Courier New",
+      "best": 117.39771341463414,
+      "relativeGain": 0.001592097148018174,
+      "errors": {
+        "Arial": 117.58492003046459,
+        "Times New Roman": 117.55623942144945,
+        "Courier New": 117.39771341463414,
+        "Calibri": 118.95295574125657,
+        "Cambria": 117.85843281297826
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 82,
+      "text": "especificados en el Anexo Il, en el lugar indicado por el",
+      "arial": 117.9933090024331,
+      "bestFamily": "Times New Roman",
+      "best": 117.66133333333333,
+      "relativeGain": 0.0028135126636114308,
+      "errors": {
+        "Arial": 117.9933090024331,
+        "Times New Roman": 117.66133333333333,
+        "Courier New": 118.83461694365626,
+        "Calibri": 118.84070796460178,
+        "Cambria": 118.32721712538226
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 83,
+      "text": "ARRENDATARIO.",
+      "arial": 120.87104202648244,
+      "bestFamily": "Times New Roman",
+      "best": 120.73790322580645,
+      "relativeGain": 0.0011014946048601404,
+      "errors": {
+        "Arial": 120.87104202648244,
+        "Times New Roman": 120.73790322580645,
+        "Courier New": 121.66724738675958,
+        "Calibri": 122.12325581395349,
+        "Cambria": 122.69378268448577
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 84,
+      "text": "asistencia técnica tal y como se refiere el Anexo Ill que _ forma parte del",
+      "arial": 118.73828494260634,
+      "bestFamily": "Courier New",
+      "best": 118.73270104194496,
+      "relativeGain": 4.70269607151315e-05,
+      "errors": {
+        "Arial": 118.73828494260634,
+        "Times New Roman": 118.77287493232268,
+        "Courier New": 118.73270104194496,
+        "Calibri": 119.99287963850472,
+        "Cambria": 118.9944669365722
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 85,
+      "text": "CONTRATO, afiadiendo el IVA vigente en cada momento.",
+      "arial": 116.05720572057206,
+      "bestFamily": "Arial",
+      "best": 116.05720572057206,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.05720572057206,
+        "Times New Roman": 117.43772007042253,
+        "Courier New": 117.33112582781457,
+        "Calibri": 118.610101010101,
+        "Cambria": 117.97374227714033
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 86,
+      "text": "‘* Asegurar el funcionamiento apropiado del equipo proporcionando la",
+      "arial": 119.12973273942093,
+      "bestFamily": "Times New Roman",
+      "best": 117.33865214942745,
+      "relativeGain": 0.015034706691663735,
+      "errors": {
+        "Arial": 119.12973273942093,
+        "Times New Roman": 117.33865214942745,
+        "Courier New": 118.26617647058823,
+        "Calibri": 119.07521624670929,
+        "Cambria": 119.81192401730299
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 87,
+      "text": "asistencia técnica, incluyendo la colocacién/sustitucién de piezas, a",
+      "arial": 118.38631315935591,
+      "bestFamily": "Courier New",
+      "best": 117.53425976884975,
+      "relativeGain": 0.0071972288668136495,
+      "errors": {
+        "Arial": 118.38631315935591,
+        "Times New Roman": 117.91899480555945,
+        "Courier New": 117.53425976884975,
+        "Calibri": 119.2158334513525,
+        "Cambria": 118.32752613240419
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 88,
+      "text": "Sexta (ALQUILER Y SERVICIOS):",
+      "arial": 129.5921052631579,
+      "bestFamily": "Times New Roman",
+      "best": 125.47444983215219,
+      "relativeGain": 0.03177396819539378,
+      "errors": {
+        "Arial": 129.5921052631579,
+        "Times New Roman": 125.47444983215219,
+        "Courier New": 128.82787193973635,
+        "Calibri": 129.0156967840735,
+        "Cambria": 126.06569069069069
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 89,
+      "text": "peticién del ARRENDATARIO o por su propia iniciativa.",
+      "arial": 116.27360277865488,
+      "bestFamily": "Times New Roman",
+      "best": 115.62059663598858,
+      "relativeGain": 0.005616116874862816,
+      "errors": {
+        "Arial": 116.27360277865488,
+        "Times New Roman": 115.62059663598858,
+        "Courier New": 115.84608208955224,
+        "Calibri": 116.50509067769647,
+        "Cambria": 116.23648218829517
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 90,
+      "text": "A la vista de que el presente CONTRATO es un contrato de",
+      "arial": 118.99715315999241,
+      "bestFamily": "Times New Roman",
+      "best": 118.82110706761156,
+      "relativeGain": 0.001479414319636275,
+      "errors": {
+        "Arial": 118.99715315999241,
+        "Times New Roman": 118.82110706761156,
+        "Courier New": 119.47731156255934,
+        "Calibri": 120.3053123175715,
+        "Cambria": 119.67881112176414
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 91,
+      "text": "* La prestacién de servicios indicada en el parrafo anterior sera",
+      "arial": 116.18424657534247,
+      "bestFamily": "Courier New",
+      "best": 115.77297481279783,
+      "relativeGain": 0.0035398238114660798,
+      "errors": {
+        "Arial": 116.18424657534247,
+        "Times New Roman": 116.44764037202894,
+        "Courier New": 115.77297481279783,
+        "Calibri": 117.732186305179,
+        "Cambria": 116.41176470588235
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 92,
+      "text": "arrendamiento y al mismo tiempo un contrato para proporcionar servicios",
+      "arial": 116.27471039566721,
+      "bestFamily": "Arial",
+      "best": 116.27471039566721,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 116.27471039566721,
+        "Times New Roman": 116.49279101532858,
+        "Courier New": 116.43412364945978,
+        "Calibri": 117.61268038071846,
+        "Cambria": 116.4831494635031
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 93,
+      "text": "realizada por el ARRENDADOR-DISTRIBUIDOR a su propio cargo,",
+      "arial": 119.97295673076923,
+      "bestFamily": "Arial",
+      "best": 119.97295673076923,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 119.97295673076923,
+        "Times New Roman": 120.21886391251519,
+        "Courier New": 120.537720222858,
+        "Calibri": 120.6274811509463,
+        "Cambria": 120.60757002271006
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 94,
+      "text": "de soporte técnicos, el ARRENDATARIO debera pagar mensualmente",
+      "arial": 114.69268974080397,
+      "bestFamily": "Arial",
+      "best": 114.69268974080397,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 114.69268974080397,
+        "Times New Roman": 115.43402126328955,
+        "Courier New": 115.06998758535072,
+        "Calibri": 116.50244286840031,
+        "Cambria": 115.43528493364559
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 95,
+      "text": "excepto en el supuesto de que la necesidad de la reparacién",
+      "arial": 117.50017349063151,
+      "bestFamily": "Arial",
+      "best": 117.50017349063151,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 117.50017349063151,
+        "Times New Roman": 117.71315650799227,
+        "Courier New": 118.12528275622064,
+        "Calibri": 119.20243343325693,
+        "Cambria": 118.29278963948198
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 96,
+      "text": "la cantidad de:",
+      "arial": 119.36563876651982,
+      "bestFamily": "Courier New",
+      "best": 118.82486865148861,
+      "relativeGain": 0.004530366700327878,
+      "errors": {
+        "Arial": 119.36563876651982,
+        "Times New Roman": 120.70258236865538,
+        "Courier New": 118.82486865148861,
+        "Calibri": 120.70593525179856,
+        "Cambria": 119.88303571428571
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 97,
+      "text": "Provenga del dafio causado por una conducta indebida del",
+      "arial": 116.55207069831918,
+      "bestFamily": "Courier New",
+      "best": 116.16407867494824,
+      "relativeGain": 0.0033289157459519643,
+      "errors": {
+        "Arial": 116.55207069831918,
+        "Times New Roman": 117.24597056762438,
+        "Courier New": 116.16407867494824,
+        "Calibri": 118.38833068922969,
+        "Cambria": 117.83787561146052
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 98,
+      "text": "ARRENDATARIO, negligencia o el hecho de permitir el uso por",
+      "arial": 117.01306058221873,
+      "bestFamily": "Arial",
+      "best": 117.01306058221873,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 117.01306058221873,
+        "Times New Roman": 118.09013282732448,
+        "Courier New": 118.05033609504456,
+        "Calibri": 118.58752194032232,
+        "Cambria": 118.30427215189873
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 99,
+      "text": "terceros o cualquier causa de fuerza mayor como, entre otros,",
+      "arial": 117.96437136005481,
+      "bestFamily": "Arial",
+      "best": 117.96437136005481,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 117.96437136005481,
+        "Times New Roman": 118.67211703958692,
+        "Courier New": 118.85128905583063,
+        "Calibri": 119.76372480889506,
+        "Cambria": 118.73800928313564
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 100,
+      "text": "fuegos, inundaciones o roturas eléctricas.",
+      "arial": 118.04586104104563,
+      "bestFamily": "Courier New",
+      "best": 117.55102974828375,
+      "relativeGain": 0.0041918563547926144,
+      "errors": {
+        "Arial": 118.04586104104563,
+        "Times New Roman": 117.9390639481001,
+        "Courier New": 117.55102974828375,
+        "Calibri": 119.13780260707635,
+        "Cambria": 117.95205163669894
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 102,
+      "text": "correspondiente al valor de las rentas",
+      "arial": 109.22744148506861,
+      "bestFamily": "Courier New",
+      "best": 108.85753074588723,
+      "relativeGain": 0.0033866099411652435,
+      "errors": {
+        "Arial": 109.22744148506861,
+        "Times New Roman": 109.28470857891291,
+        "Courier New": 108.85753074588723,
+        "Calibri": 112.59178624443345,
+        "Cambria": 110.13495539334956
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 103,
+      "text": "+ La prestacién de asistencia técnica se realizara durante los dias",
+      "arial": 113.43201506591338,
+      "bestFamily": "Courier New",
+      "best": 112.87871982032566,
+      "relativeGain": 0.004877769695497423,
+      "errors": {
+        "Arial": 113.43201506591338,
+        "Times New Roman": 113.52691649229598,
+        "Courier New": 112.87871982032566,
+        "Calibri": 114.98946763692072,
+        "Cambria": 113.69453924914676
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 104,
+      "text": "laborables de 09:00 a 14:00 y de 15:00 a 18:00 horas. El",
+      "arial": 117.63749610713174,
+      "bestFamily": "Courier New",
+      "best": 117.12717121588089,
+      "relativeGain": 0.004338114190955718,
+      "errors": {
+        "Arial": 117.63749610713174,
+        "Times New Roman": 117.85077428437353,
+        "Courier New": 117.12717121588089,
+        "Calibri": 118.80432722678458,
+        "Cambria": 117.41079483589984
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 106,
+      "text": "Proporcionar dichos servicios en el plazo de 10 horas desde la",
+      "arial": 116.90573089700996,
+      "bestFamily": "Times New Roman",
+      "best": 116.47552742616034,
+      "relativeGain": 0.0036799177213015697,
+      "errors": {
+        "Arial": 116.90573089700996,
+        "Times New Roman": 116.47552742616034,
+        "Courier New": 116.81112949937939,
+        "Calibri": 118.1905877342419,
+        "Cambria": 117.39530496751205
+      }
+    },
+    {
+      "doc": "190604",
+      "page": 1,
+      "line": 107,
+      "text": "FIRMA ARRENDADOR-DISTRIBUIDOR",
+      "arial": 137.05505729945193,
+      "bestFamily": "Times New Roman",
+      "best": 130.60242424242423,
+      "relativeGain": 0.04708059070691075,
+      "errors": {
+        "Arial": 137.05505729945193,
+        "Times New Roman": 130.60242424242423,
+        "Courier New": 134.23030607124937,
+        "Calibri": 137.39789094650206,
+        "Cambria": 133.2662448284254
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 0,
+      "text": "Condiciones particulares - Contrato Servicios",
+      "arial": 107.36567336567336,
+      "bestFamily": "Times New Roman",
+      "best": 103.496542511394,
+      "relativeGain": 0.03603694489114422,
+      "errors": {
+        "Arial": 107.36567336567336,
+        "Times New Roman": 103.496542511394,
+        "Courier New": 107.43579234972678,
+        "Calibri": 105.23565670934092,
+        "Cambria": 104.27095562338577
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 2,
+      "text": "12/2/19 EJENER",
+      "arial": 79.47927426830883,
+      "bestFamily": "Cambria",
+      "best": 77.46653252850435,
+      "relativeGain": 0.025324108182087836,
+      "errors": {
+        "Arial": 79.47927426830883,
+        "Times New Roman": 78.10410812257459,
+        "Courier New": 78.89709172259506,
+        "Calibri": 78.43405855492881,
+        "Cambria": 77.46653252850435
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 3,
+      "text": "AXON TIME SL. Av. Condomina, 27 C.P. 03016 Alicante C.|.F. B-65217531 www.axontime.com, info@axontim",
+      "arial": 94.17466460268318,
+      "bestFamily": "Times New Roman",
+      "best": 93.3082962575242,
+      "relativeGain": 0.009199590450511577,
+      "errors": {
+        "Arial": 94.17466460268318,
+        "Times New Roman": 93.3082962575242,
+        "Courier New": 94.15971333503967,
+        "Calibri": 96.13120849933598,
+        "Cambria": 95.3590692755156
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 4,
+      "text": "LA JARRINA DE MANZANARES, S.L. B13447818 13200",
+      "arial": 92.72470695345396,
+      "bestFamily": "Calibri",
+      "best": 91.87537502884837,
+      "relativeGain": 0.009159715382351564,
+      "errors": {
+        "Arial": 92.72470695345396,
+        "Times New Roman": 92.33333333333333,
+        "Courier New": 92.15116811726982,
+        "Calibri": 91.87537502884837,
+        "Cambria": 92.58032636175592
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 6,
+      "text": "lajarrina1344@gmail.com 630550790",
+      "arial": 100.02501177024482,
+      "bestFamily": "Times New Roman",
+      "best": 98.81276418408048,
+      "relativeGain": 0.012119444574011581,
+      "errors": {
+        "Arial": 100.02501177024482,
+        "Times New Roman": 98.81276418408048,
+        "Courier New": 99.42751395057512,
+        "Calibri": 99.99742761426178,
+        "Cambria": 99.27430061640587
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 7,
+      "text": "FRANCISCO JAVIER CAMACHO LOPEZ DE PABLO 06259784N TITULAR",
+      "arial": 86.41518714933517,
+      "bestFamily": "Times New Roman",
+      "best": 85.85277649946312,
+      "relativeGain": 0.0065082385217790535,
+      "errors": {
+        "Arial": 86.41518714933517,
+        "Times New Roman": 85.85277649946312,
+        "Courier New": 86.19428110227142,
+        "Calibri": 86.38560421264567,
+        "Cambria": 87.04901282937696
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 9,
+      "text": "JOSE MIGUEL MUROZ-TORRERO LOPEZ 667034924 mtorrero@ejener.com",
+      "arial": 101.20204207920793,
+      "bestFamily": "Times New Roman",
+      "best": 99.27756892230576,
+      "relativeGain": 0.019016149450778244,
+      "errors": {
+        "Arial": 101.20204207920793,
+        "Times New Roman": 99.27756892230576,
+        "Courier New": 101.20696084524549,
+        "Calibri": 100.89300542957521,
+        "Cambria": 102.27103099304237
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 10,
+      "text": "QUE SE VINCULA (En xistin):",
+      "arial": 122.01699235344095,
+      "bestFamily": "Arial",
+      "best": 122.01699235344095,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 122.01699235344095,
+        "Times New Roman": 122.4045996592845,
+        "Courier New": 122.2527316588619,
+        "Calibri": 125.2370720527145,
+        "Cambria": 124.51029159519726
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 11,
+      "text": "ENERGIAS RENOVABLES EJENER, S.L. B13617808",
+      "arial": 93.43384974794049,
+      "bestFamily": "Times New Roman",
+      "best": 91.82286899749832,
+      "relativeGain": 0.01724193913435186,
+      "errors": {
+        "Arial": 93.43384974794049,
+        "Times New Roman": 91.82286899749832,
+        "Courier New": 93.90856331419398,
+        "Calibri": 93.22071064728539,
+        "Cambria": 92.32741364579519
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 12,
+      "text": "telemedida@ejener.com 630 277 844",
+      "arial": 96.99318073438243,
+      "bestFamily": "Cambria",
+      "best": 96.84259924340371,
+      "relativeGain": 0.0015524956480300757,
+      "errors": {
+        "Arial": 96.99318073438243,
+        "Times New Roman": 96.89464345657699,
+        "Courier New": 97.1835533869116,
+        "Calibri": 97.7146774426324,
+        "Cambria": 96.84259924340371
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 13,
+      "text": "EULOGIO JIMENEZ JIMENEZ",
+      "arial": 120.60314315900686,
+      "bestFamily": "Times New Roman",
+      "best": 119.76360199810989,
+      "relativeGain": 0.0069611880661360065,
+      "errors": {
+        "Arial": 120.60314315900686,
+        "Times New Roman": 119.76360199810989,
+        "Courier New": 121.34873665720848,
+        "Calibri": 121.4116367591082,
+        "Cambria": 120.60038033143167
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 14,
+      "text": "Modalidad_| Producto |Tipo Suministi",
+      "arial": 117.26648599819332,
+      "bestFamily": "Courier New",
+      "best": 113.99955035971223,
+      "relativeGain": 0.02785907338036393,
+      "errors": {
+        "Arial": 117.26648599819332,
+        "Times New Roman": 117.93818181818182,
+        "Courier New": 113.99955035971223,
+        "Calibri": 118.88162137263933,
+        "Cambria": 119.49055734684477
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 17,
+      "text": "0 47,00 €",
+      "arial": 131.12094064949608,
+      "bestFamily": "Cambria",
+      "best": 129.3020948180816,
+      "relativeGain": 0.013871512989496453,
+      "errors": {
+        "Arial": 131.12094064949608,
+        "Times New Roman": 129.43638392857142,
+        "Courier New": 130.23224351747464,
+        "Calibri": 130.94570135746605,
+        "Cambria": 129.3020948180816
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 20,
+      "text": "AXON TIME, S.L.(Firma y sello)",
+      "arial": 96.08745459625594,
+      "bestFamily": "Times New Roman",
+      "best": 93.45759368836293,
+      "relativeGain": 0.02736945128730132,
+      "errors": {
+        "Arial": 96.08745459625594,
+        "Times New Roman": 93.45759368836293,
+        "Courier New": 95.22946859903382,
+        "Calibri": 95.81510192362906,
+        "Cambria": 95.76759181384917
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 22,
+      "text": "Apoderada: Matilde Albert Brotons",
+      "arial": 112.53254539225763,
+      "bestFamily": "Arial",
+      "best": 112.53254539225763,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 112.53254539225763,
+        "Times New Roman": 113.48871527777779,
+        "Courier New": 115.29075487701442,
+        "Calibri": 117.69566736547867,
+        "Cambria": 115.10453444098303
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 1,
+      "line": 28,
+      "text": "Firmar tres copias (cuatro si existe asesor): una para Axon Time,",
+      "arial": 114.4391035092893,
+      "bestFamily": "Courier New",
+      "best": 111.94654977375566,
+      "relativeGain": 0.021780612212951377,
+      "errors": {
+        "Arial": 114.4391035092893,
+        "Times New Roman": 113.66434624697337,
+        "Courier New": 111.94654977375566,
+        "Calibri": 116.61619937694704,
+        "Cambria": 116.16546762589928
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 0,
+      "text": "ANEXO | -CONTRATO N2",
+      "arial": 136.7479964381122,
+      "bestFamily": "Courier New",
+      "best": 132.92824909747293,
+      "relativeGain": 0.02793274812160029,
+      "errors": {
+        "Arial": 136.7479964381122,
+        "Times New Roman": 133.39546263345196,
+        "Courier New": 132.92824909747293,
+        "Calibri": 133.60505747126436,
+        "Cambria": 133.41478809738504
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 5,
+      "text": "[Contacto Instalac. Teléfono",
+      "arial": 85.11970974371881,
+      "bestFamily": "Arial",
+      "best": 85.11970974371881,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 85.11970974371881,
+        "Times New Roman": 85.51741481202062,
+        "Courier New": 85.33781632311045,
+        "Calibri": 85.69529318077036,
+        "Cambria": 85.7412904037228
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 21,
+      "text": "[Datos Técnicos necesarios para la instalacion:",
+      "arial": 83.31410953935436,
+      "bestFamily": "Times New Roman",
+      "best": 80.81969786148716,
+      "relativeGain": 0.029939846823771692,
+      "errors": {
+        "Arial": 83.31410953935436,
+        "Times New Roman": 80.81969786148716,
+        "Courier New": 83.87641053197206,
+        "Calibri": 81.5525543159131,
+        "Cambria": 82.42971183800624
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 24,
+      "text": "ONE [Comercializadora",
+      "arial": 87.88608221892025,
+      "bestFamily": "Courier New",
+      "best": 85.51883122258091,
+      "relativeGain": 0.026935447986435688,
+      "errors": {
+        "Arial": 87.88608221892025,
+        "Times New Roman": 86.12760481527606,
+        "Courier New": 85.51883122258091,
+        "Calibri": 86.79179154179155,
+        "Cambria": 86.25049212598425
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 28,
+      "text": "[Tipo Contador instalar",
+      "arial": 89.02338407235827,
+      "bestFamily": "Times New Roman",
+      "best": 87.7408906882591,
+      "relativeGain": 0.014406252890327754,
+      "errors": {
+        "Arial": 89.02338407235827,
+        "Times New Roman": 87.7408906882591,
+        "Courier New": 89.37839020122486,
+        "Calibri": 89.60336976320582,
+        "Cambria": 89.5572105619499
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 29,
+      "text": "Potencias",
+      "arial": 79.94799741602067,
+      "bestFamily": "Courier New",
+      "best": 77.7899716177862,
+      "relativeGain": 0.026992868714458034,
+      "errors": {
+        "Arial": 79.94799741602067,
+        "Times New Roman": 78.74095796676441,
+        "Courier New": 77.7899716177862,
+        "Calibri": 79.89337270341207,
+        "Cambria": 79.18474687705456
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 32,
+      "text": "[ALIAS del suministro",
+      "arial": 68.7356862745098,
+      "bestFamily": "Calibri",
+      "best": 64.83288888888889,
+      "relativeGain": 0.056779783503350896,
+      "errors": {
+        "Arial": 68.7356862745098,
+        "Times New Roman": 64.8522906793049,
+        "Courier New": 72.26508620689656,
+        "Calibri": 64.83288888888889,
+        "Cambria": 68.16750841750842
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 42,
+      "text": "jimportes finales:",
+      "arial": 67.52756311179805,
+      "bestFamily": "Times New Roman",
+      "best": 67.29957805907172,
+      "relativeGain": 0.0033761777001914744,
+      "errors": {
+        "Arial": 67.52756311179805,
+        "Times New Roman": 67.29957805907172,
+        "Courier New": 68.812734082397,
+        "Calibri": 68.18409586056644,
+        "Cambria": 68.18158826504805
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 53,
+      "text": "[Comercializadora",
+      "arial": 75.36778262979136,
+      "bestFamily": "Courier New",
+      "best": 69.87111801242236,
+      "relativeGain": 0.07293122373479893,
+      "errors": {
+        "Arial": 75.36778262979136,
+        "Times New Roman": 71.4027572624323,
+        "Courier New": 69.87111801242236,
+        "Calibri": 73.37223122636412,
+        "Cambria": 75.06813725490196
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 57,
+      "text": "Tipo Contador instalar",
+      "arial": 69.91217150760718,
+      "bestFamily": "Times New Roman",
+      "best": 66.53141167775314,
+      "relativeGain": 0.04835724247938973,
+      "errors": {
+        "Arial": 69.91217150760718,
+        "Times New Roman": 66.53141167775314,
+        "Courier New": 71.26977950713359,
+        "Calibri": 67.04405652535328,
+        "Cambria": 71.91320204230487
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 60,
+      "text": "[ALIAS del suministro",
+      "arial": 67.48925848925849,
+      "bestFamily": "Times New Roman",
+      "best": 65.79012345679011,
+      "relativeGain": 0.025176377256223802,
+      "errors": {
+        "Arial": 67.48925848925849,
+        "Times New Roman": 65.79012345679011,
+        "Courier New": 71.69904761904762,
+        "Calibri": 67.79832572298325,
+        "Cambria": 67.6259097525473
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 70,
+      "text": "ANON TIME, S.L. (Firma y sello)",
+      "arial": 93.83449883449885,
+      "bestFamily": "Times New Roman",
+      "best": 93.81436984687869,
+      "relativeGain": 0.00021451585365907767,
+      "errors": {
+        "Arial": 93.83449883449885,
+        "Times New Roman": 93.81436984687869,
+        "Courier New": 94.92736525560954,
+        "Calibri": 94.57753882915175,
+        "Cambria": 95.1376604850214
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 74,
+      "text": "Apoderada: Matilde Albert Brotons",
+      "arial": 115.22928039702234,
+      "bestFamily": "Arial",
+      "best": 115.22928039702234,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.22928039702234,
+        "Times New Roman": 116.31939546599496,
+        "Courier New": 117.28543209876543,
+        "Calibri": 119.71630489651692,
+        "Cambria": 118.18227341011517
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 81,
+      "text": "Firmar tres copias (cuatro si existe asesor): una para Axon Time, S.L.",
+      "arial": 111.68960244648318,
+      "bestFamily": "Times New Roman",
+      "best": 111.05291005291005,
+      "relativeGain": 0.005700552062383814,
+      "errors": {
+        "Arial": 111.68960244648318,
+        "Times New Roman": 111.05291005291005,
+        "Courier New": 112.4774992449411,
+        "Calibri": 113.50302066772655,
+        "Cambria": 111.93026113671274
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 2,
+      "line": 83,
+      "text": "~, otra para el cliente, otra para Grenke Rent,S.L y otra para el asesor (en su",
+      "arial": 107.69513513513513,
+      "bestFamily": "Times New Roman",
+      "best": 105.78301886792453,
+      "relativeGain": 0.01775489918659089,
+      "errors": {
+        "Arial": 107.69513513513513,
+        "Times New Roman": 105.78301886792453,
+        "Courier New": 108.77361000266028,
+        "Calibri": 108.69359886201991,
+        "Cambria": 107.07048820625343
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 0,
+      "text": "ANEXO | -CONTRATO N2",
+      "arial": 132.26598465473145,
+      "bestFamily": "Cambria",
+      "best": 132.2215644820296,
+      "relativeGain": 0.00033583973096184145,
+      "errors": {
+        "Arial": 132.26598465473145,
+        "Times New Roman": 133.46559930765903,
+        "Courier New": 136.1513073296185,
+        "Calibri": 135.6656455142232,
+        "Cambria": 132.2215644820296
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 6,
+      "text": "Teléfono",
+      "arial": 91.18206157965191,
+      "bestFamily": "Times New Roman",
+      "best": 87.19642058165549,
+      "relativeGain": 0.04371080154307301,
+      "errors": {
+        "Arial": 91.18206157965191,
+        "Times New Roman": 87.19642058165549,
+        "Courier New": 89.35479452054794,
+        "Calibri": 92.15056818181819,
+        "Cambria": 92.89015151515152
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 8,
+      "text": "Datos Técnicos necesarios pi",
+      "arial": 91.430435917515,
+      "bestFamily": "Arial",
+      "best": 91.430435917515,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 91.430435917515,
+        "Times New Roman": 92.4838278535151,
+        "Courier New": 92.86161063330727,
+        "Calibri": 93.25417339795369,
+        "Cambria": 94.06380725443475
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 14,
+      "text": "Potencias",
+      "arial": 87.29262086513995,
+      "bestFamily": "Times New Roman",
+      "best": 85.2525641025641,
+      "relativeGain": 0.023370323199799228,
+      "errors": {
+        "Arial": 87.29262086513995,
+        "Times New Roman": 85.2525641025641,
+        "Courier New": 86.65042117930204,
+        "Calibri": 88.04413702239788,
+        "Cambria": 86.41793893129771
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 23,
+      "text": "Punto de medida",
+      "arial": 72.74350986500518,
+      "bestFamily": "Calibri",
+      "best": 70.08064516129032,
+      "relativeGain": 0.036606216948515534,
+      "errors": {
+        "Arial": 72.74350986500518,
+        "Times New Roman": 70.28213207299463,
+        "Courier New": 71.95305719921105,
+        "Calibri": 70.08064516129032,
+        "Cambria": 70.37992125984252
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 27,
+      "text": "Servicio: |",
+      "arial": 76.1609375,
+      "bestFamily": "Arial",
+      "best": 76.1609375,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 76.1609375,
+        "Times New Roman": 76.26276041666667,
+        "Courier New": 76.8889757623143,
+        "Calibri": 76.98253844149075,
+        "Cambria": 77.53010164190773
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 33,
+      "text": "[Contacto Instalac.",
+      "arial": 76.68872549019609,
+      "bestFamily": "Courier New",
+      "best": 72.82750970604548,
+      "relativeGain": 0.05034919747941612,
+      "errors": {
+        "Arial": 76.68872549019609,
+        "Times New Roman": 74.81538461538462,
+        "Courier New": 72.82750970604548,
+        "Calibri": 74.78305785123968,
+        "Cambria": 77.2795698924731
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 35,
+      "text": "Datos Técnicos necesarios para [a instalacion",
+      "arial": 66.81730126920506,
+      "bestFamily": "Times New Roman",
+      "best": 60.84903518728717,
+      "relativeGain": 0.08932216609395686,
+      "errors": {
+        "Arial": 66.81730126920506,
+        "Times New Roman": 60.84903518728717,
+        "Courier New": 69.12147161433555,
+        "Calibri": 62.35021097046413,
+        "Cambria": 64.46269216347957
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 56,
+      "text": "Provincia",
+      "arial": 69.27953586497891,
+      "bestFamily": "Arial",
+      "best": 69.27953586497891,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 69.27953586497891,
+        "Times New Roman": 70.75877192982456,
+        "Courier New": 75.69763205828781,
+        "Calibri": 69.88255033557047,
+        "Cambria": 73.24808743169397
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 58,
+      "text": "[Contacto Instalac.",
+      "arial": 95.9433465085639,
+      "bestFamily": "Times New Roman",
+      "best": 93.15237672145713,
+      "relativeGain": 0.029089769000893176,
+      "errors": {
+        "Arial": 95.9433465085639,
+        "Times New Roman": 93.15237672145713,
+        "Courier New": 97.52488009592327,
+        "Calibri": 94.8730300327089,
+        "Cambria": 94.66472694717994
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 59,
+      "text": "[Datos Técnicos necesarios para la instalacion:",
+      "arial": 94.15593309627288,
+      "bestFamily": "Courier New",
+      "best": 93.37650989462863,
+      "relativeGain": 0.008278004115229807,
+      "errors": {
+        "Arial": 94.15593309627288,
+        "Times New Roman": 94.13574165298303,
+        "Courier New": 93.37650989462863,
+        "Calibri": 94.56976903102364,
+        "Cambria": 95.0174007612833
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 60,
+      "text": "[Comercializadora",
+      "arial": 88.6355633802817,
+      "bestFamily": "Courier New",
+      "best": 86.41404512233875,
+      "relativeGain": 0.02506350919677413,
+      "errors": {
+        "Arial": 88.6355633802817,
+        "Times New Roman": 88.30388219544845,
+        "Courier New": 86.41404512233875,
+        "Calibri": 90.48857994041708,
+        "Cambria": 91.55421686746988
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 73,
+      "text": "[Punto de medida",
+      "arial": 78.68987654320988,
+      "bestFamily": "Courier New",
+      "best": 75.8983682983683,
+      "relativeGain": 0.03547480778304078,
+      "errors": {
+        "Arial": 78.68987654320988,
+        "Times New Roman": 78.34087481146305,
+        "Courier New": 75.8983682983683,
+        "Calibri": 76.6984126984127,
+        "Cambria": 78.91977225672878
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 79,
+      "text": "AXON TIME, S.L. (Firma y seo)",
+      "arial": 98.6574337121212,
+      "bestFamily": "Courier New",
+      "best": 96.91903770529726,
+      "relativeGain": 0.017620527327890198,
+      "errors": {
+        "Arial": 98.6574337121212,
+        "Times New Roman": 97.68721624850659,
+        "Courier New": 96.91903770529726,
+        "Calibri": 99.32218992248063,
+        "Cambria": 99.73610116917202
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 80,
+      "text": "Apoderada: Matilde Albert Broton:",
+      "arial": 112.00840791971794,
+      "bestFamily": "Courier New",
+      "best": 108.20813008130081,
+      "relativeGain": 0.033928505091697946,
+      "errors": {
+        "Arial": 112.00840791971794,
+        "Times New Roman": 112.25480505216915,
+        "Courier New": 108.20813008130081,
+        "Calibri": 114.40869565217392,
+        "Cambria": 112.90779558843678
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 82,
+      "text": "Firmar tres copias (cuatro si existe asesor): una para Axon Time, S.L.,",
+      "arial": 113.37071557426339,
+      "bestFamily": "Times New Roman",
+      "best": 112.57601713062098,
+      "relativeGain": 0.007009732977488676,
+      "errors": {
+        "Arial": 113.37071557426339,
+        "Times New Roman": 112.57601713062098,
+        "Courier New": 113.18729397662571,
+        "Calibri": 115.39893115372524,
+        "Cambria": 113.00211672210463
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 3,
+      "line": 83,
+      "text": "otra para el cliente, otra para Grenke Rent,S.Ly otra para el asesor (en su",
+      "arial": 101.71070110701108,
+      "bestFamily": "Times New Roman",
+      "best": 100.49216721119208,
+      "relativeGain": 0.011980390288893581,
+      "errors": {
+        "Arial": 101.71070110701108,
+        "Times New Roman": 100.49216721119208,
+        "Courier New": 103.27808604744672,
+        "Calibri": 102.89020111253744,
+        "Cambria": 101.05515587529976
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 0,
+      "text": "CARTA DE AUTORIZACION",
+      "arial": 126.25285779606767,
+      "bestFamily": "Times New Roman",
+      "best": 122.95296803652968,
+      "relativeGain": 0.02613714902888139,
+      "errors": {
+        "Arial": 126.25285779606767,
+        "Times New Roman": 122.95296803652968,
+        "Courier New": 128.18118948824343,
+        "Calibri": 127.06845513413506,
+        "Cambria": 125.04555808656036
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 1,
+      "text": "de Actuaciones sobre el/los Equipo/s de Medida (Registrador) ante la Compaiiia Distribuidora",
+      "arial": 118.52885292047854,
+      "bestFamily": "Arial",
+      "best": 118.52885292047854,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 118.52885292047854,
+        "Times New Roman": 118.57900318133616,
+        "Courier New": 118.75571236559139,
+        "Calibri": 122.99033643521832,
+        "Cambria": 121.56468716861082
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 2,
+      "text": "Don/Dofia FRANCISCO JAVIER CAMACHO LOPEZ DE PABLO con D.N.I. 06259784N",
+      "arial": 125.2915857605178,
+      "bestFamily": "Times New Roman",
+      "best": 120.91608505112806,
+      "relativeGain": 0.03492254234656322,
+      "errors": {
+        "Arial": 125.2915857605178,
+        "Times New Roman": 120.91608505112806,
+        "Courier New": 124.45122349102773,
+        "Calibri": 123.77367205542726,
+        "Cambria": 122.08814050918465
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 3,
+      "text": "en nombre y representacion de LA JARRINA DE MANZANARES, S.L.",
+      "arial": 119.47640177490923,
+      "bestFamily": "Times New Roman",
+      "best": 117.40530612244898,
+      "relativeGain": 0.01733476754984766,
+      "errors": {
+        "Arial": 119.47640177490923,
+        "Times New Roman": 117.40530612244898,
+        "Courier New": 118.63383685800605,
+        "Calibri": 119.05349456855913,
+        "Cambria": 119.27452984464432
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 4,
+      "text": "y como apoderado/a de la misma, con domicilio social en: CL ANDALUCIA 12 A",
+      "arial": 110.15410385259632,
+      "bestFamily": "Courier New",
+      "best": 108.66392865524524,
+      "relativeGain": 0.013528095143374498,
+      "errors": {
+        "Arial": 110.15410385259632,
+        "Times New Roman": 108.96965959546127,
+        "Courier New": 108.66392865524524,
+        "Calibri": 109.56296296296296,
+        "Cambria": 110.69146341463414
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 5,
+      "text": "con CLF. B13447818 mediante el presente escrito AUTORIZA A:",
+      "arial": 119.63584036838066,
+      "bestFamily": "Times New Roman",
+      "best": 117.15300019293845,
+      "relativeGain": 0.020753314122231987,
+      "errors": {
+        "Arial": 119.63584036838066,
+        "Times New Roman": 117.15300019293845,
+        "Courier New": 118.81656916399321,
+        "Calibri": 119.80843964671246,
+        "Cambria": 117.78561763000194
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 6,
+      "text": "AXON TIME, S.L. como empresa instaladora y mantenedora, a realizar en nuestro nombre todas las gesti",
+      "arial": 111.9291976840364,
+      "bestFamily": "Times New Roman",
+      "best": 109.31166863108267,
+      "relativeGain": 0.023385578625719446,
+      "errors": {
+        "Arial": 111.9291976840364,
+        "Times New Roman": 109.31166863108267,
+        "Courier New": 111.85741935483871,
+        "Calibri": 111.65209998299609,
+        "Cambria": 111.83600472414375
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 7,
+      "text": "actuaciones necesarias sobre el Equipo de Medida y otros trémites que consideren oportunos sobre dic",
+      "arial": 110.65709669400944,
+      "bestFamily": "Times New Roman",
+      "best": 107.83476503284487,
+      "relativeGain": 0.02550520251736696,
+      "errors": {
+        "Arial": 110.65709669400944,
+        "Times New Roman": 107.83476503284487,
+        "Courier New": 109.5543740937651,
+        "Calibri": 109.84514003294893,
+        "Cambria": 109.61520998864927
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 8,
+      "text": "de medida, tales como la instalacién, reparacién, sustitucién, cambio 0 retirada de dichos equipos, ",
+      "arial": 113.78821044546851,
+      "bestFamily": "Times New Roman",
+      "best": 112.933436682492,
+      "relativeGain": 0.007511971228215648,
+      "errors": {
+        "Arial": 113.78821044546851,
+        "Times New Roman": 112.933436682492,
+        "Courier New": 113.96396989651929,
+        "Calibri": 115.80497395065369,
+        "Cambria": 114.56407267074711
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 9,
+      "text": "cuando, en su caso, exista conocimiento y autorizacién del propietario de los equipos.",
+      "arial": 112.1096834264432,
+      "bestFamily": "Times New Roman",
+      "best": 111.04637134778511,
+      "relativeGain": 0.009484569451627617,
+      "errors": {
+        "Arial": 112.1096834264432,
+        "Times New Roman": 111.04637134778511,
+        "Courier New": 111.20295202952029,
+        "Calibri": 115.07856730213749,
+        "Cambria": 113.01625094482237
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 10,
+      "text": "Mediante el presente documento, ademas, se autoriza a AXON TIME, S.L. para que, por motivos geografi",
+      "arial": 115.20405358983167,
+      "bestFamily": "Times New Roman",
+      "best": 112.67201954965962,
+      "relativeGain": 0.021978688781099768,
+      "errors": {
+        "Arial": 115.20405358983167,
+        "Times New Roman": 112.67201954965962,
+        "Courier New": 113.6,
+        "Calibri": 115.52126345509087,
+        "Cambria": 114.5230985420692
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 11,
+      "text": "cuando sea necesario, pueda subcontratar a un instalador autorizado de la zona, para llevar a cabo l",
+      "arial": 113.93506493506493,
+      "bestFamily": "Times New Roman",
+      "best": 111.68972877950779,
+      "relativeGain": 0.019707156500387533,
+      "errors": {
+        "Arial": 113.93506493506493,
+        "Times New Roman": 111.68972877950779,
+        "Courier New": 112.4525012025012,
+        "Calibri": 113.2529434105583,
+        "Cambria": 113.40098385469223
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 12,
+      "text": "reparacién, sustitucién, cambio, retirada o cualquier otra accién necesaria sobre los Equipos de Med",
+      "arial": 116.21844825627628,
+      "bestFamily": "Times New Roman",
+      "best": 115.8086836980181,
+      "relativeGain": 0.0035258133661756736,
+      "errors": {
+        "Arial": 116.21844825627628,
+        "Times New Roman": 115.8086836980181,
+        "Courier New": 115.9143820713664,
+        "Calibri": 118.18602742937522,
+        "Cambria": 117.52205458942761
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 13,
+      "text": "cuando, en su caso, exista conocimiento y autorizacién del propietario de los equipos. Esta autoriza",
+      "arial": 116.48265245707519,
+      "bestFamily": "Courier New",
+      "best": 114.29070963318478,
+      "relativeGain": 0.018817761938398195,
+      "errors": {
+        "Arial": 116.48265245707519,
+        "Times New Roman": 114.98173239777401,
+        "Courier New": 114.29070963318478,
+        "Calibri": 116.83991281181885,
+        "Cambria": 116.26115722362564
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 17,
+      "text": "“En caso de clientes multipunto con més de seis CUPS, éstos se detallarén en Anexo a la presente car",
+      "arial": 94.36160076226774,
+      "bestFamily": "Courier New",
+      "best": 92.7232,
+      "relativeGain": 0.017363003054552687,
+      "errors": {
+        "Arial": 94.36160076226774,
+        "Times New Roman": 93.11086123604865,
+        "Courier New": 92.7232,
+        "Calibri": 95.50109097012421,
+        "Cambria": 95.53241436925649
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 18,
+      "text": "Por medio del presente documento le comunicamos a la compafiia distribuidora de forma expresa nuestr",
+      "arial": 111.0816612729234,
+      "bestFamily": "Times New Roman",
+      "best": 108.799413457282,
+      "relativeGain": 0.020545675942260193,
+      "errors": {
+        "Arial": 111.0816612729234,
+        "Times New Roman": 108.799413457282,
+        "Courier New": 109.69092827004219,
+        "Calibri": 110.55766245287202,
+        "Cambria": 111.3976889478631
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 19,
+      "text": "de proceder a la instalacién de un equipo de medida adquirido, seguin contrato, a AXON TIME, S.L. po",
+      "arial": 114.91342136675618,
+      "bestFamily": "Times New Roman",
+      "best": 112.04600832387437,
+      "relativeGain": 0.0249528123762864,
+      "errors": {
+        "Arial": 114.91342136675618,
+        "Times New Roman": 112.04600832387437,
+        "Courier New": 113.5214739425437,
+        "Calibri": 113.80147086697751,
+        "Cambria": 113.46789857536938
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 20,
+      "text": "deberdn llevar a cabo las actuaciones que les corresponda para efectuar dicha instalacién. (R.D. 111",
+      "arial": 114.49563019901021,
+      "bestFamily": "Times New Roman",
+      "best": 113.07872317480859,
+      "relativeGain": 0.012375206125673338,
+      "errors": {
+        "Arial": 114.49563019901021,
+        "Times New Roman": 113.07872317480859,
+        "Courier New": 114.01096513913313,
+        "Calibri": 115.36556189640035,
+        "Cambria": 114.70072050758147
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 21,
+      "text": "agosto, por el que se aprueba el Reglamento unificado de puntos de medida del sistema eléctrico, asi",
+      "arial": 112.33664581033003,
+      "bestFamily": "Times New Roman",
+      "best": 110.32516870782304,
+      "relativeGain": 0.017905796349867692,
+      "errors": {
+        "Arial": 112.33664581033003,
+        "Times New Roman": 110.32516870782304,
+        "Courier New": 111.05139289145053,
+        "Calibri": 112.0933983495874,
+        "Cambria": 111.4943932220284
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 22,
+      "text": "cualquier otra normativa de aplicacién).",
+      "arial": 113.01150369761709,
+      "bestFamily": "Times New Roman",
+      "best": 111.35169842584921,
+      "relativeGain": 0.014687047047962408,
+      "errors": {
+        "Arial": 113.01150369761709,
+        "Times New Roman": 111.35169842584921,
+        "Courier New": 111.50571541190382,
+        "Calibri": 114.69585448392554,
+        "Cambria": 113.91834170854271
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 23,
+      "text": "Y para que conste a efectos oportunos firmo la presente en:",
+      "arial": 105.59764089121887,
+      "bestFamily": "Times New Roman",
+      "best": 103.18215118215119,
+      "relativeGain": 0.022874466594911866,
+      "errors": {
+        "Arial": 105.59764089121887,
+        "Times New Roman": 103.18215118215119,
+        "Courier New": 107.79513444302177,
+        "Calibri": 106.08752515090544,
+        "Cambria": 105.4603068712475
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 24,
+      "text": "MANZANARES",
+      "arial": 136.6940527283875,
+      "bestFamily": "Times New Roman",
+      "best": 130.4497843499692,
+      "relativeGain": 0.04568061487521863,
+      "errors": {
+        "Arial": 136.6940527283875,
+        "Times New Roman": 130.4497843499692,
+        "Courier New": 134.19106699751862,
+        "Calibri": 134.36960600375235,
+        "Cambria": 131.93424317617865
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 25,
+      "text": "1a 12 febrero, 2019",
+      "arial": 118.60608695652174,
+      "bestFamily": "Courier New",
+      "best": 114.72881355932203,
+      "relativeGain": 0.03269034074634821,
+      "errors": {
+        "Arial": 118.60608695652174,
+        "Times New Roman": 116.25645592163846,
+        "Courier New": 114.72881355932203,
+        "Calibri": 121.29219600725953,
+        "Cambria": 120.0301685891748
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 28,
+      "text": "Apoderada: Matilde Albert Brotons",
+      "arial": 109.68450658952106,
+      "bestFamily": "Arial",
+      "best": 109.68450658952106,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 109.68450658952106,
+        "Times New Roman": 113.10253841015366,
+        "Courier New": 111.89516390782215,
+        "Calibri": 114.49456975772766,
+        "Cambria": 112.05275304978571
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 4,
+      "line": 30,
+      "text": "Firmar tres copias (cuatro si existe asesor): una para Axon Time, S.L., otra para el cliente, otra p",
+      "arial": 111.64840355982959,
+      "bestFamily": "Times New Roman",
+      "best": 108.09761748633879,
+      "relativeGain": 0.031803285674282124,
+      "errors": {
+        "Arial": 111.64840355982959,
+        "Times New Roman": 108.09761748633879,
+        "Courier New": 111.64686267333578,
+        "Calibri": 111.31634763476349,
+        "Cambria": 111.23763243148586
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 0,
+      "text": "DOMICILIACION BANCARIA",
+      "arial": 129.01401682018422,
+      "bestFamily": "Times New Roman",
+      "best": 126.38341346153847,
+      "relativeGain": 0.020390058564816346,
+      "errors": {
+        "Arial": 129.01401682018422,
+        "Times New Roman": 126.38341346153847,
+        "Courier New": 131.18942731277534,
+        "Calibri": 130.9517184942717,
+        "Cambria": 127.40341134470448
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 1,
+      "text": "Adeudo Directo- SEPA CORE",
+      "arial": 130.15757835981108,
+      "bestFamily": "Times New Roman",
+      "best": 127.67951494153313,
+      "relativeGain": 0.019038948400127195,
+      "errors": {
+        "Arial": 130.15757835981108,
+        "Times New Roman": 127.67951494153313,
+        "Courier New": 128.9240506329114,
+        "Calibri": 129.97763157894738,
+        "Cambria": 129.40407986111111
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 2,
+      "text": "Mediante la firma de este formulario, se autoriza a AXON TIME, S.L., a enviar érdenes a su entidad",
+      "arial": 125.79982324348211,
+      "bestFamily": "Times New Roman",
+      "best": 124.7888116027823,
+      "relativeGain": 0.008036669803128584,
+      "errors": {
+        "Arial": 125.79982324348211,
+        "Times New Roman": 124.7888116027823,
+        "Courier New": 126.2182598401894,
+        "Calibri": 127.2487125113602,
+        "Cambria": 126.2505980861244
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 3,
+      "text": "financiera para adeudar los importes correspondientes en su cuenta, de acuerdo con las instrucciones",
+      "arial": 126.21953664513255,
+      "bestFamily": "Times New Roman",
+      "best": 125.37320305480682,
+      "relativeGain": 0.00670525033462294,
+      "errors": {
+        "Arial": 126.21953664513255,
+        "Times New Roman": 125.37320305480682,
+        "Courier New": 128.13786988806385,
+        "Calibri": 129.00308254366936,
+        "Cambria": 127.28823860438942
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 4,
+      "text": "AXON TIME, S.L, Esta orden de domiciliacién esta prevista para realizar cobros en euros adeudando en",
+      "arial": 123.0712630359212,
+      "bestFamily": "Times New Roman",
+      "best": 122.33027096173974,
+      "relativeGain": 0.00602083748799415,
+      "errors": {
+        "Arial": 123.0712630359212,
+        "Times New Roman": 122.33027096173974,
+        "Courier New": 123.1478751583554,
+        "Calibri": 125.26770354660069,
+        "Cambria": 123.2481098057462
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 5,
+      "text": "cuenta del deudor ya sea consumidor, empresa 0 auténomo. *. Las periodicidades en el pago marcadas",
+      "arial": 121.05326679818963,
+      "bestFamily": "Times New Roman",
+      "best": 120.51496725912067,
+      "relativeGain": 0.00444679894485102,
+      "errors": {
+        "Arial": 121.05326679818963,
+        "Times New Roman": 120.51496725912067,
+        "Courier New": 122.0136046511628,
+        "Calibri": 124.37158860684066,
+        "Cambria": 122.23954060705496
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 6,
+      "text": "con ** se realizaran al inicio del periodo que se esté abonando.",
+      "arial": 117.01158206012815,
+      "bestFamily": "Courier New",
+      "best": 116.98154443904808,
+      "relativeGain": 0.00025670639223247116,
+      "errors": {
+        "Arial": 117.01158206012815,
+        "Times New Roman": 117.47503105590062,
+        "Courier New": 116.98154443904808,
+        "Calibri": 117.47964250248262,
+        "Cambria": 118.82322097378277
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 7,
+      "text": "*Nombre/Razén social",
+      "arial": 124.0251256281407,
+      "bestFamily": "Courier New",
+      "best": 123.64048991354467,
+      "relativeGain": 0.0031012725256111956,
+      "errors": {
+        "Arial": 124.0251256281407,
+        "Times New Roman": 124.07148067104303,
+        "Courier New": 123.64048991354467,
+        "Calibri": 125.78094523630908,
+        "Cambria": 124.26227106227107
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 8,
+      "text": "LA JARRINA DE MANZANARES, S.L.",
+      "arial": 123.08133857329997,
+      "bestFamily": "Calibri",
+      "best": 122.70864015709375,
+      "relativeGain": 0.0030280659970582163,
+      "errors": {
+        "Arial": 123.08133857329997,
+        "Times New Roman": 123.96155682903533,
+        "Courier New": 123.7622326930047,
+        "Calibri": 122.70864015709375,
+        "Cambria": 123.54532425653888
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 10,
+      "text": "*Cédigo Postal 13200",
+      "arial": 114.84914361001317,
+      "bestFamily": "Times New Roman",
+      "best": 112.43524699599466,
+      "relativeGain": 0.021017976609518707,
+      "errors": {
+        "Arial": 114.84914361001317,
+        "Times New Roman": 112.43524699599466,
+        "Courier New": 113.91547464239272,
+        "Calibri": 114.51472556894244,
+        "Cambria": 114.34996673320026
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 11,
+      "text": "*Ciudad MANZANARES",
+      "arial": 128.24693376941946,
+      "bestFamily": "Cambria",
+      "best": 128.03844580777096,
+      "relativeGain": 0.0016256759949002009,
+      "errors": {
+        "Arial": 128.24693376941946,
+        "Times New Roman": 128.85987780040733,
+        "Courier New": 130.2274233637117,
+        "Calibri": 129.65512927439534,
+        "Cambria": 128.03844580777096
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 12,
+      "text": "*Pais ESPANA",
+      "arial": 134.5620649651972,
+      "bestFamily": "Times New Roman",
+      "best": 131.66012128212532,
+      "relativeGain": 0.021565837918899676,
+      "errors": {
+        "Arial": 134.5620649651972,
+        "Times New Roman": 131.66012128212532,
+        "Courier New": 132.7098729792148,
+        "Calibri": 133.4341534008683,
+        "Cambria": 134.6670530281078
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 13,
+      "text": "*IBAN Cuenta Clientel _| ES88 3190 2026 7320 1480 1522",
+      "arial": 121.46138613861386,
+      "bestFamily": "Times New Roman",
+      "best": 121.17883435582822,
+      "relativeGain": 0.002326268386754559,
+      "errors": {
+        "Arial": 121.46138613861386,
+        "Times New Roman": 121.17883435582822,
+        "Courier New": 121.90157179917595,
+        "Calibri": 121.53923541247485,
+        "Cambria": 122.0852570021545
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 14,
+      "text": "*Bic-Swift Code 2",
+      "arial": 121.85855031667839,
+      "bestFamily": "Arial",
+      "best": 121.85855031667839,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 121.85855031667839,
+        "Times New Roman": 123.60085227272727,
+        "Courier New": 123.11595221363316,
+        "Calibri": 123.83917083631165,
+        "Cambria": 124.62314749470713
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 15,
+      "text": "*Tipo de pago Periddico x Unico",
+      "arial": 128.7632967032967,
+      "bestFamily": "Courier New",
+      "best": 126.892704778157,
+      "relativeGain": 0.014527369002131287,
+      "errors": {
+        "Arial": 128.7632967032967,
+        "Times New Roman": 127.90796185406964,
+        "Courier New": 126.892704778157,
+        "Calibri": 128.57642602495542,
+        "Cambria": 128.34057168180811
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 16,
+      "text": "*Periodicidad pago Mensual x Trimestral",
+      "arial": 132.73135656041512,
+      "bestFamily": "Courier New",
+      "best": 132.07263142480596,
+      "relativeGain": 0.0049628448972366904,
+      "errors": {
+        "Arial": 132.73135656041512,
+        "Times New Roman": 132.3525840367244,
+        "Courier New": 132.07263142480596,
+        "Calibri": 133.9343109382014,
+        "Cambria": 132.77508186960404
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 18,
+      "text": "Identificador B-65217531",
+      "arial": 122.84755665722379,
+      "bestFamily": "Times New Roman",
+      "best": 121.04022366522366,
+      "relativeGain": 0.0147119978710122,
+      "errors": {
+        "Arial": 122.84755665722379,
+        "Times New Roman": 121.04022366522366,
+        "Courier New": 122.37245724572458,
+        "Calibri": 123.37083936324169,
+        "Cambria": 121.6003239157819
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 21,
+      "text": "Ciudad Alicante",
+      "arial": 138.6291754756871,
+      "bestFamily": "Courier New",
+      "best": 138.1266835016835,
+      "relativeGain": 0.003624720209720541,
+      "errors": {
+        "Arial": 138.6291754756871,
+        "Times New Roman": 139.00042408821034,
+        "Courier New": 138.1266835016835,
+        "Calibri": 139.4395229982964,
+        "Cambria": 139.21234042553192
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 22,
+      "text": "Pais ~ Espafia",
+      "arial": 138.611134424395,
+      "bestFamily": "Arial",
+      "best": 138.611134424395,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 138.611134424395,
+        "Times New Roman": 139.27550302518645,
+        "Courier New": 139.26381909547737,
+        "Calibri": 140.08393694077546,
+        "Cambria": 139.02711054923444
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 23,
+      "text": "(1) EIIBAN es el estndar internacional para la identific",
+      "arial": 101.3748322147651,
+      "bestFamily": "Courier New",
+      "best": 99.97083062242463,
+      "relativeGain": 0.01384960706387228,
+      "errors": {
+        "Arial": 101.3748322147651,
+        "Times New Roman": 101.42598255748103,
+        "Courier New": 99.97083062242463,
+        "Calibri": 103.35900092081032,
+        "Cambria": 101.81304103428893
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 24,
+      "text": "acién de cuentas bancarias en todos los paises.",
+      "arial": 95.73682242990654,
+      "bestFamily": "Arial",
+      "best": 95.73682242990654,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 95.73682242990654,
+        "Times New Roman": 96.06502835538753,
+        "Courier New": 96.6545991872922,
+        "Calibri": 98.01149865848984,
+        "Cambria": 97.97404063205417
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 25,
+      "text": "Consta de un maximo de 34 caracteres alfanuméricos,",
+      "arial": 104.06754264638082,
+      "bestFamily": "Times New Roman",
+      "best": 104.00347383047708,
+      "relativeGain": 0.0006156464760722039,
+      "errors": {
+        "Arial": 104.06754264638082,
+        "Times New Roman": 104.00347383047708,
+        "Courier New": 104.21057492495959,
+        "Calibri": 105.49117439397506,
+        "Cambria": 104.5352764284062
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 26,
+      "text": "en funci6n del pais. En Espafia se compone de",
+      "arial": 104.58741092636579,
+      "bestFamily": "Courier New",
+      "best": 104.57648692432308,
+      "relativeGain": 0.00010444853683589792,
+      "errors": {
+        "Arial": 104.58741092636579,
+        "Times New Roman": 104.92045181446768,
+        "Courier New": 104.57648692432308,
+        "Calibri": 105.0834343924327,
+        "Cambria": 104.65283738674296
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 27,
+      "text": "24 caracteres: los dos primeros identifican el pais (ES),",
+      "arial": 103.93359949569238,
+      "bestFamily": "Courier New",
+      "best": 103.58592174263816,
+      "relativeGain": 0.0033451911099126657,
+      "errors": {
+        "Arial": 103.93359949569238,
+        "Times New Roman": 103.6761399787911,
+        "Courier New": 103.58592174263816,
+        "Calibri": 105.07896426278622,
+        "Cambria": 103.98393234672305
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 28,
+      "text": "los dos siguientes son digitos de control, los 20",
+      "arial": 107.06568914956011,
+      "bestFamily": "Courier New",
+      "best": 106.6951856148492,
+      "relativeGain": 0.0034605253807628664,
+      "errors": {
+        "Arial": 107.06568914956011,
+        "Times New Roman": 107.58869047619048,
+        "Courier New": 106.6951856148492,
+        "Calibri": 109.16867469879519,
+        "Cambria": 108.47404331059033
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 29,
+      "text": "restantes corresponden al Cédigo de Cuenta Corriente.",
+      "arial": 103.31557057447361,
+      "bestFamily": "Times New Roman",
+      "best": 102.48612212529738,
+      "relativeGain": 0.008028300522023732,
+      "errors": {
+        "Arial": 103.31557057447361,
+        "Times New Roman": 102.48612212529738,
+        "Courier New": 103.35042957563135,
+        "Calibri": 104.95132388339128,
+        "Cambria": 104.14087093389297
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 30,
+      "text": "(2) El codigo internacional de identificacién bancaria (BIC), también llamado “cédigo bancario SWIFT",
+      "arial": 103.50164365548981,
+      "bestFamily": "Courier New",
+      "best": 101.94398306464745,
+      "relativeGain": 0.01504962178211496,
+      "errors": {
+        "Arial": 103.50164365548981,
+        "Times New Roman": 103.33755837224817,
+        "Courier New": 101.94398306464745,
+        "Calibri": 104.66245086310032,
+        "Cambria": 103.90243090243091
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 31,
+      "text": "permite una identificacién Gnica de cada entidad de crédito y/o de sus oficinas. Puede calcular esto",
+      "arial": 105.98164934777802,
+      "bestFamily": "Courier New",
+      "best": 105.52055241409309,
+      "relativeGain": 0.004350724267102522,
+      "errors": {
+        "Arial": 105.98164934777802,
+        "Times New Roman": 106.51087320173971,
+        "Courier New": 105.52055241409309,
+        "Calibri": 107.27480484217672,
+        "Cambria": 106.74520456813394
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 32,
+      "text": "Cédigos a partir de su cuenta bancaria en http://www.sepaesp.es/herramienta/conversion.htm",
+      "arial": 100.29566828816307,
+      "bestFamily": "Arial",
+      "best": 100.29566828816307,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 100.29566828816307,
+        "Times New Roman": 100.96082281439926,
+        "Courier New": 102.21673790155798,
+        "Calibri": 102.63539013114446,
+        "Cambria": 101.94937824795842
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 33,
+      "text": "NOTA: El cliente debe remitir firmadas dos copias. Una copia quedard en posesién de Axon Time, S.L. ",
+      "arial": 104.5886544512308,
+      "bestFamily": "Courier New",
+      "best": 104.42151361707951,
+      "relativeGain": 0.0015980780614136306,
+      "errors": {
+        "Arial": 104.5886544512308,
+        "Times New Roman": 104.62408058093229,
+        "Courier New": 104.42151361707951,
+        "Calibri": 104.97239396117901,
+        "Cambria": 104.85797384708457
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 34,
+      "text": "otra serd devuetta al cliente, debidamente firmada, La domiciliaci6n arriba firmada se aplicaré hast",
+      "arial": 104.96877128822918,
+      "bestFamily": "Courier New",
+      "best": 104.27735855740958,
+      "relativeGain": 0.006586842184911099,
+      "errors": {
+        "Arial": 104.96877128822918,
+        "Times New Roman": 105.06193375371458,
+        "Courier New": 104.27735855740958,
+        "Calibri": 106.23460324451295,
+        "Cambria": 105.44361606338916
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 35,
+      "text": "Se haya efectuado el cobro del total de los importes vinculados a los productos y servicios reflejad",
+      "arial": 103.59176571920757,
+      "bestFamily": "Courier New",
+      "best": 103.56498330266476,
+      "relativeGain": 0.0002585380831852094,
+      "errors": {
+        "Arial": 103.59176571920757,
+        "Times New Roman": 103.67541017870205,
+        "Courier New": 103.56498330266476,
+        "Calibri": 104.80252914861389,
+        "Cambria": 104.25977992988302
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 36,
+      "text": "el contrato. El cliente deberd comunicar cualquier cambio de cuenta bancaria a Axon Time, S.L. envia",
+      "arial": 104.40245352907193,
+      "bestFamily": "Arial",
+      "best": 104.40245352907193,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 104.40245352907193,
+        "Times New Roman": 104.88872867099256,
+        "Courier New": 104.66506088585575,
+        "Calibri": 105.51783915233628,
+        "Cambria": 105.38970638326862
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 37,
+      "text": "un mail a contratacion@controllerenergetico.com. Recomendamos que informe a su oficina bancaria",
+      "arial": 106.87738890550737,
+      "bestFamily": "Times New Roman",
+      "best": 106.79188107489996,
+      "relativeGain": 0.0008000553857374949,
+      "errors": {
+        "Arial": 106.87738890550737,
+        "Times New Roman": 106.79188107489996,
+        "Courier New": 107.72711588865667,
+        "Calibri": 107.46884222084964,
+        "Cambria": 107.16405130767951
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 38,
+      "text": "para agilizar el pago y evitar asi posibles inconvenientes.",
+      "arial": 100.14185257032008,
+      "bestFamily": "Arial",
+      "best": 100.14185257032008,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 100.14185257032008,
+        "Times New Roman": 100.50638193421699,
+        "Courier New": 100.81569474442044,
+        "Calibri": 101.8250998003992,
+        "Cambria": 100.18477996596158
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 39,
+      "text": "AXON TIME, S.L. (Firma y sello)",
+      "arial": 93.93522060698803,
+      "bestFamily": "Times New Roman",
+      "best": 92.54440154440154,
+      "relativeGain": 0.014806151021941836,
+      "errors": {
+        "Arial": 93.93522060698803,
+        "Times New Roman": 92.54440154440154,
+        "Courier New": 94.67655259822561,
+        "Calibri": 93.56737034141256,
+        "Cambria": 94.54114583333333
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 40,
+      "text": "Apoderada: Matilde Albert Brotons",
+      "arial": 110.44106905710491,
+      "bestFamily": "Arial",
+      "best": 110.44106905710491,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 110.44106905710491,
+        "Times New Roman": 111.80742616033756,
+        "Courier New": 112.54879657105175,
+        "Calibri": 115.0171157430944,
+        "Cambria": 113.61571979219039
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 42,
+      "text": "Firmar tres copias (cuatro si existe asesor): una para Axon Time, S.L.,",
+      "arial": 112.89910118875036,
+      "bestFamily": "Times New Roman",
+      "best": 110.2324340349837,
+      "relativeGain": 0.023619914823842573,
+      "errors": {
+        "Arial": 112.89910118875036,
+        "Times New Roman": 110.2324340349837,
+        "Courier New": 111.40390431674457,
+        "Calibri": 113.2061824729892,
+        "Cambria": 112.68882265275708
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 5,
+      "line": 43,
+      "text": "otra para el cliente, otra para Grenke Rent,S.Ly otra para el asesor (ensu",
+      "arial": 105.25567502986858,
+      "bestFamily": "Times New Roman",
+      "best": 103.99951088285644,
+      "relativeGain": 0.011934407780442044,
+      "errors": {
+        "Arial": 105.25567502986858,
+        "Times New Roman": 103.99951088285644,
+        "Courier New": 106.78450781679628,
+        "Calibri": 105.99733066399735,
+        "Cambria": 104.41656604684859
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 1,
+      "text": "CONTRATO DE ARRENDAMIENTO Y PRESTACION DE SERVICIOS DE ASISTENCIA TECNICA",
+      "arial": 95.02529691211402,
+      "bestFamily": "Times New Roman",
+      "best": 89.30184633710542,
+      "relativeGain": 0.06023080970009536,
+      "errors": {
+        "Arial": 95.02529691211402,
+        "Times New Roman": 89.30184633710542,
+        "Courier New": 95.44344667943805,
+        "Calibri": 92.96270734955806,
+        "Cambria": 91.28374556896483
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 2,
+      "text": "AXON TIME, S.L_",
+      "arial": 108.79514070966613,
+      "bestFamily": "Times New Roman",
+      "best": 107.95148342059336,
+      "relativeGain": 0.0077545493628633135,
+      "errors": {
+        "Arial": 108.79514070966613,
+        "Times New Roman": 107.95148342059336,
+        "Courier New": 108.63548782623926,
+        "Calibri": 111.12651677373304,
+        "Cambria": 110.49632290063279
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 3,
+      "text": "LA JARRINA DE MANZANARES, S.L.",
+      "arial": 107.27703774183317,
+      "bestFamily": "Cambria",
+      "best": 107.15830546265327,
+      "relativeGain": 0.0011067818582540393,
+      "errors": {
+        "Arial": 107.27703774183317,
+        "Times New Roman": 109.21055949566588,
+        "Courier New": 108.47117073949848,
+        "Calibri": 107.23149967256057,
+        "Cambria": 107.15830546265327
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 4,
+      "text": "Como ARRENDADOR-DISTRIBUIDOR",
+      "arial": 117.02002385821405,
+      "bestFamily": "Times New Roman",
+      "best": 116.40952380952382,
+      "relativeGain": 0.005217056265771508,
+      "errors": {
+        "Arial": 117.02002385821405,
+        "Times New Roman": 116.40952380952382,
+        "Courier New": 116.65463607458967,
+        "Calibri": 118.0040129111053,
+        "Cambria": 116.84248802190281
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 5,
+      "text": "Como ARRENDATARIO",
+      "arial": 113.9496393085613,
+      "bestFamily": "Times New Roman",
+      "best": 110.3101662578359,
+      "relativeGain": 0.0319393117241044,
+      "errors": {
+        "Arial": 113.9496393085613,
+        "Times New Roman": 110.3101662578359,
+        "Courier New": 112.26742919389977,
+        "Calibri": 114.15557415934144,
+        "Cambria": 113.48674863387977
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 6,
+      "text": "con sede en Alicante",
+      "arial": 113.75417032484636,
+      "bestFamily": "Courier New",
+      "best": 112.86524822695036,
+      "relativeGain": 0.007814413268168684,
+      "errors": {
+        "Arial": 113.75417032484636,
+        "Times New Roman": 115.95706618962433,
+        "Courier New": 112.86524822695036,
+        "Calibri": 118.67446043165468,
+        "Cambria": 116.06896551724138
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 7,
+      "text": "con sede en MANZANARES",
+      "arial": 107.77164366373903,
+      "bestFamily": "Courier New",
+      "best": 107.58753148614609,
+      "relativeGain": 0.001708354547949455,
+      "errors": {
+        "Arial": 107.77164366373903,
+        "Times New Roman": 108.47867001254706,
+        "Courier New": 107.58753148614609,
+        "Calibri": 109.22236421725239,
+        "Cambria": 108.58614232209737
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 8,
+      "text": "con un capital social escriturado de 68.754 €",
+      "arial": 110.13740157480315,
+      "bestFamily": "Arial",
+      "best": 110.13740157480315,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 110.13740157480315,
+        "Times New Roman": 111.09278350515464,
+        "Courier New": 111.25347222222223,
+        "Calibri": 114.06789137380191,
+        "Cambria": 113.90389197776013
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 9,
+      "text": "con un capital social escriturado de Capital",
+      "arial": 99.78029367366543,
+      "bestFamily": "Arial",
+      "best": 99.78029367366543,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 99.78029367366543,
+        "Times New Roman": 100.0877994737571,
+        "Courier New": 101.03715937241948,
+        "Calibri": 101.64506565014824,
+        "Cambria": 100.90026138395929
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 10,
+      "text": "inscrito en el registro mercantil de Barcelona",
+      "arial": 106.12696586114308,
+      "bestFamily": "Arial",
+      "best": 106.12696586114308,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 106.12696586114308,
+        "Times New Roman": 108.56617647058823,
+        "Courier New": 108.53962836556693,
+        "Calibri": 110.16836335160532,
+        "Cambria": 108.82915541843424
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 11,
+      "text": "inscrito en el registro mercantil de Registro",
+      "arial": 105.20534069981585,
+      "bestFamily": "Times New Roman",
+      "best": 102.99227593554401,
+      "relativeGain": 0.021035669382853946,
+      "errors": {
+        "Arial": 105.20534069981585,
+        "Times New Roman": 102.99227593554401,
+        "Courier New": 104.540273556231,
+        "Calibri": 105.54389492025196,
+        "Cambria": 105.26448697501328
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 13,
+      "text": "C.LF. B13447818",
+      "arial": 113.82549634273772,
+      "bestFamily": "Times New Roman",
+      "best": 112.41908713692946,
+      "relativeGain": 0.012355836354742949,
+      "errors": {
+        "Arial": 113.82549634273772,
+        "Times New Roman": 112.41908713692946,
+        "Courier New": 114.09533678756476,
+        "Calibri": 116.18991416309012,
+        "Cambria": 112.47734457323499
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 14,
+      "text": "| representado por Matilde Albert Brotons",
+      "arial": 117.5680942669386,
+      "bestFamily": "Courier New",
+      "best": 114.64004474272932,
+      "relativeGain": 0.024905137252298596,
+      "errors": {
+        "Arial": 117.5680942669386,
+        "Times New Roman": 115.29404395854685,
+        "Courier New": 114.64004474272932,
+        "Calibri": 118.07491553070024,
+        "Cambria": 116.86798454896615
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 15,
+      "text": "Tepresentado por FRANCISCO JAVIER CAMACHO LOPEZ DE PABLO",
+      "arial": 115.94575799721837,
+      "bestFamily": "Arial",
+      "best": 115.94575799721837,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.94575799721837,
+        "Times New Roman": 116.82920723226704,
+        "Courier New": 117.64977477477477,
+        "Calibri": 117.50710762982304,
+        "Cambria": 116.96620111731843
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 17,
+      "text": "con D.N.I. 06259784N en calidad de TITULAR |",
+      "arial": 99.56321229790618,
+      "bestFamily": "Times New Roman",
+      "best": 99.4017185821697,
+      "relativeGain": 0.0016220219497665358,
+      "errors": {
+        "Arial": 99.56321229790618,
+        "Times New Roman": 99.4017185821697,
+        "Courier New": 100.43447786354362,
+        "Calibri": 100.64643179765132,
+        "Cambria": 100.55846610856062
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 18,
+      "text": "Concluyen este contrato de arrendamiento y prestacién de servicios de asistencia técnica (en adelant",
+      "arial": 102.64338330557098,
+      "bestFamily": "Arial",
+      "best": 102.64338330557098,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 102.64338330557098,
+        "Times New Roman": 102.98831260968596,
+        "Courier New": 104.01067395264116,
+        "Calibri": 104.22995421349377,
+        "Cambria": 103.46447905079718
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 20,
+      "text": "Primera (OBJETO):",
+      "arial": 109.58988870024523,
+      "bestFamily": "Times New Roman",
+      "best": 106.70578231292517,
+      "relativeGain": 0.026317267236293906,
+      "errors": {
+        "Arial": 109.58988870024523,
+        "Times New Roman": 106.70578231292517,
+        "Courier New": 110.47674418604652,
+        "Calibri": 109.88831118813788,
+        "Cambria": 108.89299943084804
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 21,
+      "text": "recepcion de la solicitud de asistencia, con la excepcién de que se",
+      "arial": 106.92086330935251,
+      "bestFamily": "Courier New",
+      "best": 106.87716604518535,
+      "relativeGain": 0.0004086879100548957,
+      "errors": {
+        "Arial": 106.92086330935251,
+        "Times New Roman": 108.04120443740095,
+        "Courier New": 106.87716604518535,
+        "Calibri": 109.24418073938841,
+        "Cambria": 108.21335137573297
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 22,
+      "text": "El objeto del CONTRATO es el arrendamiento de equipos y accesorios",
+      "arial": 112.10526315789474,
+      "bestFamily": "Arial",
+      "best": 112.10526315789474,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 112.10526315789474,
+        "Times New Roman": 113.20555888822236,
+        "Courier New": 113.33471892319874,
+        "Calibri": 114.49320900060815,
+        "Cambria": 113.51428000798882
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 23,
+      "text": "diese un evento de fuerza mayor que impidiese el cumplimiento para",
+      "arial": 113.06137582833702,
+      "bestFamily": "Arial",
+      "best": 113.06137582833702,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 113.06137582833702,
+        "Times New Roman": 113.77965023847376,
+        "Courier New": 114.6347935311666,
+        "Calibri": 115.16094351732991,
+        "Cambria": 114.06236150680596
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 24,
+      "text": "identificados en la propuesta presentada por el ARRENDADOR-",
+      "arial": 118.29517543859649,
+      "bestFamily": "Cambria",
+      "best": 117.82655467138225,
+      "relativeGain": 0.003961452911978479,
+      "errors": {
+        "Arial": 118.29517543859649,
+        "Times New Roman": 118.54259560017718,
+        "Courier New": 117.8780487804878,
+        "Calibri": 119.15690936106984,
+        "Cambria": 117.82655467138225
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 25,
+      "text": "con sus obligaciones. En estos casos, el periodo maximo de 10",
+      "arial": 115.45880241474956,
+      "bestFamily": "Courier New",
+      "best": 114.60494026477237,
+      "relativeGain": 0.007395383739647299,
+      "errors": {
+        "Arial": 115.45880241474956,
+        "Times New Roman": 115.72229529759947,
+        "Courier New": 114.60494026477237,
+        "Calibri": 116.69983416252073,
+        "Cambria": 115.63033486539724
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 26,
+      "text": "DISTRIBUIDOR al ARRENDATARIO, asi como la Prestacion de",
+      "arial": 116.80010312822276,
+      "bestFamily": "Courier New",
+      "best": 116.73510838026966,
+      "relativeGain": 0.0005564613918340694,
+      "errors": {
+        "Arial": 116.80010312822276,
+        "Times New Roman": 117.34755677907776,
+        "Courier New": 116.73510838026966,
+        "Calibri": 117.89877622377622,
+        "Cambria": 117.57595155709343
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 27,
+      "text": "horas se computa desde el momento en que la causa de fuerza",
+      "arial": 115.33149800645529,
+      "bestFamily": "Arial",
+      "best": 115.33149800645529,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.33149800645529,
+        "Times New Roman": 115.84846743295019,
+        "Courier New": 116.14228723404256,
+        "Calibri": 117.30087124878993,
+        "Cambria": 115.81665393430099
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 28,
+      "text": "servicios de asistencia técnica de los equipos y accesorios.",
+      "arial": 108.23921946518911,
+      "bestFamily": "Arial",
+      "best": 108.23921946518911,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 108.23921946518911,
+        "Times New Roman": 108.99418322830829,
+        "Courier New": 108.26576895818569,
+        "Calibri": 110.57430112800392,
+        "Cambria": 109.32752360203341
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 29,
+      "text": "mayor finalice.",
+      "arial": 113.0733752620545,
+      "bestFamily": "Courier New",
+      "best": 112.15926214601195,
+      "relativeGain": 0.008084247188376838,
+      "errors": {
+        "Arial": 113.0733752620545,
+        "Times New Roman": 112.80396889246445,
+        "Courier New": 112.15926214601195,
+        "Calibri": 112.96180555555556,
+        "Cambria": 114.24946581196582
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 30,
+      "text": "* La solicitud de asistencia debe ser remitida a la direccién de correo",
+      "arial": 105.10576555937381,
+      "bestFamily": "Arial",
+      "best": 105.10576555937381,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 105.10576555937381,
+        "Times New Roman": 106.56007974848553,
+        "Courier New": 105.29038945653782,
+        "Calibri": 107.99721771388825,
+        "Cambria": 106.2564398308343
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 31,
+      "text": "Segunda (DURACION):",
+      "arial": 109.332524925896,
+      "bestFamily": "Courier New",
+      "best": 107.52856350526899,
+      "relativeGain": 0.016499769138686803,
+      "errors": {
+        "Arial": 109.332524925896,
+        "Times New Roman": 107.88893563315104,
+        "Courier New": 107.52856350526899,
+        "Calibri": 110.9620403321471,
+        "Cambria": 109.19299011052937
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 33,
+      "text": "EI periodo inicial, de cumplimiento minimo obligatorio, empezard a",
+      "arial": 110.89554473979783,
+      "bestFamily": "Times New Roman",
+      "best": 110.63917333829826,
+      "relativeGain": 0.002311827784435403,
+      "errors": {
+        "Arial": 110.89554473979783,
+        "Times New Roman": 110.63917333829826,
+        "Courier New": 111.07386569872958,
+        "Calibri": 112.33142748237088,
+        "Cambria": 112.04202626641651
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 34,
+      "text": "* Proporcionar, sin gastos adicionales para el ARRENDATARIO, los",
+      "arial": 111.95064710957722,
+      "bestFamily": "Arial",
+      "best": 111.95064710957722,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 111.95064710957722,
+        "Times New Roman": 112.45020891364902,
+        "Courier New": 112.45108508439546,
+        "Calibri": 113.60901725959845,
+        "Cambria": 112.05901810584959
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 35,
+      "text": "contar el primer dia del mes o trimestre natural siguiente a la fecha de",
+      "arial": 112.42977305189652,
+      "bestFamily": "Courier New",
+      "best": 110.87833176544372,
+      "relativeGain": 0.013799203221166952,
+      "errors": {
+        "Arial": 112.42977305189652,
+        "Times New Roman": 113.0246972594009,
+        "Courier New": 110.87833176544372,
+        "Calibri": 114.24698698376989,
+        "Cambria": 113.34592192954618
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 36,
+      "text": "recursos necesarios para la instalacién de los equipos.",
+      "arial": 109.92078189300412,
+      "bestFamily": "Courier New",
+      "best": 109.6332171314741,
+      "relativeGain": 0.0026161091340301226,
+      "errors": {
+        "Arial": 109.92078189300412,
+        "Times New Roman": 111.16371681415929,
+        "Courier New": 109.6332171314741,
+        "Calibri": 112.57862956156471,
+        "Cambria": 111.24292023902312
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 37,
+      "text": "entrega de los bienes arrendados, segun sea el modo de pago acordado.",
+      "arial": 115.31722009991184,
+      "bestFamily": "Arial",
+      "best": 115.31722009991184,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.31722009991184,
+        "Times New Roman": 116.62468401486989,
+        "Courier New": 116.63858256138803,
+        "Calibri": 117.55902204889756,
+        "Cambria": 116.75022248590922
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 38,
+      "text": "Entre la fecha de entrega del bien y la de inicio del contrato, el",
+      "arial": 115.46893424036281,
+      "bestFamily": "Arial",
+      "best": 115.46893424036281,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.46893424036281,
+        "Times New Roman": 116.61968611915283,
+        "Courier New": 115.64574325331743,
+        "Calibri": 117.39267095982828,
+        "Cambria": 116.05123137731833
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 39,
+      "text": "Cuarta (OBLIGACIONES DEL ARRENDATARIO):",
+      "arial": 109.71791255289139,
+      "bestFamily": "Times New Roman",
+      "best": 106.03987873134328,
+      "relativeGain": 0.03352263760737385,
+      "errors": {
+        "Arial": 109.71791255289139,
+        "Times New Roman": 106.03987873134328,
+        "Courier New": 108.2274325908558,
+        "Calibri": 107.51685750636132,
+        "Cambria": 106.30663525716528
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 40,
+      "text": "ARRENDATARIO debera abonar diariamente 1/30 de la renta acordada",
+      "arial": 115.62737920937043,
+      "bestFamily": "Arial",
+      "best": 115.62737920937043,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 115.62737920937043,
+        "Times New Roman": 116.24094068924715,
+        "Courier New": 115.79415651152547,
+        "Calibri": 117.01307578008915,
+        "Cambria": 116.6649461731308
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 41,
+      "text": "Las obligaciones del ARRENDATARIO son, entre otras, las que se",
+      "arial": 112.00228855721392,
+      "bestFamily": "Arial",
+      "best": 112.00228855721392,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 112.00228855721392,
+        "Times New Roman": 112.29744516388095,
+        "Courier New": 112.03490556709187,
+        "Calibri": 112.43936159398191,
+        "Cambria": 112.4175565247907
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 42,
+      "text": "hasta el inicio del CONTRATO. A Ia finalizacion del periodo inicial del",
+      "arial": 113.16024945770064,
+      "bestFamily": "Courier New",
+      "best": 111.89907766341398,
+      "relativeGain": 0.011145007194050895,
+      "errors": {
+        "Arial": 113.16024945770064,
+        "Times New Roman": 113.83204134366925,
+        "Courier New": 111.89907766341398,
+        "Calibri": 114.74412209542142,
+        "Cambria": 113.96338143207187
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 43,
+      "text": "derivan de su condicién legal como ARRENDATARIO contenidas en los",
+      "arial": 113.86933509758518,
+      "bestFamily": "Arial",
+      "best": 113.86933509758518,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 113.86933509758518,
+        "Times New Roman": 114.7849533954727,
+        "Courier New": 114.54281949934123,
+        "Calibri": 115.14060402684564,
+        "Cambria": 114.71321571238349
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 45,
+      "text": "apartados siguientes:",
+      "arial": 118.18587542913193,
+      "bestFamily": "Times New Roman",
+      "best": 116.11089206505667,
+      "relativeGain": 0.017556948802392874,
+      "errors": {
+        "Arial": 118.18587542913193,
+        "Times New Roman": 116.11089206505667,
+        "Courier New": 118.47616777883698,
+        "Calibri": 119.37131434282858,
+        "Cambria": 118.53022794846383
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 46,
+      "text": "natural, a menos que una de las partes manifieste su voluntad de",
+      "arial": 114.26957680773076,
+      "bestFamily": "Courier New",
+      "best": 114.22725763612218,
+      "relativeGain": 0.0003703450453814878,
+      "errors": {
+        "Arial": 114.26957680773076,
+        "Times New Roman": 115.15581356217399,
+        "Courier New": 114.22725763612218,
+        "Calibri": 116.2709601081812,
+        "Cambria": 115.19902831295025
+      }
+    },
+    {
+      "doc": "190213",
+      "page": 6,
+      "line": 47,
+      "text": "* Pagar las cantidades establecidas en la siguiente cldusula en la",
+      "arial": 113.93754273991338,
+      "bestFamily": "Arial",
+      "best": 113.93754273991338,
+      "relativeGain": 0.0,
+      "errors": {
+        "Arial": 113.93754273991338,
+        "Times New Roman": 114.77683486238531,
+        "Courier New": 114.03806701618419,
+        "Calibri": 116.6657323055361,
+        "Cambria": 114.40546122074346
+      }
+    }
+  ]
+}

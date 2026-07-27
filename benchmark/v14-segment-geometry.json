@@ -1,0 +1,125 @@
+{
+  "documents": 5,
+  "ocrPages": 40,
+  "lines": 1503,
+  "splitLines": 127,
+  "meanMaeV13": 3.548017574785638,
+  "meanMaeV14": 1.4639574284200458,
+  "splitMeanMaeV13": 25.695632777686534,
+  "splitMeanMaeV14": 1.0315193919583079,
+  "improvedLines": 127,
+  "regressedLines": 0,
+  "worstRegressions": [],
+  "bestImprovements": [
+    {
+      "mae13": 113.15831773127752,
+      "mae14": 2.4148109704704837,
+      "max13": 234.13986784140968,
+      "max14": 6.800000000000011,
+      "segments": 2,
+      "words": 4,
+      "doc": "maiz",
+      "page": 3,
+      "text": "20: HUERCASA 54 GAMAZ.A."
+    },
+    {
+      "mae13": 71.93000632911392,
+      "mae14": 0.567699553542333,
+      "max13": 153.28481012658227,
+      "max14": 1.818340611353733,
+      "segments": 2,
+      "words": 4,
+      "doc": "sd7-low-native-text",
+      "page": 4,
+      "text": "$D700 KOMPAKT POWER ELECTRONICS."
+    },
+    {
+      "mae13": 58.79798015425132,
+      "mae14": 1.0854473988302225,
+      "max13": 111.99811888638074,
+      "max14": 2.2912484945804863,
+      "segments": 2,
+      "words": 8,
+      "doc": "maiz",
+      "page": 9,
+      "text": "HU AL CONTRATO DE SUMINISTRO DE MATERIA PRIMA"
+    },
+    {
+      "mae13": 57.80739790153349,
+      "mae14": 0.20055519820919301,
+      "max13": 160.49556093623892,
+      "max14": 1.0006666666666604,
+      "segments": 4,
+      "words": 5,
+      "doc": "190213",
+      "page": 2,
+      "text": "limportes finales: Senvick [ I"
+    },
+    {
+      "mae13": 56.527091760165796,
+      "mae14": 0.9167120212606201,
+      "max13": 126.34342171085541,
+      "max14": 2.254156769596193,
+      "segments": 2,
+      "words": 7,
+      "doc": "190213",
+      "page": 9,
+      "text": "fecha de demora, de forma invariable. MARY"
+    },
+    {
+      "mae13": 54.6964156626506,
+      "mae14": 0.11554533205118211,
+      "max13": 114.59036144578315,
+      "max14": 0.235973597359731,
+      "segments": 2,
+      "words": 4,
+      "doc": "190213",
+      "page": 11,
+      "text": "Lugar y fecha MANZANARES"
+    },
+    {
+      "mae13": 52.24187175493248,
+      "mae14": 0.8652794411177686,
+      "max13": 93.63317757009344,
+      "max14": 2.594306049822052,
+      "segments": 2,
+      "words": 3,
+      "doc": "190213",
+      "page": 5,
+      "text": "Pais ~ Espafia"
+    },
+    {
+      "mae13": 52.44454445422535,
+      "mae14": 1.1552500750213228,
+      "max13": 96.115536971831,
+      "max14": 3.872823618470875,
+      "segments": 2,
+      "words": 9,
+      "doc": "190213",
+      "page": 11,
+      "text": "con sede en Alicante | con sede en MANZANARES"
+    },
+    {
+      "mae13": 48.63082904884319,
+      "mae14": 0.0005483633754958342,
+      "max13": 74.89588688946017,
+      "max14": 0.0006349206349227643,
+      "segments": 3,
+      "words": 3,
+      "doc": "190213",
+      "page": 2,
+      "text": "Teléfono z Puerto"
+    },
+    {
+      "mae13": 49.125295454545444,
+      "mae14": 0.8876356025759051,
+      "max13": 107.39249011857709,
+      "max14": 3.3666053357865735,
+      "segments": 2,
+      "words": 4,
+      "doc": "maiz",
+      "page": 2,
+      "text": "NO SUPERFICIE | CODIGO"
+    }
+  ]
+}
