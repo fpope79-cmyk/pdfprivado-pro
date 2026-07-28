@@ -1624,7 +1624,25 @@ function drawCalibrationLine(context, line, page, sx, sy, {
   if (source === "ocr") {
     const anchorPlan = buildOcrWordAnchorPlan(line, page, geometry);
     if (anchorPlan.enabled) {
+      // v22-B: mantener la coherencia calibrador->DOCX de v22-A solo en
+      // paginas OCR densas, reutilizando la frontera estructural historica
+      // pageOcrLayoutCoverage >= 0.20. En paginas sparse conservamos v21.
+      const pageLineCount = Array.isArray(page?.layout)
+        ? page.layout.filter((candidateLine) => {
+            const candidateSource = String(
+              candidateLine?.source || page?.source || ""
+            ).toLocaleLowerCase();
+            return candidateSource === "ocr";
+          }).length
+        : 0;
+      const pageAllowsLift =
+        pageLineCount >= 32 &&
+        pageOcrLayoutCoverage(page) >= 0.20;
+      const fontLift = 1.14;
+      const baseContextFont = context.font;
+
       for (const word of anchorPlan.words) {
+        const confidence = Number(word?.confidence ?? line?.confidence);
         const wordScale = docxOcrWordTextScale({
           text: word.text,
           targetWidth: word.width,
@@ -1632,16 +1650,46 @@ function drawCalibrationLine(context, line, page, sx, sy, {
           size: geometry.displayFontSize,
           bold: Boolean(line?.bold),
           italic: Boolean(line?.italic),
-          confidence: word?.confidence ?? line?.confidence,
+          confidence,
         });
-        drawCalibrationScaledText(
-          context,
-          word.text,
-          word.x * sx - offsetX,
-          baselineY,
-          wordScale
-        );
+        const baseScalePercent = Number(wordScale) || 100;
+        const compensatedScale = Math.round(baseScalePercent / fontLift);
+        const canLift =
+          pageAllowsLift &&
+          Number.isFinite(confidence) &&
+          confidence >= 75 &&
+          compensatedScale >= 78 &&
+          compensatedScale <= 122;
+
+        if (canLift) {
+          const liftedHalfPoints = Math.max(
+            9,
+            Math.round(geometry.displayFontSize * fontLift * 2)
+          );
+          const liftedSizePoints = liftedHalfPoints / 2;
+          context.font =
+            `${line?.italic ? "italic " : ""}` +
+            `${line?.bold ? "700 " : "400 "}` +
+            `${Math.max(1, liftedSizePoints * sy)}px "${geometry.font.family}"`;
+          drawCalibrationScaledText(
+            context,
+            word.text,
+            word.x * sx - offsetX,
+            baselineY,
+            compensatedScale
+          );
+          context.font = baseContextFont;
+        } else {
+          drawCalibrationScaledText(
+            context,
+            word.text,
+            word.x * sx - offsetX,
+            baselineY,
+            wordScale
+          );
+        }
       }
+      context.font = baseContextFont;
       return geometry;
     }
 
