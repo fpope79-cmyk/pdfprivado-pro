@@ -1294,6 +1294,14 @@ export function resolveDocxEditableFont(line = {}) {
   const lower = descriptor.toLocaleLowerCase();
   if (/calibri/u.test(lower)) return { family: "Calibri", reliable: true };
   if (/cambria/u.test(lower)) return { family: "Cambria", reliable: true };
+
+  // v23: conservar la variante metrica Narrow cuando el propio PDF
+  // declara Arial Narrow. Bold e italic siguen siendo propiedades
+  // independientes del TextRun, sin alterar tamano, escala ni geometria.
+  if (/arial\s+narrow/u.test(lower)) {
+    return { family: "Arial Narrow", reliable: true };
+  }
+
   if (/arial|helvetica|liberation sans|dejavu sans|noto sans|sans/u.test(lower)) {
     return { family: "Arial", reliable: true };
   }
