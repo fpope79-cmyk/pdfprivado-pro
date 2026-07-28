@@ -2370,7 +2370,24 @@ function layoutLineGeometry(line, page) {
       Math.max(fontSize, Number(line?.height) || fontSize) -
       fontSize * baselineFactor;
   } else {
-    computedTop = pageHeight - (Number(line?.y) || 0) - (fontSize * 0.82);
+    // v21: geometría vertical nativa adaptativa.
+    // Si la caja del PDF demuestra una altura vertical real superior al
+    // fontSize nominal y el tamaño visible se ha reducido, usamos ese tamaño
+    // visible también para posicionar la baseline. En el resto conservamos
+    // exactamente el comportamiento histórico.
+    const nativeHeight = Number(line?.height);
+    const nativeHasVerticalScale =
+      displayFontSize < fontSize &&
+      Number.isFinite(nativeHeight) &&
+      nativeHeight > fontSize + (1 / DOCX_TWIPS_PER_POINT);
+    const nativeBaselineSize = nativeHasVerticalScale
+      ? displayFontSize
+      : fontSize;
+
+    computedTop =
+      pageHeight -
+      (Number(line?.y) || 0) -
+      (nativeBaselineSize * 0.82);
   }
 
   const visualBaselineOffset = source === "ocr"
