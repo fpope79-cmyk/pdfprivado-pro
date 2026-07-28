@@ -2766,20 +2766,52 @@ function editableOcrSegmentRunOptions(segment, line, geometry, singleRun) {
 }
 
 
-function editableOcrWordRunOptions(word, line, geometry, singleRun) {
-  const scale = docxOcrWordTextScale({
-    text: word?.text,
+function editableOcrWordRunOptions(word, line, geometry, singleRun, page) {
+  const text = String(word?.text || "");
+  const confidence = Number(word?.confidence ?? line?.confidence);
+  const baseScale = docxOcrWordTextScale({
+    text,
     targetWidth: word?.width,
     family: geometry.font.family,
     size: geometry.displayFontSize,
     bold: Boolean(line?.bold),
     italic: Boolean(line?.italic),
-    confidence: word?.confidence ?? line?.confidence,
+    confidence,
   });
+
+  // v20: recuperación vertical adaptativa de palabras OCR.
+  // En páginas con al menos 32 líneas OCR, aumenta un 14 % el tamaño
+  // tipográfico de palabras ancladas fiables y compensa horizontalmente
+  // para conservar aproximadamente el ancho de v19.
+  const pageLineCount = Array.isArray(page?.layout)
+    ? page.layout.filter((candidateLine) => {
+        const source = String(
+          candidateLine?.source || page?.source || ""
+        ).toLocaleLowerCase();
+        return source === "ocr";
+      }).length
+    : 0;
+  const pageAllowsLift = pageLineCount >= 32;
+
+  const fontLift = 1.14;
+  const baseScalePercent = Number(baseScale) || 100;
+  const compensatedScale = Math.round(baseScalePercent / fontLift);
+  const canLift =
+    pageAllowsLift &&
+    Number.isFinite(confidence) &&
+    confidence >= 75 &&
+    compensatedScale >= 78 &&
+    compensatedScale <= 122;
+
   return {
     ...singleRun,
-    text: String(word?.text || ""),
-    ...(scale ? { scale } : {}),
+    text,
+    ...(canLift
+      ? {
+          size: Math.max(9, Math.round(geometry.displayFontSize * fontLift * 2)),
+          scale: compensatedScale,
+        }
+      : (baseScale ? { scale: baseScale } : {})),
   };
 }
 
@@ -2823,7 +2855,7 @@ function editableLineTextbox(line, page, api, index) {
         }));
       }
       runChildren.push(new api.TextRun(
-        editableOcrWordRunOptions(word, line, geometry, singleRun)
+        editableOcrWordRunOptions(word, line, geometry, singleRun, page)
       ));
     });
   } else if (source === "ocr" && Array.isArray(content.segments) && content.segments.length) {
