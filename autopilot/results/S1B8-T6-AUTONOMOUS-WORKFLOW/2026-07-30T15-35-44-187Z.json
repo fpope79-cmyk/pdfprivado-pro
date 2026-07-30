@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B8-T6-AUTONOMOUS-WORKFLOW",
+  "title": "T6 autonomo: paginacion, binding geometrico y decision de prototipo",
+  "startedAt": "2026-07-30T15:35:40.319Z",
+  "finishedAt": "2026-07-30T15:35:44.187Z",
+  "outcome": "PASS",
+  "exitCode": 0,
+  "activeBaselineBefore": "T5",
+  "activeBaselineAfter": "T5",
+  "keptApplied": false,
+  "summary": {
+    "experiment": "S1B8-T6-AUTONOMOUS-WORKFLOW",
+    "pass": true,
+    "decision": "decision=READY_FOR_CONSERVATIVE_PROTOTYPE;segmentation=SECTION;exactAnchorCarrier=0/16;exactDrawingCarrier=0/16;exactTopLevelParagraph=0/16;exactSection=16/16;exactExplicitBreak=3/16;exactPageBreakBefore=3/16;tables=23;tablePages=16;candidateTextboxes=564;resolvedTextboxes=551;coverage=0.976950;ambiguity=0.023050;unresolved=0.000000;centerResolved=551;overlapResolved=0;gridSpans=6;merges=0",
+    "promotionAllowed": false,
+    "note": "Flujo T6 autonomo read-only: descubre paginacion, elige una señal exacta y audita binding textbox-celda. No lee texto, no modifica DOCX ni motor, no rerenderiza full206. El mapa numerico queda solo local.",
+    "candidate": {
+      "pages": 206,
+      "eligiblePages": 16,
+      "wordTables": 23
+    },
+    "baseline": {
+      "r3pRerendered": false
+    },
+    "gates": {
+      "candidateDocs16": true,
+      "pages206": true,
+      "readOnly": true,
+      "noTextRead": true,
+      "noDocumentNamesPublished": true,
+      "noPrivatePathsPublished": true,
+      "segmentationFound": true,
+      "tablePages": 16,
+      "wordTables": 23,
+      "candidateTextboxes": 564,
+      "resolvedTextboxes": 551,
+      "unresolvedTextboxes": 0,
+      "ambiguousTextboxes": 13,
+      "bindingCoverage": 0.9769503546099291,
+      "ambiguityRate": 0.02304964539007092,
+      "unresolvedRate": 0,
+      "bindingRecords": 551,
+      "rawParagraphs": 9819,
+      "rawAnchorCarrierParagraphs": 9628,
+      "rawDrawingCarrierParagraphs": 9628,
+      "rawExplicitPageBreaks": 0,
+      "rawPageBreakBefore": 0,
+      "rawParagraphSectPr": 190,
+      "rawBodySectPr": 16,
+      "rawLastRenderedPageBreaks": 0
+    }
+  },
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
