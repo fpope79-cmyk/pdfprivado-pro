@@ -1,10 +1,10 @@
 {
     "schemaVersion":  1,
-    "updatedAt":  "2026-07-30T13:18:54.1894600+02:00",
+    "updatedAt":  "2026-07-30T17:02:24.3337409+02:00",
     "baselinePolicy":  {
                            "official":  "v23",
                            "officialCommit":  "b06d0a812603fcc6d18accd15c80263829bef73c",
-                           "localWorkingBaseline":  "R3P",
+                           "localWorkingBaseline":  "T5",
                            "noAutomaticOfficialPromotion":  true
                        },
     "closedIds":  [
@@ -25,7 +25,10 @@
                       "T1",
                       "T2",
                       "T3",
-                      "T4"
+                      "T4",
+                      "T5",
+                      "S1B7-T5-HYBRID-TABLE-SHELL-FULL206",
+                      "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206"
                   ],
     "jobs":  [
                  {
@@ -51,8 +54,8 @@
                  },
                  {
                      "id":  "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
-                     "title":  "Reintento técnico T5 con spec R3R reutilizado",
-                     "enabled":  true,
+                     "title":  "Reintento tÃ©cnico T5 con spec R3R reutilizado",
+                     "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B7-T5R-HYBRID-TABLE-SHELL-FULL206.ps1",
                      "sha256":  "b1496f20bbfb936b924d8d79bcb564aa8a92f16b5eb278860659f729558f3b64",
@@ -62,6 +65,27 @@
                      "resultDiscovery":  {
                                              "root":  "%USERPROFILE%\\Downloads",
                                              "prefix":  "PDFPrivado-S1B7-T5-HYBRID-TABLE-SHELL-",
+                                             "file":  "RESULTADO.json"
+                                         },
+                     "privacy":  {
+                                     "uploadConsole":  false,
+                                     "uploadArtifacts":  false,
+                                     "uploadDocuments":  false
+                                 }
+                 },
+                 {
+                     "id":  "S1B8-T6A-SEMANTIC-SCHEMA",
+                     "title":  "Descubrir esquema de asociacion semantica desde T5 sin modificar DOCX",
+                     "enabled":  true,
+                     "shell":  "powershell",
+                     "script":  "autopilot/jobs/S1B8-T6A-SEMANTIC-SCHEMA.ps1",
+                     "sha256":  "530f3d57022f45382a76f17cef2eb8492b88e5daa1be13b98cf72262a860d463",
+                     "timeoutMinutes":  30,
+                     "keepAppliedOnPass":  false,
+                     "nextBaselineName":  "T5",
+                     "resultDiscovery":  {
+                                             "root":  "%USERPROFILE%\\Downloads",
+                                             "prefix":  "PDFPrivado-S1B8-T6A-SEMANTIC-SCHEMA-",
                                              "file":  "RESULTADO.json"
                                          },
                      "privacy":  {
