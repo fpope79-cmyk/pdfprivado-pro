@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "updatedAt":  "2026-07-30T17:02:24.3337409+02:00",
+    "updatedAt":  "2026-07-30T17:06:45.8171391+02:00",
     "baselinePolicy":  {
                            "official":  "v23",
                            "officialCommit":  "b06d0a812603fcc6d18accd15c80263829bef73c",
@@ -28,7 +28,8 @@
                       "T4",
                       "T5",
                       "S1B7-T5-HYBRID-TABLE-SHELL-FULL206",
-                      "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206"
+                      "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
+                      "S1B8-T6A-SEMANTIC-SCHEMA"
                   ],
     "jobs":  [
                  {
@@ -54,7 +55,7 @@
                  },
                  {
                      "id":  "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
-                     "title":  "Reintento tÃ©cnico T5 con spec R3R reutilizado",
+                     "title":  "Reintento tÃƒÂ©cnico T5 con spec R3R reutilizado",
                      "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B7-T5R-HYBRID-TABLE-SHELL-FULL206.ps1",
@@ -76,7 +77,7 @@
                  {
                      "id":  "S1B8-T6A-SEMANTIC-SCHEMA",
                      "title":  "Descubrir esquema de asociacion semantica desde T5 sin modificar DOCX",
-                     "enabled":  true,
+                     "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B8-T6A-SEMANTIC-SCHEMA.ps1",
                      "sha256":  "530f3d57022f45382a76f17cef2eb8492b88e5daa1be13b98cf72262a860d463",
@@ -86,6 +87,27 @@
                      "resultDiscovery":  {
                                              "root":  "%USERPROFILE%\\Downloads",
                                              "prefix":  "PDFPrivado-S1B8-T6A-SEMANTIC-SCHEMA-",
+                                             "file":  "RESULTADO.json"
+                                         },
+                     "privacy":  {
+                                     "uploadConsole":  false,
+                                     "uploadArtifacts":  false,
+                                     "uploadDocuments":  false
+                                 }
+                 },
+                 {
+                     "id":  "S1B8-T6A2-STRUCTURAL-SCHEMA",
+                     "title":  "Mapear esquema estructural agregado de T5 sin publicar valores",
+                     "enabled":  true,
+                     "shell":  "powershell",
+                     "script":  "autopilot/jobs/S1B8-T6A2-STRUCTURAL-SCHEMA.ps1",
+                     "sha256":  "a89cb825723f2dc1175470ce4af0ce929f5547e2704ab197449fd17f9df77502",
+                     "timeoutMinutes":  30,
+                     "keepAppliedOnPass":  false,
+                     "nextBaselineName":  "T5",
+                     "resultDiscovery":  {
+                                             "root":  "%USERPROFILE%\\Downloads",
+                                             "prefix":  "PDFPrivado-S1B8-T6A2-STRUCTURAL-SCHEMA-",
                                              "file":  "RESULTADO.json"
                                          },
                      "privacy":  {
