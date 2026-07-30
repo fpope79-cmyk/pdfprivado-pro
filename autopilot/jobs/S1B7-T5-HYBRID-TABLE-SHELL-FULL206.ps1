@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$Project = "C:\Proyectos\pdfprivado-pro",
     [string]$AuditRoot = ""
 )

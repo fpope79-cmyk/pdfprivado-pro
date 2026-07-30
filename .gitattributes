@@ -1,0 +1,3 @@
+autopilot/jobs/*.ps1 text eol=lf
+autopilot/runtime/*.mjs text eol=lf
+autopilot/control/*.json text eol=lf

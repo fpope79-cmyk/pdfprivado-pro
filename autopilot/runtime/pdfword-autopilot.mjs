@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const runtimeDir = path.dirname(fileURLToPath(import.meta.url));
 const homeDir = path.resolve(runtimeDir, '..');
 const configPath = path.join(homeDir, 'config.json');
@@ -227,7 +227,22 @@ function executeJob(config, state, queue, job) {
   if (!scriptPath.startsWith(path.resolve(config.controlRepo) + path.sep)) throw new Error('Ruta de trabajo fuera de controlRepo.');
   if (!fs.existsSync(scriptPath)) throw new Error(`No existe job: ${scriptPath}`);
   const actualSha = sha256File(scriptPath);
-  if (job.sha256 && actualSha !== job.sha256) throw new Error(`SHA256 de job incorrecto para ${job.id}.`);
+  const canonicalSha = crypto.createHash('sha256')
+    .update(Buffer.from(
+      fs.readFileSync(scriptPath, 'utf8')
+        .replace(/^\uFEFF/u, '')
+        .replace(/\r\n/g, '\n'),
+      'utf8'
+    ))
+    .digest('hex');
+
+  if (
+    job.sha256 &&
+    actualSha !== job.sha256 &&
+    canonicalSha !== job.sha256
+  ) {
+    throw new Error(`SHA256 de job incorrecto para ${job.id}. raw=${actualSha} canonical=${canonicalSha}`);
+  }
 
   const runDir = path.join(homeDir, 'runs', job.id, startedAt.replace(/[:.]/g, '-'));
   fs.mkdirSync(runDir, { recursive: true });
