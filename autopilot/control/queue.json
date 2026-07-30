@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-30T20:00:00+02:00",
+  "baselinePolicy": {
+    "official": "v23",
+    "officialCommit": "b06d0a812603fcc6d18accd15c80263829bef73c",
+    "localWorkingBaseline": "R3P",
+    "noAutomaticOfficialPromotion": true
+  },
+  "closedIds": [
+    "G1", "G2", "G3", "G4", "G5", "audit206", "diagnostico-v23",
+    "S1B5", "R1", "R2", "R2R", "R3", "R3R", "R3P", "T1", "T2", "T3", "T4"
+  ],
+  "jobs": [
+    {
+      "id": "S1B7-T5-HYBRID-TABLE-SHELL-FULL206",
+      "title": "Validar Table-only con tabla Word real y texto v23 intacto",
+      "enabled": true,
+      "shell": "powershell",
+      "script": "autopilot/jobs/S1B7-T5-HYBRID-TABLE-SHELL-FULL206.ps1",
+      "sha256": "ee4758dc56efc13439ff901cf8f52cab399f5448c61d25d60e1e36738aca0c7b",
+      "timeoutMinutes": 240,
+      "keepAppliedOnPass": true,
+      "nextBaselineName": "T5",
+      "resultDiscovery": {
+        "root": "%USERPROFILE%\\Downloads",
+        "prefix": "PDFPrivado-S1B7-T5-HYBRID-TABLE-SHELL-",
+        "file": "RESULTADO.json"
+      },
+      "privacy": {
+        "uploadConsole": false,
+        "uploadArtifacts": false,
+        "uploadDocuments": false
+      }
+    }
+  ]
+}
