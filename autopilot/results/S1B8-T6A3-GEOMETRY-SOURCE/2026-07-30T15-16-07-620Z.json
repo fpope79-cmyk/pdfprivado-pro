@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B8-T6A3-GEOMETRY-SOURCE",
+  "title": "Localizar fuente geometrica para binding textbox-celda desde T5",
+  "startedAt": "2026-07-30T15:16:04.331Z",
+  "finishedAt": "2026-07-30T15:16:07.620Z",
+  "outcome": "PASS",
+  "exitCode": 0,
+  "activeBaselineBefore": "T5",
+  "activeBaselineAfter": "T5",
+  "keptApplied": false,
+  "summary": {
+    "experiment": "S1B8-T6A3-GEOMETRY-SOURCE",
+    "pass": true,
+    "decision": "decision=OOXML_DIRECT_GEOMETRY;tables=23;floating=23;numericXY=23;grid=23;rows=160;rowsWithHeight=160;cells=1278;textboxes=9423;anchors=9628;positionedAnchors=9628;anchorWithTextbox=9422",
+    "promotionAllowed": false,
+    "note": "T6-A3 read-only sobre los candidate.docx T5. Inspecciona solo estructura OOXML y geometria; no lee ni publica texto de documentos.",
+    "candidate": {
+      "pages": 206,
+      "eligiblePages": 16,
+      "wordTables": 23
+    },
+    "baseline": {
+      "r3pRerendered": false
+    },
+    "gates": {
+      "candidateDocs16": true,
+      "wordTables23": true,
+      "readOnly": true,
+      "noTextRead": true,
+      "noDocumentNamesPublished": true,
+      "noPrivatePathsPublished": true,
+      "floatingTables": 23,
+      "numericXYTables": 23,
+      "gridTables": 23,
+      "tableRows": 160,
+      "rowsWithExplicitHeight": 160,
+      "tableCells": 1278,
+      "textboxes": 9423,
+      "anchors": 9628,
+      "positionedAnchors": 9628,
+      "anchorWithTextbox": 9422
+    }
+  },
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
