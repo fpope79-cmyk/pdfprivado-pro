@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
+  "title": "Reintento técnico T5 con spec R3R reutilizado",
+  "startedAt": "2026-07-30T11:18:58.776Z",
+  "finishedAt": "2026-07-30T12:21:50.627Z",
+  "outcome": "PASS",
+  "exitCode": 0,
+  "activeBaselineBefore": "R3P",
+  "activeBaselineAfter": "T5",
+  "keptApplied": true,
+  "summary": {
+    "experiment": "S1B7-T5 HYBRID TABLE SHELL FULL206",
+    "pass": true,
+    "promotionAllowed": false,
+    "note": "Aunque pase, T4-SHELL fue una mejora microscópica: T5 solo valida la base híbrida de TableEngine.",
+    "candidate": {
+      "pages": 206,
+      "strictSsim": 0.8232946976745824,
+      "deltaVsR3P": 0.000006360372582392415,
+      "deltaVsV23": 0.0000323730155824542,
+      "eligiblePages": 16,
+      "wordTables": 23,
+      "tableGroups": 22,
+      "formGroups": 10
+    },
+    "baseline": {
+      "v23": 0.823262324659,
+      "r3p": 0.823288337302,
+      "r3pRerendered": false
+    },
+    "gates": {
+      "pages206": true,
+      "activePages16": true,
+      "wordTables23": true,
+      "globalVsR3PPositive": true,
+      "keepsR3GainVsV23": true
+    }
+  },
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
