@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B8-T6B-OOXML-CELL-BINDING-AUDIT",
+  "title": "Auditar binding geometrico textbox-celda directamente en OOXML T5",
+  "startedAt": "2026-07-30T15:20:51.142Z",
+  "finishedAt": "2026-07-30T15:20:54.644Z",
+  "outcome": "PASS",
+  "exitCode": 0,
+  "activeBaselineBefore": "T5",
+  "activeBaselineAfter": "T5",
+  "keptApplied": false,
+  "summary": {
+    "experiment": "S1B8-T6B-OOXML-CELL-BINDING-AUDIT",
+    "pass": true,
+    "decision": "decision=PAGE_SEGMENTATION_REQUIRED;pageSegExactDocs=3/16;expectedPages=206;observedPages=16;explicitPageBreaks=0;lastRenderedBreaks=0;tables=23;tablePages=9;candidateTextboxes=3391;resolvedTextboxes=2768;coverage=0.816278;frameCoverage=1.000000;unresolved=112;ambiguous=511;merges=0;gridSpans=6;boundCells=354;tableFrames=page:page=23;anchorFrames=page:page=7244",
+    "promotionAllowed": false,
+    "note": "T6-B es una auditoria geometrica read-only. Calcula pertenencia textbox-celda desde OOXML sin leer texto, sin mover objetos y sin modificar DOCX.",
+    "candidate": {
+      "pages": 206,
+      "eligiblePages": 16,
+      "wordTables": 23
+    },
+    "baseline": {
+      "r3pRerendered": false
+    },
+    "gates": {
+      "candidateDocs16": true,
+      "pages206": true,
+      "wordTables23": true,
+      "readOnly": true,
+      "noTextRead": true,
+      "noDocumentNamesPublished": true,
+      "noPrivatePathsPublished": true,
+      "pageSegExactDocs": 3,
+      "observedPages": 16,
+      "explicitPageBreaks": 0,
+      "lastRenderedPageBreaks": 0,
+      "tablePages": 9,
+      "candidateAnchors": 3391,
+      "resolvedAnchors": 2768,
+      "centerResolved": 2768,
+      "overlapResolved": 0,
+      "unresolvedTextboxes": 112,
+      "ambiguousTextboxes": 511,
+      "frameCompatibleCandidates": 3391,
+      "mergeCells": 0,
+      "gridSpans": 6,
+      "boundCells": 354
+    }
+  },
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
