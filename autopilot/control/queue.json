@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "updatedAt":  "2026-07-30T17:20:46.0565068+02:00",
+    "updatedAt":  "2026-07-30T17:35:35.2296084+02:00",
     "baselinePolicy":  {
                            "official":  "v23",
                            "officialCommit":  "b06d0a812603fcc6d18accd15c80263829bef73c",
@@ -31,7 +31,9 @@
                       "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
                       "S1B8-T6A-SEMANTIC-SCHEMA",
                       "S1B8-T6A2-STRUCTURAL-SCHEMA",
-                      "S1B8-T6A3-GEOMETRY-SOURCE"
+                      "S1B8-T6A3-GEOMETRY-SOURCE",
+                      "S1B8-T6B-OOXML-CELL-BINDING-AUDIT",
+                      "S1B8-T6C-PAGE-SEGMENTATION-AUDIT"
                   ],
     "jobs":  [
                  {
@@ -57,7 +59,7 @@
                  },
                  {
                      "id":  "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
-                     "title":  "Reintento tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cnico T5 con spec R3R reutilizado",
+                     "title":  "Reintento tÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©cnico T5 con spec R3R reutilizado",
                      "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B7-T5R-HYBRID-TABLE-SHELL-FULL206.ps1",
@@ -142,7 +144,7 @@
                  {
                      "id":  "S1B8-T6B-OOXML-CELL-BINDING-AUDIT",
                      "title":  "Auditar binding geometrico textbox-celda directamente en OOXML T5",
-                     "enabled":  true,
+                     "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B8-T6B-OOXML-CELL-BINDING-AUDIT.ps1",
                      "sha256":  "db505438d0056eab6696a72f6eb11942608a09a468d342d7f7b0cf5977542dc4",
@@ -152,6 +154,27 @@
                      "resultDiscovery":  {
                                              "root":  "%USERPROFILE%\\Downloads",
                                              "prefix":  "PDFPrivado-S1B8-T6B-OOXML-CELL-BINDING-AUDIT-",
+                                             "file":  "RESULTADO.json"
+                                         },
+                     "privacy":  {
+                                     "uploadConsole":  false,
+                                     "uploadArtifacts":  false,
+                                     "uploadDocuments":  false
+                                 }
+                 },
+                 {
+                     "id":  "S1B8-T6-AUTONOMOUS-WORKFLOW",
+                     "title":  "T6 autonomo: paginacion, binding geometrico y decision de prototipo",
+                     "enabled":  true,
+                     "shell":  "powershell",
+                     "script":  "autopilot/jobs/S1B8-T6-AUTONOMOUS-WORKFLOW.ps1",
+                     "sha256":  "319d48d403c39224b53e39f57d7c274f67deecec3010370f3f8804d22fd9119d",
+                     "timeoutMinutes":  60,
+                     "keepAppliedOnPass":  false,
+                     "nextBaselineName":  "T5",
+                     "resultDiscovery":  {
+                                             "root":  "%USERPROFILE%\\Downloads",
+                                             "prefix":  "PDFPrivado-S1B8-T6-AUTONOMOUS-WORKFLOW-",
                                              "file":  "RESULTADO.json"
                                          },
                      "privacy":  {
