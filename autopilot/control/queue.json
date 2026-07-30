@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "updatedAt":  "2026-07-30T17:15:59.1206887+02:00",
+    "updatedAt":  "2026-07-30T17:20:46.0565068+02:00",
     "baselinePolicy":  {
                            "official":  "v23",
                            "officialCommit":  "b06d0a812603fcc6d18accd15c80263829bef73c",
@@ -30,7 +30,8 @@
                       "S1B7-T5-HYBRID-TABLE-SHELL-FULL206",
                       "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
                       "S1B8-T6A-SEMANTIC-SCHEMA",
-                      "S1B8-T6A2-STRUCTURAL-SCHEMA"
+                      "S1B8-T6A2-STRUCTURAL-SCHEMA",
+                      "S1B8-T6A3-GEOMETRY-SOURCE"
                   ],
     "jobs":  [
                  {
@@ -56,7 +57,7 @@
                  },
                  {
                      "id":  "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
-                     "title":  "Reintento tÃƒÆ’Ã‚Â©cnico T5 con spec R3R reutilizado",
+                     "title":  "Reintento tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cnico T5 con spec R3R reutilizado",
                      "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B7-T5R-HYBRID-TABLE-SHELL-FULL206.ps1",
@@ -120,7 +121,7 @@
                  {
                      "id":  "S1B8-T6A3-GEOMETRY-SOURCE",
                      "title":  "Localizar fuente geometrica para binding textbox-celda desde T5",
-                     "enabled":  true,
+                     "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B8-T6A3-GEOMETRY-SOURCE.ps1",
                      "sha256":  "049fea50127e854602c670335a46c781af05a5e1b989eb6f5538ca199a562cda",
@@ -130,6 +131,27 @@
                      "resultDiscovery":  {
                                              "root":  "%USERPROFILE%\\Downloads",
                                              "prefix":  "PDFPrivado-S1B8-T6A3-GEOMETRY-SOURCE-",
+                                             "file":  "RESULTADO.json"
+                                         },
+                     "privacy":  {
+                                     "uploadConsole":  false,
+                                     "uploadArtifacts":  false,
+                                     "uploadDocuments":  false
+                                 }
+                 },
+                 {
+                     "id":  "S1B8-T6B-OOXML-CELL-BINDING-AUDIT",
+                     "title":  "Auditar binding geometrico textbox-celda directamente en OOXML T5",
+                     "enabled":  true,
+                     "shell":  "powershell",
+                     "script":  "autopilot/jobs/S1B8-T6B-OOXML-CELL-BINDING-AUDIT.ps1",
+                     "sha256":  "db505438d0056eab6696a72f6eb11942608a09a468d342d7f7b0cf5977542dc4",
+                     "timeoutMinutes":  30,
+                     "keepAppliedOnPass":  false,
+                     "nextBaselineName":  "T5",
+                     "resultDiscovery":  {
+                                             "root":  "%USERPROFILE%\\Downloads",
+                                             "prefix":  "PDFPrivado-S1B8-T6B-OOXML-CELL-BINDING-AUDIT-",
                                              "file":  "RESULTADO.json"
                                          },
                      "privacy":  {
