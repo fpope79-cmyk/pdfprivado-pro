@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B7-T5-HYBRID-TABLE-SHELL-FULL206",
+  "title": "Validar Table-only con tabla Word real y texto v23 intacto",
+  "startedAt": "2026-07-30T11:09:47.768Z",
+  "finishedAt": "2026-07-30T11:09:49.945Z",
+  "outcome": "TECHNICAL_FAIL",
+  "exitCode": 1,
+  "activeBaselineBefore": "R3P",
+  "activeBaselineAfter": "R3P",
+  "keptApplied": false,
+  "summary": null,
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
