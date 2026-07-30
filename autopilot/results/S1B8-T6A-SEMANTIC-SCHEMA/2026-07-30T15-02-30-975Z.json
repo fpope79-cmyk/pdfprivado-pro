@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B8-T6A-SEMANTIC-SCHEMA",
+  "title": "Descubrir esquema de asociacion semantica desde T5 sin modificar DOCX",
+  "startedAt": "2026-07-30T15:02:29.717Z",
+  "finishedAt": "2026-07-30T15:02:30.975Z",
+  "outcome": "PASS",
+  "exitCode": 0,
+  "activeBaselineBefore": "T5",
+  "activeBaselineAfter": "T5",
+  "keptApplied": false,
+  "summary": {
+    "experiment": "S1B8-T6A-SEMANTIC-SCHEMA",
+    "pass": true,
+    "decision": "SAFE_KEYS=pages;SAFE_SHAPES=pages|pages[]",
+    "promotionAllowed": false,
+    "note": "T6-A read-only sobre baseline T5. Solo publica nombres/categorias de campos estructurales recurrentes; no publica valores ni documentos.",
+    "candidate": {
+      "pages": 206,
+      "eligiblePages": 16
+    },
+    "baseline": {
+      "r3pRerendered": false
+    },
+    "gates": {
+      "specFiles16": true,
+      "readOnly": true,
+      "noValuesPublished": true,
+      "noDocumentNamesPublished": true,
+      "noPrivatePathsPublished": true,
+      "specFiles": 16,
+      "safeKeys": 1,
+      "safeShapes": 2
+    }
+  },
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
