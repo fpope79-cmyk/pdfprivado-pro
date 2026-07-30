@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "agentVersion": "1.0.1",
+  "jobId": "S1B8-T6A2-STRUCTURAL-SCHEMA",
+  "title": "Mapear esquema estructural agregado de T5 sin publicar valores",
+  "startedAt": "2026-07-30T15:06:50.938Z",
+  "finishedAt": "2026-07-30T15:06:52.107Z",
+  "outcome": "FAIL",
+  "exitCode": 2,
+  "activeBaselineBefore": "T5",
+  "activeBaselineAfter": "T5",
+  "keptApplied": false,
+  "summary": {
+    "experiment": "S1B8-T6A2-STRUCTURAL-SCHEMA",
+    "pass": false,
+    "decision": "STABLE_KEYS=pages;PATH_TYPES=pages:array|pages[]:number;ARRAY_STATS=pages[n=16,min=1,max=24,avg=12.88];DEPTH_TYPES=d0(object=16)|d1(array=16)|d2(number=206)",
+    "promotionAllowed": false,
+    "note": "T6-A2 read-only sobre T5. Publica solo esquema agregado compartido por >=8/16 specs, tipos y estadisticas de arrays; nunca valores.",
+    "candidate": {
+      "pages": 206,
+      "eligiblePages": 16
+    },
+    "baseline": {
+      "r3pRerendered": false
+    },
+    "gates": {
+      "specFiles16": true,
+      "readOnly": true,
+      "noValuesPublished": true,
+      "noDocumentNamesPublished": true,
+      "noPrivatePathsPublished": true,
+      "stableSchemaFound": false,
+      "specFiles": 16,
+      "stableKeys": 1,
+      "publishedPaths": 2,
+      "arrayPaths": 1,
+      "maxDepth": 2
+    }
+  },
+  "privacy": {
+    "consoleUploaded": false,
+    "artifactsUploaded": false,
+    "documentsUploaded": false
+  }
+}
