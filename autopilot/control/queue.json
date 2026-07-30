@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "updatedAt":  "2026-07-30T13:09:07.0250915+02:00",
+    "updatedAt":  "2026-07-30T13:18:54.1894600+02:00",
     "baselinePolicy":  {
                            "official":  "v23",
                            "officialCommit":  "b06d0a812603fcc6d18accd15c80263829bef73c",
@@ -31,10 +31,31 @@
                  {
                      "id":  "S1B7-T5-HYBRID-TABLE-SHELL-FULL206",
                      "title":  "Validar Table-only con tabla Word real y texto v23 intacto",
-                     "enabled":  true,
+                     "enabled":  false,
                      "shell":  "powershell",
                      "script":  "autopilot/jobs/S1B7-T5-HYBRID-TABLE-SHELL-FULL206.ps1",
                      "sha256":  "066882a2e19a737d468d05b0bc563f84026ea5adca847e3df725dddabf18ca22",
+                     "timeoutMinutes":  240,
+                     "keepAppliedOnPass":  true,
+                     "nextBaselineName":  "T5",
+                     "resultDiscovery":  {
+                                             "root":  "%USERPROFILE%\\Downloads",
+                                             "prefix":  "PDFPrivado-S1B7-T5-HYBRID-TABLE-SHELL-",
+                                             "file":  "RESULTADO.json"
+                                         },
+                     "privacy":  {
+                                     "uploadConsole":  false,
+                                     "uploadArtifacts":  false,
+                                     "uploadDocuments":  false
+                                 }
+                 },
+                 {
+                     "id":  "S1B7-T5R-HYBRID-TABLE-SHELL-FULL206",
+                     "title":  "Reintento técnico T5 con spec R3R reutilizado",
+                     "enabled":  true,
+                     "shell":  "powershell",
+                     "script":  "autopilot/jobs/S1B7-T5R-HYBRID-TABLE-SHELL-FULL206.ps1",
+                     "sha256":  "b1496f20bbfb936b924d8d79bcb564aa8a92f16b5eb278860659f729558f3b64",
                      "timeoutMinutes":  240,
                      "keepAppliedOnPass":  true,
                      "nextBaselineName":  "T5",
