@@ -22,7 +22,10 @@ function log(message) {
   try { fs.appendFileSync(logPath, `${line}\n`, 'utf8'); } catch {}
 }
 function readJson(p, fallback = null) {
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return fallback; }
+  try {
+    const text = fs.readFileSync(p, 'utf8').replace(/^\uFEFF/u, '');
+    return JSON.parse(text);
+  } catch { return fallback; }
 }
 function writeJsonAtomic(p, value) {
   fs.mkdirSync(path.dirname(p), { recursive: true });

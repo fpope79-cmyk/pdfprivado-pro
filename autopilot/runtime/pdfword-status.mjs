@@ -5,11 +5,14 @@ import { fileURLToPath } from 'node:url';
 
 const runtimeDir = path.dirname(fileURLToPath(import.meta.url));
 const home = path.resolve(runtimeDir, '..');
-const config = JSON.parse(fs.readFileSync(path.join(home, 'config.json'), 'utf8'));
+const parseJson = p =>
+  JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/u, ''));
+
+const config = parseJson(path.join(home, 'config.json'));
 let latest = null;
-try { latest = JSON.parse(fs.readFileSync(path.join(home, 'latest-status.json'), 'utf8')); } catch {}
+try { latest = parseJson(path.join(home, 'latest-status.json')); } catch {}
 let lock = null;
-try { lock = JSON.parse(fs.readFileSync(path.join(home, 'agent.lock'), 'utf8')); } catch {}
+try { lock = parseJson(path.join(home, 'agent.lock')); } catch {}
 
 console.log('============================================================');
 console.log(' PDFPRIVADO PRO - PDF→WORD AUTOPILOT');
