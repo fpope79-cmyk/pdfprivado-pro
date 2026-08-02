@@ -1,9 +1,21 @@
+import { initializeAppLanguage } from "./i18n/app-language-bootstrap.js";
+import { installLanguageManagerUi } from "./i18n/language-manager-ui.js";
 import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "./vendor/pdfjs/pdf.worker.mjs",
   import.meta.url
 ).href;
+
+const appLanguage = await initializeAppLanguage();
+
+globalThis.pdfprivadoAppLanguage = appLanguage;
+globalThis.pdfprivadoI18n = appLanguage.runtime;
+globalThis.pdfprivadoT = appLanguage.runtime.t;
+
+globalThis.pdfprivadoLanguageManager = installLanguageManagerUi({
+  runtime: appLanguage.runtime,
+});
 
 const year = document.querySelector("#current-year");
 const homeView = document.querySelector("#home-view");

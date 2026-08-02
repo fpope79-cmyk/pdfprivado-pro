@@ -1,3 +1,8 @@
+mod language_package_storage;
+
+use language_package_storage::{
+    delete_language_package, list_language_packages, read_language_package, save_language_package,
+};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tauri_plugin_fs::FsExt;
@@ -56,6 +61,11 @@ fn authorize_pdf_path(app: tauri::AppHandle, path: String) -> Result<PdfPathInfo
 }
 
 #[tauri::command]
+fn get_system_locale() -> Option<String> {
+    sys_locale::get_locale()
+}
+
+#[tauri::command]
 fn startup_pdf_path() -> Option<String> {
     std::env::args_os().skip(1).find_map(|argument| {
         let path = Path::new(&argument);
@@ -81,6 +91,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             authorize_pdf_path,
+            delete_language_package,
+            get_system_locale,
+            list_language_packages,
+            read_language_package,
+            save_language_package,
             startup_pdf_path
         ])
         .run(tauri::generate_context!())
