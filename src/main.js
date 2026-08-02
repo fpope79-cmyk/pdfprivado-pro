@@ -1,4 +1,8 @@
 import { initializeAppLanguage } from "./i18n/app-language-bootstrap.js";
+import { applyDocumentTranslations, observeDocumentTranslations } from "./i18n/dom-translator.js";
+import { SOURCE_TEXT_KEYS } from "./i18n/source-text-keys.js";
+import { SOURCE_TEXT_PATTERNS } from "./i18n/source-text-patterns.js";
+import { APP_LANGUAGE_CHANGED_EVENT } from "./i18n/language-runtime.js";
 import { installLanguageManagerUi } from "./i18n/language-manager-ui.js";
 import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
 
@@ -12,6 +16,30 @@ const appLanguage = await initializeAppLanguage();
 globalThis.pdfprivadoAppLanguage = appLanguage;
 globalThis.pdfprivadoI18n = appLanguage.runtime;
 globalThis.pdfprivadoT = appLanguage.runtime.t;
+
+applyDocumentTranslations({
+  root: document,
+  t: appLanguage.runtime.t,
+  sourceTextKeys: SOURCE_TEXT_KEYS,
+  sourceTextPatterns: SOURCE_TEXT_PATTERNS,
+});
+
+const appLanguageObserver = observeDocumentTranslations({
+  root: document,
+  t: appLanguage.runtime.t,
+  sourceTextKeys: SOURCE_TEXT_KEYS,
+  sourceTextPatterns: SOURCE_TEXT_PATTERNS,
+});
+
+globalThis.pdfprivadoAppLanguageObserver = appLanguageObserver;
+
+window.addEventListener(APP_LANGUAGE_CHANGED_EVENT, () => {
+  applyDocumentTranslations({
+    root: document,
+    t: appLanguage.runtime.t,
+    sourceTextKeys: SOURCE_TEXT_KEYS,
+  });
+});
 
 globalThis.pdfprivadoLanguageManager = installLanguageManagerUi({
   runtime: appLanguage.runtime,

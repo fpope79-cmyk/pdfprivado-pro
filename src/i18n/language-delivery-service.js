@@ -111,7 +111,7 @@ export function createLanguageDeliveryService({
     });
   }
 
-  async function activateInstalled(code, version) {
+  async function activateInstalled(code, version, options = {}) {
     if (code === "es") {
       runtime.resetToFallback({
         persist: true,
@@ -121,12 +121,38 @@ export function createLanguageDeliveryService({
       return runtime.getActiveLanguage();
     }
 
-    const verified = await readInstalledLanguagePackage({
-      code,
-      version,
-      invoke,
-      cryptoRef,
+    options.onProgress?.("Leyendo y verificando el paquete instalado…");
+
+    const timeoutMs = 15000;
+    let timeoutId;
+
+    const timeout = new Promise((_, reject) => {
+      timeoutId = globalThis.setTimeout(() => {
+        reject(
+          new Error(
+            `La lectura o verificación del idioma ${code} superó ${timeoutMs / 1000} segundos.`,
+          ),
+        );
+      }, timeoutMs);
     });
+
+    let verified;
+
+    try {
+      verified = await Promise.race([
+        readInstalledLanguagePackage({
+          code,
+          version,
+          invoke,
+          cryptoRef,
+        }),
+        timeout,
+      ]);
+    } finally {
+      globalThis.clearTimeout(timeoutId);
+    }
+
+    options.onProgress?.("Paquete verificado. Activando idioma…");
 
     return runtime.setLanguageBundle(
       {

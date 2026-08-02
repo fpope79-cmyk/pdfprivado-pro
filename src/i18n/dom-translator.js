@@ -30,10 +30,21 @@ function preserveOuterWhitespace(source, translated) {
 
 function compilePattern(patternEntry) {
   let compiled = compiledPatternCache.get(patternEntry);
+
   if (!compiled) {
-    compiled = new RegExp(patternEntry.pattern, "u");
+    try {
+      compiled = new RegExp(patternEntry.pattern, "u");
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
+
+      compiled = new RegExp(patternEntry.pattern);
+    }
+
     compiledPatternCache.set(patternEntry, compiled);
   }
+
   return compiled;
 }
 

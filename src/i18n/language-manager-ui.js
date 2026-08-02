@@ -36,7 +36,7 @@ function button(label, action, primary = false) {
   const element = document.createElement("button");
   element.type = "button";
   element.textContent = label;
-  element.dataset.action = action;
+  element.dataset.languageAction = action;
 
   if (primary) {
     element.dataset.primary = "";
@@ -195,27 +195,51 @@ export function installLanguageManagerUi({
       );
 
       list.onclick = async (event) => {
-        const target = event.target.closest("button[data-action]");
+        const target = event.target.closest("button[data-language-action]");
         if (!target) return;
 
+        event.preventDefault();
+        event.stopPropagation();
+
+        const action = target.dataset.languageAction;
         const article = target.closest("[data-code]");
         const code = article?.dataset.code;
 
         target.disabled = true;
 
         try {
-          if (target.dataset.action === "activate-es") {
+          if (action === "activate-es") {
             await service.activateInstalled("es");
-          } else if (target.dataset.action === "install") {
+          } else if (action === "install") {
             const entry = state.catalog.find((item) => item.code === code);
             await service.installFromCatalog(entry);
-          } else if (target.dataset.action === "activate") {
-            await service.activateInstalled(code, target.dataset.version);
-          } else if (target.dataset.action === "remove") {
+          } else if (action === "activate") {
+            setStatus(`Activando ${code}…`);
+
+            await service.activateInstalled(
+              code,
+              target.dataset.version,
+              {
+                onProgress: (message) => setStatus(message),
+              },
+            );
+
+            setStatus("Idioma activado correctamente.");
+          } else if (action === "remove") {
             await service.removeInstalled(code, target.dataset.version);
           }
 
-          await refresh();
+          if (action === "activate" || action === "activate-es") {
+            setStatus("Idioma activado correctamente. Se aplicará completamente al reiniciar.");
+            target.textContent = "Activo";
+            target.disabled = true;
+          } else if (action === "install") {
+            setStatus("Idioma descargado e instalado correctamente.");
+            target.disabled = false;
+          } else if (action === "remove") {
+            setStatus("Idioma eliminado correctamente.");
+            target.disabled = false;
+          }
         } catch (error) {
           setStatus(
             error instanceof Error ? error.message : String(error),
