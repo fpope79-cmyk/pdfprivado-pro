@@ -8705,3 +8705,423 @@ body.viewer-active:not(.viewer-tools-collapsed) .viewer-tool-section {
     flex-direction: column;
   }
 }
+/* PDFPRIVADO_LANGUAGE_MANAGERS_INTEGRATED_V4 */
+.viewer-ocr-language-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ocr-app-language-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.ocr-app-language-row-status {
+  color: #536276;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.ocr-app-language-row-action {
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 1px solid #c7d1dd;
+  border-radius: 7px;
+  background: #fff;
+  color: #234;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ocr-app-language-row-action:not(:disabled) {
+  border-color: #2463eb;
+  background: #2463eb;
+  color: #fff;
+}
+
+.ocr-app-language-row-action:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.language-manager-list {
+  display: none !important;
+}
+
+.language-manager-picker {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+}
+
+.language-manager-picker-field {
+  display: grid;
+  gap: 5px;
+}
+
+.language-manager-picker-field > span {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.language-manager-picker-select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 34px 8px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+
+.language-manager-picker-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 11px 12px;
+  border: 1px solid #dde4ed;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.language-manager-picker-detail strong,
+.language-manager-picker-detail small {
+  display: block;
+}
+
+.language-manager-picker-detail strong {
+  color: #172033;
+  font-size: 0.95rem;
+}
+
+.language-manager-picker-detail small {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.language-manager-picker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.language-manager-picker-actions button {
+  border: 1px solid #c7d1dd;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 9px;
+  color: #27364a;
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.language-manager-picker-actions button[data-primary] {
+  border-color: #2463eb;
+  background: #2463eb;
+  color: #fff;
+}
+
+.language-manager-picker-actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+@media (max-width: 620px) {
+  .language-manager-picker-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .language-manager-picker-actions {
+    justify-content: flex-start;
+  }
+}
+/* PDFPRIVADO_HELP_LANGUAGE_PICKER_COMPACT_V5 */
+.language-manager-panel {
+  width: min(600px, 100%);
+  max-height: min(470px, 78vh);
+  padding: 15px;
+}
+
+.language-manager-header {
+  margin-bottom: 9px;
+}
+
+.language-manager-header h2 {
+  font-size: 1.06rem;
+}
+
+.language-manager-header p {
+  font-size: 0.76rem;
+}
+
+.language-manager-status {
+  margin-bottom: 8px;
+  padding: 6px 9px;
+  font-size: 0.71rem;
+}
+
+.language-manager-picker {
+  gap: 8px;
+}
+
+.language-manager-picker-field {
+  gap: 4px;
+}
+
+.language-manager-picker-field > span {
+  font-size: 0.64rem;
+  letter-spacing: 0.055em;
+}
+
+.language-manager-picker-select {
+  min-height: 34px;
+  padding: 6px 30px 6px 9px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.language-manager-picker-select optgroup {
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.language-manager-picker-select option {
+  font-size: 0.79rem;
+  padding: 3px 6px;
+}
+
+.language-manager-picker-detail {
+  min-height: 50px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  gap: 9px;
+}
+
+.language-manager-picker-detail strong {
+  font-size: 0.84rem;
+}
+
+.language-manager-picker-detail small {
+  margin-top: 2px;
+  font-size: 0.68rem;
+}
+
+.language-manager-picker-actions {
+  gap: 5px;
+}
+
+.language-manager-picker-actions button {
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 0.70rem;
+}
+
+.language-manager-close {
+  padding: 6px 9px;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 620px) {
+  .language-manager-panel {
+    width: min(94vw, 560px);
+    max-height: 84vh;
+  }
+}
+/* PDFPRIVADO_LANGUAGE_MANAGER_VISUAL_FIX_V6 */
+.ocr-language-manager-list .viewer-ocr-language-row[hidden] {
+  display: none !important;
+}
+
+.ocr-app-language-row-status[data-kind="busy"] {
+  color: #1d4ed8;
+}
+
+.ocr-app-language-row-status[data-kind="success"] {
+  color: #167447;
+}
+
+.ocr-app-language-row-status[data-kind="error"] {
+  color: #a61b1b;
+  font-weight: 650;
+}
+
+.language-manager-picker-field {
+  position: relative;
+}
+
+.language-manager-picker-hint {
+  display: block;
+  margin-top: -1px;
+  color: #718096;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+.language-manager-picker-select-wrap {
+  position: relative;
+  display: block;
+}
+
+.language-manager-picker-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  cursor: pointer;
+  border-color: #aebccc;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.language-manager-picker-select:hover {
+  border-color: #7f95ad;
+  background: #fff;
+}
+
+.language-manager-picker-select:focus {
+  outline: 3px solid rgba(36, 99, 235, 0.16);
+  outline-offset: 1px;
+  border-color: #2463eb;
+}
+
+.language-manager-picker-chevron {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-56%);
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+/* PDFPRIVADO_OCR_INTERFACE_LABELS_V8 */
+.ocr-app-language-row {
+  align-items: center;
+}
+
+.ocr-app-language-row-action {
+  max-width: 128px;
+  min-width: 74px;
+  padding-inline: 7px;
+  font-size: 0.63rem;
+  line-height: 1.15;
+  white-space: normal;
+  text-align: center;
+}
+
+.ocr-language-manager-column-header strong {
+  font-size: 0.74rem;
+  letter-spacing: 0.01em;
+}
+/* PDFPRIVADO_APP_LANGUAGE_COLUMNS_STYLE_V9 */
+.ocr-app-language-row-action {
+  min-width: 68px;
+  max-width: 92px;
+  white-space: nowrap;
+  font-size: 0.66rem;
+}
+
+.ocr-language-manager-column-header strong {
+  font-size: 0.75rem;
+}
+/* PDFPRIVADO_LANGUAGE_MANAGER_V10 */
+.ocr-language-manager-import[hidden],
+.viewer-ocr-language-admin-note[hidden] {
+  display: none !important;
+}
+
+.ocr-language-status-badge {
+  white-space: nowrap;
+}
+
+.ocr-app-language-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.ocr-app-language-row-action,
+.ocr-app-language-row-remove {
+  min-width: 62px;
+  max-width: 90px;
+  min-height: 25px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ocr-app-language-row-action {
+  border: 1px solid #2463eb;
+  background: #2463eb;
+  color: #fff;
+}
+
+.ocr-app-language-row-action:disabled {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: default;
+}
+
+.ocr-app-language-row-remove {
+  border: 1px solid #d8a5a5;
+  background: #fff;
+  color: #9b1c1c;
+}
+
+.ocr-app-language-row-remove:hover:not(:disabled) {
+  border-color: #b42318;
+  background: #fff4f2;
+}
+
+.ocr-app-language-row-remove:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.language-manager-picker-actions button:last-child:not([data-primary]) {
+  border-color: #d8a5a5;
+  color: #9b1c1c;
+}
+
+.language-manager-picker-actions button:last-child:not([data-primary]):hover:not(:disabled) {
+  background: #fff4f2;
+  border-color: #b42318;
+}
+/* PDFPRIVADO_LANGUAGE_MANAGER_V11 */
+.viewer-ocr-language-row .ocr-language-status-badge:empty {
+  display: none !important;
+}
+
+.ocr-app-language-row-action,
+.ocr-app-language-row-remove {
+  min-width: 62px;
+  max-width: 96px;
+}
+/* PDFPRIVADO_LANGUAGE_BADGE_CLEANUP_V12 */
+.viewer-ocr-language-row [data-ocr-base-badge="true"] {
+  white-space: nowrap;
+}

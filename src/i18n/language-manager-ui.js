@@ -170,23 +170,25 @@ function injectStyles(documentRef) {
   const style = documentRef.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    .language-manager-overlay{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:rgba(15,23,42,.58);padding:24px}
+    /* PDFPRIVADO_LANGUAGE_MANAGER_COMPACT_V2 */
+    .language-manager-overlay{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:rgba(15,23,42,.56);padding:18px}
     .language-manager-overlay[hidden]{display:none}
-    .language-manager-panel{width:min(760px,100%);max-height:min(720px,90vh);overflow:auto;background:#fff;color:#172033;border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.28);padding:24px}
-    .language-manager-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
-    .language-manager-header h2{margin:0 0 6px;font-size:1.35rem}
-    .language-manager-header p{margin:0;color:#5a6577}
-    .language-manager-close{border:0;background:#eef1f5;border-radius:10px;padding:8px 12px;cursor:pointer}
-    .language-manager-list{display:grid;gap:12px}
-    .language-manager-item{display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid #dce2ea;border-radius:14px;padding:14px}
+    .language-manager-panel{width:min(720px,100%);max-height:min(620px,82vh);overflow:hidden;background:#fff;color:#172033;border:1px solid rgba(148,163,184,.28);border-radius:16px;box-shadow:0 24px 70px rgba(15,23,42,.30);padding:18px;display:flex;flex-direction:column}
+    .language-manager-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
+    .language-manager-header h2{margin:0 0 3px;font-size:1.17rem;line-height:1.25}
+    .language-manager-header p{margin:0;color:#64748b;font-size:.83rem}
+    .language-manager-close{border:0;background:#eef2f7;color:#334155;border-radius:9px;padding:7px 10px;cursor:pointer;font-weight:650}
+    .language-manager-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:auto;padding:1px 3px 3px 1px}
+    .language-manager-item{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:9px;border:1px solid #dde4ed;border-radius:11px;padding:9px 10px;min-height:54px;background:#fff}
     .language-manager-item strong,.language-manager-item small{display:block}
-    .language-manager-item small{color:#657084;margin-top:4px}
-    .language-manager-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
-    .language-manager-actions button{border:1px solid #bdc7d4;background:#fff;border-radius:9px;padding:8px 11px;cursor:pointer}
+    .language-manager-item small{color:#64748b;margin-top:2px;font-size:.70rem;line-height:1.25}
+    .language-manager-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+    .language-manager-actions button{border:1px solid #c7d1dd;background:#fff;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.76rem;white-space:nowrap}
     .language-manager-actions button[data-primary]{background:#2463eb;border-color:#2463eb;color:#fff}
     .language-manager-actions button:disabled{opacity:.55;cursor:wait}
-    .language-manager-status{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:#f2f5f9}
+    .language-manager-status{margin:0 0 10px;padding:7px 10px;border-radius:9px;background:#f1f5f9;color:#475569;font-size:.76rem}
     .language-manager-status[data-kind="error"]{background:#fff0f0;color:#9b1c1c}
+    @media(max-width:700px){.language-manager-list{grid-template-columns:1fr}.language-manager-panel{max-height:88vh}}
   `;
   documentRef.head.append(style);
 }

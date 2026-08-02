@@ -4,6 +4,7 @@ import { SOURCE_TEXT_KEYS } from "./i18n/source-text-keys.js";
 import { SOURCE_TEXT_PATTERNS } from "./i18n/source-text-patterns.js";
 import { APP_LANGUAGE_CHANGED_EVENT } from "./i18n/language-runtime.js";
 import { installLanguageManagerUi } from "./i18n/language-manager-ui.js";
+import { installEmbeddedAppLanguageManager } from "./i18n/embedded-app-language-manager.js";
 import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -44,6 +45,12 @@ window.addEventListener(APP_LANGUAGE_CHANGED_EVENT, () => {
 globalThis.pdfprivadoLanguageManager = installLanguageManagerUi({
   runtime: appLanguage.runtime,
 });
+
+globalThis.pdfprivadoEmbeddedAppLanguageManager =
+  installEmbeddedAppLanguageManager({
+    manager: globalThis.pdfprivadoLanguageManager,
+    runtime: appLanguage.runtime,
+  });
 
 const year = document.querySelector("#current-year");
 const homeView = document.querySelector("#home-view");
