@@ -78,7 +78,20 @@ function resolveLegacyBinding(source, sourceTextKeys, sourceTextPatterns) {
   return null;
 }
 
+function isTranslationSkipped(target) {
+  const element =
+    target?.nodeType === 3
+      ? target.parentElement
+      : target;
+
+  return Boolean(
+    element?.closest?.('[data-i18n-skip="true"]'),
+  );
+}
+
 function translateLegacyTextNode(node, t, sourceTextKeys, sourceTextPatterns) {
+  if (isTranslationSkipped(node)) return false;
+
   const original = node?.nodeValue;
   if (typeof original !== "string") return false;
 
@@ -111,6 +124,8 @@ function translateLegacyAttribute(
   sourceTextKeys,
   sourceTextPatterns,
 ) {
+  if (isTranslationSkipped(element)) return false;
+
   const original = element.getAttribute?.(attributeName);
   if (!original) return false;
 
