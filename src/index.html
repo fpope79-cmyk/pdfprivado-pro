@@ -439,8 +439,71 @@
           </div>
 
           <section class="convert-export-preview-panel" aria-labelledby="convert-export-preview-title">
-            <h2 id="convert-export-preview-title">Vista previa</h2>
-            <pre class="convert-export-preview" id="convert-export-preview">La vista previa aparecerá después de analizar el documento.</pre>
+            <div class="convert-export-preview-heading">
+              <h2 id="convert-export-preview-title">Vista previa</h2>
+              <div class="convert-export-preview-tabs" role="tablist" aria-label="Modo de vista previa">
+                <button
+                  class="convert-export-preview-tab is-active"
+                  id="convert-export-preview-tab-document"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="convert-export-document-pane"
+                  data-preview-mode="document"
+                >
+                  Documento
+                </button>
+                <button
+                  class="convert-export-preview-tab"
+                  id="convert-export-preview-tab-text"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="convert-export-text-pane"
+                  data-preview-mode="text"
+                >
+                  Texto extraído
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="convert-export-document-pane"
+              id="convert-export-document-pane"
+              role="tabpanel"
+              aria-labelledby="convert-export-preview-tab-document"
+            >
+              <div class="convert-export-document-toolbar" aria-label="Controles del documento">
+                <button class="secondary-button" id="convert-export-document-prev" type="button" disabled aria-label="Página anterior">←</button>
+                <label class="convert-export-document-page-field">
+                  <span class="visually-hidden">Página</span>
+                  <input id="convert-export-document-page" type="number" min="1" value="1" disabled />
+                </label>
+                <span class="convert-export-document-counter" id="convert-export-document-counter">/ 0</span>
+                <button class="secondary-button" id="convert-export-document-next" type="button" disabled aria-label="Página siguiente">→</button>
+                <span class="convert-export-document-toolbar-spacer"></span>
+                <button class="secondary-button" id="convert-export-document-zoom-out" type="button" disabled aria-label="Reducir zoom">−</button>
+                <span class="convert-export-document-zoom" id="convert-export-document-zoom">Ajustar</span>
+                <button class="secondary-button" id="convert-export-document-zoom-in" type="button" disabled aria-label="Aumentar zoom">+</button>
+                <button class="secondary-button" id="convert-export-document-fit" type="button" disabled>Ajustar al ancho</button>
+              </div>
+              <div class="convert-export-document-stage" id="convert-export-document-stage">
+                <canvas id="convert-export-document-canvas" aria-label="Vista visual de la página del PDF"></canvas>
+                <p class="convert-export-document-empty" id="convert-export-document-empty">
+                  Selecciona un PDF para mostrar el documento.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="convert-export-text-pane"
+              id="convert-export-text-pane"
+              role="tabpanel"
+              aria-labelledby="convert-export-preview-tab-text"
+              hidden
+            >
+              <pre class="convert-export-preview" id="convert-export-preview">La vista previa aparecerá después de analizar el documento.</pre>
+            </div>
           </section>
         </div>        <div
           class="app-view viewer-workspace"

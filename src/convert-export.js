@@ -80,6 +80,20 @@ const els = {
   progress: $("#convert-export-progress"),
   progressText: $("#convert-export-progress-text"),
   preview: $("#convert-export-preview"),
+  previewTabs: $$("[data-preview-mode]"),
+  documentPane: $("#convert-export-document-pane"),
+  textPane: $("#convert-export-text-pane"),
+  documentStage: $("#convert-export-document-stage"),
+  documentCanvas: $("#convert-export-document-canvas"),
+  documentEmpty: $("#convert-export-document-empty"),
+  documentPrev: $("#convert-export-document-prev"),
+  documentNext: $("#convert-export-document-next"),
+  documentPage: $("#convert-export-document-page"),
+  documentCounter: $("#convert-export-document-counter"),
+  documentZoomOut: $("#convert-export-document-zoom-out"),
+  documentZoomIn: $("#convert-export-document-zoom-in"),
+  documentZoom: $("#convert-export-document-zoom"),
+  documentFit: $("#convert-export-document-fit"),
   stats: $("#convert-export-stats"),
 };
 
@@ -97,6 +111,13 @@ if (!els.view) {
     busy: false,
     cancelled: false,
     renderTasks: new Set(),
+    documentPreviewMode: "document",
+    documentPreviewPage: 1,
+    documentPreviewScale: 1,
+    documentPreviewFitWidth: true,
+    documentPreviewTask: null,
+    documentPreviewSerial: 0,
+    documentPreviewResizeTimer: 0,
     sourceKind: "standalone",
     ocrRecords: new Map(),
     ocrPool: null,
@@ -550,6 +571,7 @@ if (!els.view) {
   }
 
   async function replacePdf(file, bytes, sourceKind = "standalone") {
+    cancelDocumentPreviewRender({ release: true });
     if (state.pdf) {
       try {
         await state.pdf.destroy();
@@ -580,6 +602,7 @@ if (!els.view) {
     els.range.placeholder = `Ej.: 1-3,5,8-${pdf.numPages}`;
     els.analyze.disabled = false;
     clearStructuredResult();
+    resetDocumentPreviewForPdf();
   }
 
   async function loadFile(file) {
@@ -603,6 +626,7 @@ if (!els.view) {
       state.file = null;
       state.pdf = null;
       state.pageCount = 0;
+      resetDocumentPreviewForPdf();
       els.fileName.textContent = "Ningún PDF seleccionado";
       els.fileMeta.textContent =
         "El documento permanece siempre en este equipo.";
@@ -1069,6 +1093,187 @@ if (!els.view) {
         rendered.canvas.width = 1;
         rendered.canvas.height = 1;
       }
+    }
+  }
+
+  /* PDFPRIVADO_CONVERT_EXPORT_DOCUMENT_PREVIEW_V1 */
+  function cancelDocumentPreviewRender({ release = false } = {}) {
+    state.documentPreviewSerial += 1;
+    try {
+      state.documentPreviewTask?.cancel?.();
+    } catch {}
+    state.documentPreviewTask = null;
+
+    if (release && els.documentCanvas) {
+      els.documentCanvas.width = 1;
+      els.documentCanvas.height = 1;
+      els.documentCanvas.style.width = "1px";
+      els.documentCanvas.style.height = "1px";
+    }
+  }
+
+  function clampDocumentPreviewPage(value) {
+    const total = Math.max(0, Number(state.pageCount) || 0);
+    if (!total) return 1;
+    return Math.max(1, Math.min(Math.trunc(Number(value) || 1), total));
+  }
+
+  function updateDocumentPreviewControls() {
+    const hasPdf = Boolean(state.pdf && state.pageCount);
+    const page = clampDocumentPreviewPage(state.documentPreviewPage);
+    state.documentPreviewPage = page;
+
+    if (els.documentPage) {
+      els.documentPage.disabled = !hasPdf;
+      els.documentPage.min = "1";
+      els.documentPage.max = String(Math.max(1, state.pageCount || 1));
+      els.documentPage.value = String(page);
+    }
+    if (els.documentCounter) {
+      els.documentCounter.textContent = `/ ${hasPdf ? state.pageCount : 0}`;
+    }
+    if (els.documentPrev) {
+      els.documentPrev.disabled = !hasPdf || page <= 1;
+    }
+    if (els.documentNext) {
+      els.documentNext.disabled = !hasPdf || page >= state.pageCount;
+    }
+    for (const control of [
+      els.documentZoomOut,
+      els.documentZoomIn,
+      els.documentFit,
+    ]) {
+      if (control) control.disabled = !hasPdf;
+    }
+    if (els.documentZoom) {
+      els.documentZoom.textContent = state.documentPreviewFitWidth
+        ? "Ajustar"
+        : `${Math.round(state.documentPreviewScale * 100)}%`;
+    }
+  }
+
+  async function renderDocumentPreview() {
+    updateDocumentPreviewControls();
+    cancelDocumentPreviewRender();
+
+    if (
+      state.documentPreviewMode !== "document" ||
+      !state.pdf ||
+      !state.pageCount ||
+      !els.documentCanvas ||
+      !els.documentStage
+    ) {
+      if (els.documentEmpty) {
+        els.documentEmpty.hidden = Boolean(state.pdf && state.pageCount);
+      }
+      return;
+    }
+
+    const serial = ++state.documentPreviewSerial;
+    const pageNumber = clampDocumentPreviewPage(state.documentPreviewPage);
+    state.documentPreviewPage = pageNumber;
+    if (els.documentEmpty) els.documentEmpty.hidden = true;
+
+    let page = null;
+    try {
+      page = await state.pdf.getPage(pageNumber);
+      if (serial !== state.documentPreviewSerial) return;
+
+      const rotation = Number(page.rotate) || 0;
+      const base = page.getViewport({ scale: 1, rotation });
+      const stageWidth = Math.max(
+        120,
+        els.documentStage.clientWidth - 32
+      );
+      const scale = state.documentPreviewFitWidth
+        ? Math.max(0.05, stageWidth / Math.max(1, base.width))
+        : Math.max(0.25, Math.min(4, state.documentPreviewScale));
+      const viewport = page.getViewport({ scale, rotation });
+      const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+      const canvas = els.documentCanvas;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("No se pudo preparar el lienzo del documento.");
+
+      canvas.width = Math.max(1, Math.floor(viewport.width * outputScale));
+      canvas.height = Math.max(1, Math.floor(viewport.height * outputScale));
+      canvas.style.width = `${Math.max(1, Math.round(viewport.width))}px`;
+      canvas.style.height = `${Math.max(1, Math.round(viewport.height))}px`;
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const task = page.render({
+        canvasContext: context,
+        viewport,
+        transform:
+          outputScale === 1
+            ? null
+            : [outputScale, 0, 0, outputScale, 0, 0],
+      });
+      state.documentPreviewTask = task;
+      await task.promise;
+
+      if (serial !== state.documentPreviewSerial) return;
+      state.documentPreviewTask = null;
+      updateDocumentPreviewControls();
+    } catch (error) {
+      if (error?.name !== "RenderingCancelledException") {
+        console.warn("No se pudo renderizar la vista previa del documento.", error);
+        if (els.documentEmpty) {
+          els.documentEmpty.hidden = false;
+          els.documentEmpty.textContent =
+            "No se pudo mostrar esta página del PDF.";
+        }
+      }
+    } finally {
+      try {
+        page?.cleanup?.();
+      } catch {}
+    }
+  }
+
+  function setDocumentPreviewMode(mode) {
+    state.documentPreviewMode = mode === "text" ? "text" : "document";
+
+    for (const tab of els.previewTabs || []) {
+      const active = tab.dataset.previewMode === state.documentPreviewMode;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+    }
+
+    if (els.documentPane) {
+      els.documentPane.hidden = state.documentPreviewMode !== "document";
+    }
+    if (els.textPane) {
+      els.textPane.hidden = state.documentPreviewMode !== "text";
+    }
+
+    if (state.documentPreviewMode === "document") {
+      requestAnimationFrame(() => {
+        void renderDocumentPreview();
+      });
+    } else {
+      cancelDocumentPreviewRender();
+    }
+  }
+
+  function resetDocumentPreviewForPdf() {
+    cancelDocumentPreviewRender({ release: true });
+    state.documentPreviewPage = 1;
+    state.documentPreviewScale = 1;
+    state.documentPreviewFitWidth = true;
+    if (els.documentEmpty) {
+      els.documentEmpty.hidden = Boolean(state.pdf && state.pageCount);
+      els.documentEmpty.textContent = state.pdf
+        ? "Preparando la vista visual del documento…"
+        : "Selecciona un PDF para mostrar el documento.";
+    }
+    updateDocumentPreviewControls();
+    if (state.documentPreviewMode === "document" && state.pdf) {
+      requestAnimationFrame(() => {
+        void renderDocumentPreview();
+      });
     }
   }
 
@@ -2216,6 +2421,78 @@ if (!els.view) {
     void loadFile(els.fileInput.files?.[0]);
   });
 
+  for (const tab of els.previewTabs || []) {
+    tab.addEventListener("click", () => {
+      setDocumentPreviewMode(tab.dataset.previewMode);
+    });
+  }
+
+  els.documentPrev?.addEventListener("click", () => {
+    state.documentPreviewPage = clampDocumentPreviewPage(
+      state.documentPreviewPage - 1
+    );
+    void renderDocumentPreview();
+  });
+
+  els.documentNext?.addEventListener("click", () => {
+    state.documentPreviewPage = clampDocumentPreviewPage(
+      state.documentPreviewPage + 1
+    );
+    void renderDocumentPreview();
+  });
+
+  const applyDocumentPreviewPage = () => {
+    state.documentPreviewPage = clampDocumentPreviewPage(
+      els.documentPage?.value
+    );
+    void renderDocumentPreview();
+  };
+
+  els.documentPage?.addEventListener("change", applyDocumentPreviewPage);
+  els.documentPage?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applyDocumentPreviewPage();
+    }
+  });
+
+  els.documentZoomOut?.addEventListener("click", () => {
+    state.documentPreviewFitWidth = false;
+    state.documentPreviewScale = Math.max(
+      0.25,
+      state.documentPreviewScale - 0.1
+    );
+    void renderDocumentPreview();
+  });
+
+  els.documentZoomIn?.addEventListener("click", () => {
+    state.documentPreviewFitWidth = false;
+    state.documentPreviewScale = Math.min(
+      4,
+      state.documentPreviewScale + 0.1
+    );
+    void renderDocumentPreview();
+  });
+
+  els.documentFit?.addEventListener("click", () => {
+    state.documentPreviewFitWidth = true;
+    void renderDocumentPreview();
+  });
+
+  window.addEventListener("resize", () => {
+    if (
+      state.documentPreviewMode !== "document" ||
+      !state.documentPreviewFitWidth ||
+      !state.pdf
+    ) {
+      return;
+    }
+    window.clearTimeout(state.documentPreviewResizeTimer);
+    state.documentPreviewResizeTimer = window.setTimeout(() => {
+      void renderDocumentPreview();
+    }, 160);
+  });
+
   els.scope.addEventListener("change", updateScopeUi);
   els.textMode.addEventListener("change", () => {
     updateOcrLanguageUi();
@@ -2452,6 +2729,8 @@ if (!els.view) {
     .finally(() => {
       restoreSettings();
       resetResult();
+      setDocumentPreviewMode("document");
+      resetDocumentPreviewForPdf();
       setBusy(false);
     });
 }
